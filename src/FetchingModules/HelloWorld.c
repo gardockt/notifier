@@ -1,33 +1,12 @@
 #include "HelloWorld.h"
 
-void* helloWorldFetchingThread(void* args) {
-	FetchingModule* fetchingModule = args;
-
-	fetchingModule->busy = true;
-	fetchingModule->fetch(fetchingModule);
-	fetchingModule->busy = false;
-
-	pthread_exit(NULL);
-}
-
-void* helloWorldThread(void* args) {
-	FetchingModule* fetchingModule = args;
-	pthread_t fetchingThread;
-
-	while(1) {
-		if(!fetchingModule->busy) {
-			pthread_create(&fetchingThread, NULL, helloWorldFetchingThread, fetchingModule);
-			pthread_detach(fetchingThread);
-		}
-		sleep(fetchingModule->intervalSecs);
-	}
-}
-
 bool helloWorldEnable(FetchingModule* fetchingModule) {
-	pthread_create(&fetchingModule->thread, NULL, helloWorldThread, fetchingModule);
+	bool retVal = fetchingModuleCreateThread(fetchingModule);
 
-	printf("HelloWorld enabled\n");
-	return true;
+	if(retVal) {
+		printf("HelloWorld enabled\n");
+	}
+	return retVal;
 }
 
 void helloWorldFetch(FetchingModule* fetchingModule) {
@@ -35,10 +14,13 @@ void helloWorldFetch(FetchingModule* fetchingModule) {
 	printf("%s\n", config->text);
 }
 
-void helloWorldDisable(FetchingModule* fetchingModule) {
-	pthread_cancel(fetchingModule->thread);
+bool helloWorldDisable(FetchingModule* fetchingModule) {
+	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
-	printf("HelloWorld disabled\n");
+	if(retVal) {
+		printf("HelloWorld disabled\n");
+	}
+	return retVal;
 }
 
 bool helloWorldTemplate(FetchingModule* fetchingModule) {

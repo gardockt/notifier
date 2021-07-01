@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <pthread.h>
+#include <unistd.h> // sleep
 
 typedef struct FetMod {
 	int intervalSecs;
@@ -12,7 +13,10 @@ typedef struct FetMod {
 
 	bool (*enable)(struct FetMod*);
 	void (*fetch)(struct FetMod*);
-	void (*disable)(struct FetMod*);
+	bool (*disable)(struct FetMod*);
 } FetchingModule;
+
+bool fetchingModuleCreateThread(FetchingModule* fetchingModule);
+bool fetchingModuleDestroyThread(FetchingModule* fetchingModule);
 
 #endif // ifndef FETCHINGMODULE_H

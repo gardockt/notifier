@@ -1,4 +1,4 @@
-LIBS = Main.o ModuleManager.o Map.o HelloWorld.o
+LIBS = Main.o ModuleManager.o Map.o FetchingModule.o HelloWorld.o
 TARGET = linux
 OUTPUT = notifier
 FLAGS = -lpthread -ggdb
