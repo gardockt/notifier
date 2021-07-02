@@ -19,12 +19,12 @@ typedef struct {
 	int availableSize;
 } Map;
 
-int initMap(Map* map);
+bool initMap(Map* map);
 void destroyMap(Map* map);
 
-int doubleMapSize(Map* map);
+bool doubleMapSize(Map* map);
 
-int putIntoMap(Map* map, void* key, int keySize, void* value);
+bool putIntoMap(Map* map, void* key, int keySize, void* value);
 void* getFromMap(Map* map, void* key, int keySize); 
 bool removeFromMap(Map* map, void* key, int keySize);
 

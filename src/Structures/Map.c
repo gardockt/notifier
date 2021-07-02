@@ -1,10 +1,8 @@
 #include "Map.h"
 
-// TODO: zamienić na memcpy
-
 #define MIN(x,y) ((x)<(y)?(x):(y))
 
-int initMap(Map* map) {
+bool initMap(Map* map) {
 	map->elements = malloc(MAP_DEFAULT_SIZE * sizeof *map->elements);
 	map->size = 0;
 	map->availableSize = map->elements != NULL ? MAP_DEFAULT_SIZE : 0;
@@ -17,27 +15,54 @@ void destroyMap(Map* map) {
 	map->availableSize = 0;
 }
 
-int doubleMapSize(Map* map) {
+bool doubleMapSize(Map* map) {
 	MapElement* elementsNew = reallocarray(map->elements, map->availableSize * 2, sizeof *map->elements);
 	if(elementsNew != NULL) {
 		map->elements = elementsNew;
-		return 1;
+		return true;
 	}
-	return 0;
+	return false;
 }
 
-int putIntoMap(Map* map, void* key, int keySize, void* value) {
-	if(map->size >= map->availableSize && !doubleMapSize(map)) {
-		return 0;
+bool putIntoMap(Map* map, void* key, int keySize, void* value) {
+	// possible indices of inserted element
+	int insertionIndexMin = 0;
+	int insertionIndexMax = map->size;
+
+	int checkedIndex;
+	MapElement* checkedElement;
+	int cmpSize;
+	int cmpResult;
+
+	while(insertionIndexMin != insertionIndexMax) {
+		checkedIndex = (insertionIndexMin + insertionIndexMax) / 2;
+		checkedElement = &map->elements[checkedIndex];
+		cmpSize = MIN(keySize, checkedElement->keySize);
+		if(!(cmpResult = memcmp(key, checkedElement->key, cmpSize))) {
+			cmpResult = keySize - checkedElement->keySize;
+		}
+
+		if(cmpResult == 0) {
+			return false;
+		} else if(cmpResult > 0) {
+			insertionIndexMin = checkedIndex + 1;
+		} else { // cmpResult < 0
+			insertionIndexMax = checkedIndex;
+		}
 	}
 
-	// TODO: zakładamy kolejność alfabetyczną dodawania - NAPRAWIĆ! (można założyć optymalizację dla takiej kolejności)
-	// TODO: memcpy?
-	MapElement* element = &map->elements[map->size++];
+	if(map->size >= map->availableSize && !doubleMapSize(map)) {
+		return false;
+	}
+
+	int insertionIndex = insertionIndexMin;
+	memmove(checkedElement + 1, checkedElement, (map->size++ - insertionIndex) * sizeof *checkedElement);
+
+	MapElement* element = &map->elements[insertionIndex];
 	element->key = key;
 	element->keySize = keySize;
 	element->value = value;
-	return 1;
+	return true;
 }
 
 void* getFromMap(Map* map, void* key, int keySize) {
