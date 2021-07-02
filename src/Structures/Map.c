@@ -65,7 +65,7 @@ bool putIntoMap(Map* map, void* key, int keySize, void* value) {
 	return true;
 }
 
-void* getFromMap(Map* map, void* key, int keySize) {
+int getKeyIndex(Map* map, void* key, int keySize) {
 	int min = 0;
 	int max = map->size - 1;
 	int checkedIndex;
@@ -82,7 +82,7 @@ void* getFromMap(Map* map, void* key, int keySize) {
 		}
 
 		if(cmpResult == 0) {
-			return checkedElement->value;
+			return checkedIndex;
 		} else if(cmpResult > 0) {
 			min = checkedIndex + 1;
 		} else { // cmpResult < 0
@@ -90,9 +90,33 @@ void* getFromMap(Map* map, void* key, int keySize) {
 		}
 	}
 	
-	return NULL;
+	return -1;
 }
 
-bool removeFromMap(Map* map, void* key, int keySize) {
-	// TODO: zrobic
+void* getFromMap(Map* map, void* key, int keySize) {
+	int index = getKeyIndex(map, key, keySize);
+	return index >= 0 ? map->elements[index].value : NULL;
+}
+
+bool removeFromMap(Map* map, void* key, int keySize, void** keyAddress, void** valueAddress) {
+	int index = getKeyIndex(map, key, keySize);
+	if(index < 0) {
+		return false;
+	}
+
+	MapElement* elementToRemove = &map->elements[index];
+	if(keyAddress != NULL) {
+		*keyAddress = elementToRemove->key;
+	}
+	if(valueAddress != NULL) {
+		*valueAddress = elementToRemove->value;
+	}
+
+	memmove(elementToRemove, elementToRemove + 1, (map->size-- - index - 1) * sizeof *elementToRemove);
+	return true;
+}
+
+bool existsInMap(Map* map, void* key, int keySize) {
+	int index = getKeyIndex(map, key, keySize);
+	return index >= 0;
 }

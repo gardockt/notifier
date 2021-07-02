@@ -6,6 +6,8 @@ ModuleManager moduleManager;
 
 dictionary* config;
 
+// TODO: fix memleaks
+
 void onExit(int signal) {
 	printf("Niszczenie moduleManager...\n");
 	destroyModuleManager(&moduleManager);
@@ -21,8 +23,6 @@ void unloadConfig() {
 }
 
 int main() {
-	//HelloWorldConfig* config = malloc(sizeof *config);
-
 	struct sigaction signalMgmt;
 	signalMgmt.sa_handler = onExit;
 	sigemptyset(&signalMgmt.sa_mask);
@@ -38,59 +38,76 @@ int main() {
 		return 1;
 	}
 
-	//config->text = "gitara siema";
-
 	int configSectionCount = iniparser_getnsec(config);
-	printf("Ilość sekcji: %d\n\n", configSectionCount);
+	int keyCount;
+
+	int globalConfigKeyCount;
+	char** globalConfigKeys;
+
+	// global settings loading
+	globalConfigKeyCount = iniparser_getsecnkeys(config, CONFIG_GLOBAL_SECTION_NAME);
+	if(globalConfigKeyCount > 0) {
+		globalConfigKeys = malloc(globalConfigKeyCount * sizeof *globalConfigKeys);
+		iniparser_getseckeys(config, CONFIG_GLOBAL_SECTION_NAME, globalConfigKeys);
+	}
+
 	for(int i = 0; i < configSectionCount; i++) {
 		char* sectionName = iniparser_getsecname(config, i);
 		char** keys;
-		int keyCount;
 		Map* configMap;
 		char* value;
-		char* moduleType;
+		char* moduleType = NULL;
 
-		printf("Nazwa sekcji %d: %s\n", i, sectionName);
-		if(!strncmp(sectionName, CONFIG_GLOBAL_SECTION_NAME, strlen(CONFIG_GLOBAL_SECTION_NAME))) {
-			fprintf(stderr, "Global config is not supported yet\n");
-		} else {
-			// nieglobalny config
-			keyCount = iniparser_getsecnkeys(config, sectionName);
-			printf("Ilość kluczy: %d\n", keyCount);
-			
-			configMap = malloc(sizeof *configMap);
-			initMap(configMap);
-			keys = malloc(keyCount * sizeof *keys);
-			iniparser_getseckeys(config, sectionName, keys);
+		// TODO: add global section config
 
-			for(int i = 0; i < keyCount; i++) {
-				printf("Klucz %d: %s\n", i, keys[i]);
-				if(keys[i][strlen(sectionName) + 1] == '_') {
-					fprintf(stderr, "Option %s contains illegal prefix, ignoring\n", keys[i]);
-					continue;
-				}
+		// non-global settings loading
+		if(sectionName[0] == '_') {
+			continue;
+		}
 
-				char* keyTrimmed = malloc(strlen(keys[i]) - strlen(sectionName));
-				strcpy(keyTrimmed, keys[i] + strlen(sectionName) + 1);
+		keyCount = iniparser_getsecnkeys(config, sectionName);
 
-				char* valueTemp = iniparser_getstring(config, keys[i], NULL);
-				value = malloc(strlen(valueTemp) + 1);
-				strcpy(value, valueTemp);
+		configMap = malloc(sizeof *configMap);
+		initMap(configMap);
+		keys = malloc(keyCount * sizeof *keys);
+		iniparser_getseckeys(config, sectionName, keys);
 
-				if(!strcmp(keyTrimmed, "module")) {
-					printf("Dodawany moduł: %s\n", value);
-					moduleType = value;
-				} else {
-					printf("Dodawanie do mapy pary %s -> %s\n", keyTrimmed, value);
-					putIntoMap(configMap, keyTrimmed, strlen(keyTrimmed), value);
-				}
+		for(int i = 0; i < keyCount; i++) {
+			if(keys[i][strlen(sectionName) + 1] == '_') {
+				fprintf(stderr, "Option %s contains illegal prefix, ignoring\n", keys[i]);
+				continue;
 			}
 
-			// odpalanie modułu
-			printf("Odpalanie modułu %s (%s)...\n", sectionName, moduleType);
-			enableModule(&moduleManager, moduleType, sectionName, configMap);
+			char* keyTrimmed = malloc(strlen(keys[i]) - strlen(sectionName));
+			strcpy(keyTrimmed, keys[i] + strlen(sectionName) + 1);
+
+			char* valueTemp = iniparser_getstring(config, keys[i], NULL);
+			value = malloc(strlen(valueTemp) + 1);
+			strcpy(value, valueTemp);
+
+			if(!strcmp(keyTrimmed, "module")) {
+				moduleType = value;
+			} else {
+				putIntoMap(configMap, keyTrimmed, strlen(keyTrimmed), value);
+			}
 		}
-		printf("\n");
+
+		// add global settings for undefined values
+		for(int i = 0; i < globalConfigKeyCount; i++) {
+			if(!existsInMap(configMap, globalConfigKeys[i], strlen(globalConfigKeys[i]))) {
+				char* keyTrimmed = malloc(strlen(globalConfigKeys[i]) - strlen(CONFIG_GLOBAL_SECTION_NAME));
+				char* valueTemp = iniparser_getstring(config, globalConfigKeys[i], NULL);
+				char* value = malloc(strlen(valueTemp) + 1);
+
+				strcpy(keyTrimmed, globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1);
+				strcpy(value, valueTemp);
+				putIntoMap(configMap, keyTrimmed, strlen(keyTrimmed), value);
+			}
+		}
+
+		if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
+			fprintf(stderr, "Error while enabling module %s\n", sectionName);
+		}
 	}
 
 	sleep(1000);

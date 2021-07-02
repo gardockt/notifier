@@ -41,9 +41,12 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 }
 
 bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config) {
+	if(moduleManager == NULL || moduleType == NULL || moduleCustomName == NULL || config == NULL) {
+		return false;
+	}
+
 	FetchingModule* moduleTemplate = getFromMap(&moduleManager->availableModules, moduleType, strlen(moduleType));
 	FetchingModule* module;
-
 	if(moduleTemplate == NULL) {
 		return false;
 	}
@@ -69,7 +72,7 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	}
 
 	module->disable(module);
-	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName));
+	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), NULL, NULL);
 	free(module);
 
 	return true;
