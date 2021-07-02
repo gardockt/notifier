@@ -1,3 +1,4 @@
 *.o
 /notifier
+/notifier.ini
 /test/a.out

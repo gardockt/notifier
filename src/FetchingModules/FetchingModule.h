@@ -5,12 +5,15 @@
 #include <pthread.h>
 #include <unistd.h> // sleep
 
+#include "../Structures/Map.h"
+
 typedef struct FetMod {
 	int intervalSecs;
 	void* config;
 	pthread_t thread;
 	bool busy;
 
+	void (*parseConfig)(struct FetMod*, Map*);
 	bool (*enable)(struct FetMod*);
 	void (*fetch)(struct FetMod*);
 	bool (*disable)(struct FetMod*);

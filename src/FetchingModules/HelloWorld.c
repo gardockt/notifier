@@ -1,5 +1,17 @@
 #include "HelloWorld.h"
 
+void helloWorldParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
+	HelloWorldConfig* config = malloc(sizeof *config);
+	fetchingModule->config = config;
+
+	// TODO: fix memleak on unused keys
+	char* text = getFromMap(configToParse, "text", strlen("text"));
+	char* interval = getFromMap(configToParse, "interval", strlen("interval"));
+
+	config->text = text;
+	fetchingModule->intervalSecs = atoi(interval);
+}
+
 bool helloWorldEnable(FetchingModule* fetchingModule) {
 	bool retVal = fetchingModuleCreateThread(fetchingModule);
 
@@ -27,6 +39,7 @@ bool helloWorldTemplate(FetchingModule* fetchingModule) {
 	fetchingModule->intervalSecs = 1;
 	fetchingModule->config = NULL;
 	fetchingModule->busy = false;
+	fetchingModule->parseConfig = helloWorldParseConfig;
 	fetchingModule->enable = helloWorldEnable;
 	fetchingModule->fetch = helloWorldFetch;
 	fetchingModule->disable = helloWorldDisable;

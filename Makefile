@@ -1,7 +1,7 @@
 LIBS = Main.o ModuleManager.o Map.o FetchingModule.o HelloWorld.o
 TARGET = linux
 OUTPUT = notifier
-FLAGS = -lpthread -ggdb
+FLAGS = -lpthread -liniparser -ggdb
 
 
 
@@ -10,7 +10,7 @@ FLAGS = -lpthread -ggdb
 all: $(OUTPUT)
 
 clean:
-	rm *.o $(OUTPUT)*
+	rm *.o $(OUTPUT)
 
 
 

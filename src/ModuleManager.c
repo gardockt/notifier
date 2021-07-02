@@ -40,7 +40,7 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 	destroyMap(&moduleManager->activeModules);
 }
 
-bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, void* config) {
+bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config) {
 	FetchingModule* moduleTemplate = getFromMap(&moduleManager->availableModules, moduleType, strlen(moduleType));
 	FetchingModule* module;
 
@@ -54,7 +54,7 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 	}
 
 	memcpy(module, moduleTemplate, sizeof *module);
-	module->config = config;
+	module->parseConfig(module, config);
 	module->enable(module);
 	putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
 
