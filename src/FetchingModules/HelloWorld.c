@@ -4,12 +4,29 @@ void helloWorldParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	HelloWorldConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	// TODO: fix memleak on unused keys
 	char* text = getFromMap(configToParse, "text", strlen("text"));
 	char* interval = getFromMap(configToParse, "interval", strlen("interval"));
 
 	config->text = text;
 	fetchingModule->intervalSecs = atoi(interval);
+
+	int keyCount = getMapSize(configToParse);
+	char** keys = malloc(keyCount * sizeof *keys);
+	getMapKeys(configToParse, keys);
+
+	for(int i = 0; i < keyCount; i++) {
+		if(!strcmp(keys[i], "text")) {
+			continue;
+		}
+
+		char* valueToFree;
+		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, &valueToFree); // key is already in keys[i]
+		free(keys[i]);
+		free(valueToFree);
+	}
+	
+	free(keys);
+	destroyMap(configToParse);
 }
 
 bool helloWorldEnable(FetchingModule* fetchingModule) {
@@ -22,11 +39,16 @@ bool helloWorldEnable(FetchingModule* fetchingModule) {
 }
 
 void helloWorldFetch(FetchingModule* fetchingModule) {
-	HelloWorldConfig* config = fetchingModule->config;
+	HelloWorldConfig* config = (HelloWorldConfig*)(fetchingModule->config);
 	printf("%s\n", config->text);
 }
 
 bool helloWorldDisable(FetchingModule* fetchingModule) {
+	HelloWorldConfig* config = fetchingModule->config;
+
+	free(config->text);
+	free(config);
+
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	if(retVal) {

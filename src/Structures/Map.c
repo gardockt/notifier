@@ -120,3 +120,14 @@ bool existsInMap(Map* map, void* key, int keySize) {
 	int index = getKeyIndex(map, key, keySize);
 	return index >= 0;
 }
+
+int getMapSize(Map* map) {
+	return map->size;
+}
+
+void getMapKeys(Map* map, void** keyArray) {
+	int size = getMapSize(map);
+	for(int i = 0; i < size; i++) {
+		keyArray[i] = map->elements[i].key;
+	}
+}

@@ -71,8 +71,11 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 		return false;
 	}
 
+	char* keyToFree;
+
 	module->disable(module);
-	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), NULL, NULL);
+	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), &keyToFree, NULL); // value is already stored in "module"
+	free(keyToFree);
 	free(module);
 
 	return true;

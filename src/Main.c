@@ -52,11 +52,15 @@ int main() {
 	}
 
 	for(int i = 0; i < configSectionCount; i++) {
-		char* sectionName = iniparser_getsecname(config, i);
+		char* sectionName;
 		char** keys;
 		Map* configMap;
 		char* value;
 		char* moduleType = NULL;
+
+		char* sectionNameTemp = iniparser_getsecname(config, i);
+		sectionName = malloc(strlen(sectionNameTemp) + 1);
+		strcpy(sectionName, sectionNameTemp);
 
 		// TODO: add global section config
 
@@ -87,6 +91,7 @@ int main() {
 
 			if(!strcmp(keyTrimmed, "module")) {
 				moduleType = value;
+				free(keyTrimmed);
 			} else {
 				putIntoMap(configMap, keyTrimmed, strlen(keyTrimmed), value);
 			}
@@ -108,7 +113,13 @@ int main() {
 		if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
 			fprintf(stderr, "Error while enabling module %s\n", sectionName);
 		}
+
+		free(moduleType);
+		free(keys);
 	}
+
+	unloadConfig();
+	free(globalConfigKeys);
 
 	sleep(1000);
 
