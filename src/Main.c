@@ -66,6 +66,7 @@ int main() {
 
 		// non-global settings loading
 		if(sectionName[0] == '_') {
+			free(sectionName);
 			continue;
 		}
 
@@ -114,6 +115,7 @@ int main() {
 			fprintf(stderr, "Error while enabling module %s\n", sectionName);
 		}
 
+		free(configMap);
 		free(moduleType);
 		free(keys);
 	}

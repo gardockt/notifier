@@ -15,14 +15,12 @@ void helloWorldParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	getMapKeys(configToParse, keys);
 
 	for(int i = 0; i < keyCount; i++) {
-		if(!strcmp(keys[i], "text")) {
-			continue;
-		}
-
 		char* valueToFree;
 		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, &valueToFree); // key is already in keys[i]
+		if(strcmp(keys[i], "text") != 0) {
+			free(valueToFree);
+		}
 		free(keys[i]);
-		free(valueToFree);
 	}
 	
 	free(keys);
@@ -46,14 +44,14 @@ void helloWorldFetch(FetchingModule* fetchingModule) {
 bool helloWorldDisable(FetchingModule* fetchingModule) {
 	HelloWorldConfig* config = fetchingModule->config;
 
-	free(config->text);
-	free(config);
-
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	if(retVal) {
 		printf("HelloWorld disabled\n");
+		free(config->text);
+		free(config);
 	}
+
 	return retVal;
 }
 
