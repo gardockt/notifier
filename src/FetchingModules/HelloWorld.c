@@ -38,7 +38,11 @@ bool helloWorldEnable(FetchingModule* fetchingModule) {
 
 void helloWorldFetch(FetchingModule* fetchingModule) {
 	HelloWorldConfig* config = (HelloWorldConfig*)(fetchingModule->config);
-	printf("%s\n", config->text);
+	Message message;
+
+	message.title = "Hello World!";
+	message.text = config->text;
+	fetchingModule->display->displayMessage(&message);
 }
 
 bool helloWorldDisable(FetchingModule* fetchingModule) {
@@ -62,6 +66,7 @@ bool helloWorldTemplate(FetchingModule* fetchingModule) {
 	fetchingModule->parseConfig = helloWorldParseConfig;
 	fetchingModule->enable = helloWorldEnable;
 	fetchingModule->fetch = helloWorldFetch;
+	fetchingModule->display = NULL;
 	fetchingModule->disable = helloWorldDisable;
 
 	return true;

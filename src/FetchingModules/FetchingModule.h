@@ -6,12 +6,14 @@
 #include <unistd.h> // sleep
 
 #include "../Structures/Map.h"
+#include "../Displays/Display.h"
 
 typedef struct FetMod {
 	int intervalSecs;
 	void* config;
 	pthread_t thread;
 	bool busy;
+	Display* display;
 
 	void (*parseConfig)(struct FetMod*, Map*);
 	bool (*enable)(struct FetMod*);

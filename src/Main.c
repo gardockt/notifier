@@ -1,16 +1,19 @@
 #include "Main.h"
 #include "ModuleManager.h"
-#include "FetchingModules/HelloWorld.h"
+#include "DisplayManager.h"
+#include "Displays/Display.h"
+#include "FetchingModules/FetchingModule.h"
 
+// TODO: make global variables?
 ModuleManager moduleManager;
+DisplayManager displayManager;
 
 dictionary* config;
 
-// TODO: fix memleaks
-
 void onExit(int signal) {
-	printf("Niszczenie moduleManager...\n");
+	printf("Niszczenie menedżerów...\n");
 	destroyModuleManager(&moduleManager);
+	destroyDisplayManager(&displayManager);
 }
 
 bool loadConfig() {
@@ -32,6 +35,7 @@ int main() {
 	}
 
 	initModuleManager(&moduleManager);
+	initDisplayManager(&displayManager);
 
 	if(!loadConfig()) {
 		fprintf(stderr, "Error loading config file!\n");
@@ -57,6 +61,7 @@ int main() {
 		Map* configMap;
 		char* value;
 		char* moduleType = NULL;
+		Display* display = NULL;
 
 		char* sectionNameTemp = iniparser_getsecname(config, i);
 		sectionName = malloc(strlen(sectionNameTemp) + 1);
@@ -93,11 +98,14 @@ int main() {
 			if(!strcmp(keyTrimmed, "module")) {
 				moduleType = value;
 				free(keyTrimmed);
+			} else if(!strcmp(keyTrimmed, "display")) {
+				display = getDisplay(&displayManager, value);
 			} else {
 				putIntoMap(configMap, keyTrimmed, strlen(keyTrimmed), value);
 			}
 		}
 
+		// TODO: global display does not work, might be fixed with global managers
 		// add global settings for undefined values
 		for(int i = 0; i < globalConfigKeyCount; i++) {
 			if(!existsInMap(configMap, globalConfigKeys[i], strlen(globalConfigKeys[i]))) {
@@ -111,7 +119,7 @@ int main() {
 			}
 		}
 
-		if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
+		if(!enableModule(&moduleManager, moduleType, sectionName, configMap, display)) {
 			fprintf(stderr, "Error while enabling module %s\n", sectionName);
 		}
 

@@ -1,6 +1,7 @@
 #include "ModuleManager.h"
 #include "Structures/Map.h"
 #include "FetchingModules/FetchingModule.h"
+#include "Displays/Display.h"
 
 // fetching modules
 #include "FetchingModules/HelloWorld.h"
@@ -9,8 +10,8 @@ bool initModuleManager(ModuleManager* moduleManager) {
 	FetchingModule* template = malloc(sizeof *template);
 
 	if(!(template != NULL &&
-	     initMap(&moduleManager->availableModules) &&
-	     initMap(&moduleManager->activeModules))) {
+	   initMap(&moduleManager->availableModules) &&
+	   initMap(&moduleManager->activeModules))) {
 		return false;
 	}
 
@@ -40,8 +41,9 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 	destroyMap(&moduleManager->activeModules);
 }
 
-bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config) {
-	if(moduleManager == NULL || moduleType == NULL || moduleCustomName == NULL || config == NULL) {
+// TODO: passing display separately feels bad, fix with global display manager?
+bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config, Display* display) {
+	if(moduleManager == NULL || moduleType == NULL || moduleCustomName == NULL || config == NULL || display == NULL) {
 		return false;
 	}
 
@@ -58,6 +60,8 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 
 	memcpy(module, moduleTemplate, sizeof *module);
 	module->parseConfig(module, config);
+	module->display = display;
+	module->display->init();
 	module->enable(module);
 	putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
 
@@ -74,6 +78,7 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	char* keyToFree;
 
 	module->disable(module);
+	module->display->uninit();
 	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), &keyToFree, NULL); // value is already stored in "module"
 	free(keyToFree);
 	free(module);
