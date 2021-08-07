@@ -1,4 +1,7 @@
 #include "HelloWorld.h"
+#include "../Stash.h"
+
+int totalFetches = 0;
 
 void helloWorldParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	HelloWorldConfig* config = malloc(sizeof *config);
@@ -29,10 +32,17 @@ void helloWorldParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 
 bool helloWorldEnable(FetchingModule* fetchingModule) {
 	bool retVal = fetchingModuleCreateThread(fetchingModule);
+	int lastCount = stashGetInt("helloworld", "count", 0);
 
 	if(retVal) {
 		printf("HelloWorld enabled\n");
+		if(lastCount == 0) {
+			printf("Last fetches were not count\n");
+		} else {
+			printf("Last fetches: %d\n", lastCount);
+		}
 	}
+
 	return retVal;
 }
 
@@ -43,6 +53,7 @@ void helloWorldFetch(FetchingModule* fetchingModule) {
 	message.title = "Hello World!";
 	message.text = config->text;
 	fetchingModule->display->displayMessage(&message);
+	stashSetInt("helloworld", "count", ++totalFetches);
 }
 
 bool helloWorldDisable(FetchingModule* fetchingModule) {
@@ -51,6 +62,7 @@ bool helloWorldDisable(FetchingModule* fetchingModule) {
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	if(retVal) {
+		printf("Total fetches this session: %d\n", totalFetches);
 		printf("HelloWorld disabled\n");
 		free(config->text);
 		free(config);

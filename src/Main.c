@@ -3,6 +3,10 @@
 #include "DisplayManager.h"
 #include "Displays/Display.h"
 #include "FetchingModules/FetchingModule.h"
+#include "Stash.h"
+
+// TODO: move config to another source file?
+// TODO: move ini managing to another source file?
 
 // TODO: make global variables?
 ModuleManager moduleManager;
@@ -14,6 +18,7 @@ void onExit(int signal) {
 	printf("Niszczenie menedżerów...\n");
 	destroyModuleManager(&moduleManager);
 	destroyDisplayManager(&displayManager);
+	stashDestroy();
 }
 
 bool loadConfig() {
@@ -36,6 +41,11 @@ int main() {
 
 	initModuleManager(&moduleManager);
 	initDisplayManager(&displayManager);
+
+	if(!stashInit()) {
+		fprintf(stderr, "Error loading stash file!\n");
+		return 1;
+	}
 
 	if(!loadConfig()) {
 		fprintf(stderr, "Error loading config file!\n");

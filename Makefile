@@ -1,7 +1,7 @@
-LIBS = Main.o ModuleManager.o Map.o FetchingModule.o HelloWorld.o DisplayManager.o Dunst.o
+LIBS = Main.o ModuleManager.o Map.o FetchingModule.o HelloWorld.o DisplayManager.o Dunst.o Stash.o
 TARGET = linux
 OUTPUT = notifier
-FLAGS = -lpthread -liniparser `pkg-config --cflags --libs libnotify` -ggdb
+FLAGS = -lpthread -liniparser `pkg-config --cflags --libs libnotify` -lm -ggdb
 
 
 
