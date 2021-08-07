@@ -56,7 +56,7 @@ bool putIntoMap(Map* map, void* key, int keySize, void* value) {
 	}
 
 	int insertionIndex = insertionIndexMin;
-	memmove(checkedElement + 1, checkedElement, (map->size++ - insertionIndex) * sizeof *checkedElement);
+	memmove(&map->elements[insertionIndex + 1], &map->elements[insertionIndex], (map->size++ - insertionIndex) * sizeof *checkedElement);
 
 	MapElement* element = &map->elements[insertionIndex];
 	element->key = key;
