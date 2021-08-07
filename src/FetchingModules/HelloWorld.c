@@ -3,7 +3,7 @@
 
 int totalFetches = 0;
 
-void helloWorldParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
+bool helloWorldParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	HelloWorldConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
@@ -28,6 +28,8 @@ void helloWorldParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	
 	free(keys);
 	destroyMap(configToParse);
+
+	return true;
 }
 
 bool helloWorldEnable(FetchingModule* fetchingModule) {

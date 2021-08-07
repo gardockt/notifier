@@ -15,7 +15,7 @@ typedef struct FetMod {
 	bool busy;
 	Display* display;
 
-	void (*parseConfig)(struct FetMod*, Map*);
+	bool (*parseConfig)(struct FetMod*, Map*);
 	bool (*enable)(struct FetMod*);
 	void (*fetch)(struct FetMod*);
 	bool (*disable)(struct FetMod*);

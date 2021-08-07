@@ -59,13 +59,15 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 	}
 
 	memcpy(module, moduleTemplate, sizeof *module);
-	module->parseConfig(module, config);
-	module->display = display;
-	module->display->init();
-	module->enable(module);
-	putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
-
-	return true;
+	if(module->parseConfig(module, config)) {
+		module->display = display;
+		module->display->init();
+		module->enable(module);
+		putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
+		return true;
+	} else {
+		return false;
+	}
 }
 
 bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
