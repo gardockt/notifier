@@ -1,9 +1,9 @@
-#include "Main.h"
 #include "ModuleManager.h"
 #include "DisplayManager.h"
 #include "Displays/Display.h"
 #include "FetchingModules/FetchingModule.h"
 #include "Stash.h"
+#include "Main.h"
 
 // TODO: move config to another source file?
 // TODO: move ini managing to another source file?
@@ -19,6 +19,10 @@ void onExit(int signal) {
 	destroyModuleManager(&moduleManager);
 	destroyDisplayManager(&displayManager);
 	stashDestroy();
+
+#ifdef REQUIRED_CURL
+	curl_global_cleanup();
+#endif
 }
 
 bool loadConfig() {
@@ -51,6 +55,10 @@ int main() {
 		fprintf(stderr, "Error loading config file!\n");
 		return 1;
 	}
+
+#ifdef REQUIRED_CURL
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+#endif
 
 	int configSectionCount = iniparser_getnsec(config);
 	int keyCount;

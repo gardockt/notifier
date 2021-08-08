@@ -5,18 +5,19 @@
 
 // fetching modules
 #include "FetchingModules/HelloWorld.h"
+#include "FetchingModules/Twitch.h"
 
 bool initModuleManager(ModuleManager* moduleManager) {
-	FetchingModule* template = malloc(sizeof *template);
+	FetchingModule* template;
 
-	if(!(template != NULL &&
-	   initMap(&moduleManager->availableModules) &&
-	   initMap(&moduleManager->activeModules))) {
+	if(!(initMap(&moduleManager->availableModules) &&
+	     initMap(&moduleManager->activeModules))) {
 		return false;
 	}
 
 	// adding modules to template map
-	if(!(helloWorldTemplate(template) && putIntoMap(&moduleManager->availableModules, "HelloWorld", strlen("HelloWorld"), template))) {
+	if(!((template = malloc(sizeof *template)) != NULL && helloWorldTemplate(template) && putIntoMap(&moduleManager->availableModules, "HelloWorld", strlen("HelloWorld"), template)) ||
+	   !((template = malloc(sizeof *template)) != NULL && twitchTemplate(template) && putIntoMap(&moduleManager->availableModules, "Twitch", strlen("Twitch"), template))) {
 		return false;
 	}
 
