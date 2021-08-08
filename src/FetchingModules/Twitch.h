@@ -17,6 +17,7 @@ typedef struct {
 	int streamCount;
 	char* clientId;
 	char* clientSecret;
+	Map* streamTitles;
 } TwitchConfig;
 
 bool twitchTemplate(FetchingModule*);

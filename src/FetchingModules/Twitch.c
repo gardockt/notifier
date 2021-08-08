@@ -6,9 +6,10 @@
 #define MIN(x,y) ((x)<(y)?(x):(y))
 
 CURL* curl = NULL;
-struct curl_slist* list = NULL;
+struct curl_slist* list = NULL; // TODO: global variable might cause issues with multiple instances
 
-// TODO: do not spam with notifications when stream is live
+// TODO: REFACTOR!!
+// idea for improving notification condition I might check later: collect active streams and topics into array (or sorted list), get all keys from array and update each key's value depending on active streams' array
 
 typedef struct {
 	char* data;
@@ -83,6 +84,12 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	config->clientId = clientId;
 	config->clientSecret = clientSecret;
 	fetchingModule->intervalSecs = atoi(interval);
+	config->streamTitles = malloc(sizeof *config->streamTitles);
+	
+	initMap(config->streamTitles);
+	for(int i = 0; i < config->streamCount; i++) {
+		putIntoMap(config->streamTitles, config->streams[i], strlen(config->streams[i]), NULL);
+	}
 
 	int keyCount = getMapSize(configToParse);
 	char** keys = malloc(keyCount * sizeof *keys);
@@ -160,6 +167,12 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	Memory response = {NULL, 0};
 	char* url;
 
+	char** streamsFromMap  = malloc(config->streamCount * sizeof *streamsFromMap);
+	char** streamerName    = malloc(config->streamCount * sizeof *streamerName);
+	char** streamsNewTopic = malloc(config->streamCount * sizeof *streamsNewTopic);
+	getMapKeys(config->streamTitles, streamsFromMap);
+	streamsNewTopic = memset(streamsNewTopic, 0, config->streamCount * sizeof *streamsNewTopic);
+
 	// getting response
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&response);
 	for(int i = 0; i < config->streamCount; i += 100) {
@@ -175,15 +188,33 @@ void twitchFetch(FetchingModule* fetchingModule) {
 
 		for(int i = 0; i < activeStreamers; i++) {
 			json_object* stream = json_object_array_get_idx(data, i);
+			char* activeStreamerName = JSON_STRING(stream, "user_name");
 
-			notificationData.streamerName = JSON_STRING(stream, "user_name");
-			notificationData.title        = JSON_STRING(stream, "title");
-			twitchDisplayNotification(fetchingModule, &notificationData);
+			for(int j = 0; j < config->streamCount; j++) {
+				if(!strcasecmp(activeStreamerName, streamsFromMap[j])) {
+					streamerName[j]    = activeStreamerName;
+					streamsNewTopic[j] = JSON_STRING(stream, "title");
+					break;
+				}
+			}
+		}
+
+		for(int i = 0; i < config->streamCount; i++) {
+			if(getFromMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i])) == NULL && streamsNewTopic[i] != NULL) {
+				notificationData.streamerName = streamerName[i];
+				notificationData.title        = streamsNewTopic[i];
+				twitchDisplayNotification(fetchingModule, &notificationData);
+			}
+			putIntoMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i]), streamsNewTopic[i]); // value get uninitialized, but we are only checking whether it is NULL
 		}
 
 		json_object_put(root);
 		free(response.data);
 	}
+
+	free(streamsNewTopic);
+	free(streamerName);
+	free(streamsFromMap);
 }
 
 bool twitchDisable(FetchingModule* fetchingModule) {
@@ -195,6 +226,8 @@ bool twitchDisable(FetchingModule* fetchingModule) {
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	if(retVal) {
+		destroyMap(config->streamTitles);
+		free(config->streamTitles);
 		free(config->title);
 		free(config->body);
 		for(int i = 0; i < config->streamCount; i++) {
