@@ -19,6 +19,8 @@ typedef struct {
 	char* clientSecret;
 	Map* streamTitles;
 	char* token;
+	CURL* curl;
+	struct curl_slist* list;
 } TwitchConfig;
 
 bool twitchTemplate(FetchingModule*);

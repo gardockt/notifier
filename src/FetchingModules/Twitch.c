@@ -6,9 +6,6 @@
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
 #define MIN(x,y) ((x)<(y)?(x):(y))
 
-CURL* curl = NULL;
-struct curl_slist* list = NULL; // TODO: global variable might cause issues with multiple instances
-
 // TODO: REFACTOR!!
 // idea for improving notification condition I might check later: collect active streams and topics into array (or sorted list), get all keys from array and update each key's value depending on active streams' array
 
@@ -104,6 +101,8 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	config->clientSecret = clientSecret;
 	fetchingModule->intervalSecs = atoi(interval);
 	config->streamTitles = malloc(sizeof *config->streamTitles);
+
+	config->list = NULL;
 	
 	char* tokenKeyName = malloc(strlen("token_") + strlen(config->clientId) + 1);
 	sprintf(tokenKeyName, "token_%s", config->clientId);
@@ -145,7 +144,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 
 bool twitchEnable(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
-	bool retVal = (curl = curl_easy_init()) != NULL;
+	bool retVal = (config->curl = curl_easy_init()) != NULL;
 
 	char* headerClientId = malloc(strlen("Client-ID: ") + strlen(config->clientId) + 1);
 	char* headerClientToken = malloc(strlen("Authorization: Bearer ") + strlen(config->token) + 1);
@@ -154,11 +153,11 @@ bool twitchEnable(FetchingModule* fetchingModule) {
 	sprintf(headerClientToken, "Authorization: Bearer %s", config->token);
 
 	if(retVal) {
-		list = curl_slist_append(list, headerClientId);
-		list = curl_slist_append(list, headerClientToken);
+		config->list = curl_slist_append(config->list, headerClientId);
+		config->list = curl_slist_append(config->list, headerClientToken);
 
-		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, twitchCurlCallback);
+		curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
+		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, twitchCurlCallback);
 
 		retVal = fetchingModuleCreateThread(fetchingModule);
 		printf("Twitch enabled\n");
@@ -204,12 +203,12 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	streamsNewTopic = memset(streamsNewTopic, 0, config->streamCount * sizeof *streamsNewTopic);
 
 	// getting response
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&response);
+	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
 	for(int i = 0; i < config->streamCount; i += 100) {
 		url = twitchGenerateUrl(config->streams, i, MIN(config->streamCount - 1, i + 99));
-		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(config->curl, CURLOPT_URL, url);
 
-		CURLcode code = curl_easy_perform(curl);
+		CURLcode code = curl_easy_perform(config->curl);
 
 		// parsing response
 		json_object* root = json_tokener_parse(response.data);
@@ -250,8 +249,8 @@ void twitchFetch(FetchingModule* fetchingModule) {
 bool twitchDisable(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
 
-	curl_slist_free_all(list);
-	curl_easy_cleanup(curl);
+	curl_slist_free_all(config->list);
+	curl_easy_cleanup(config->curl);
 
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
