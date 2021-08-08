@@ -149,7 +149,7 @@ int main() {
 	unloadConfig();
 	free(globalConfigKeys);
 
-	sleep(1000);
+	pause();
 
 	return 0;
 }
