@@ -1,6 +1,7 @@
 #include "Twitch.h"
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
+#include "../Stash.h"
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
 #define MIN(x,y) ((x)<(y)?(x):(y))
@@ -10,6 +11,8 @@ struct curl_slist* list = NULL; // TODO: global variable might cause issues with
 
 // TODO: REFACTOR!!
 // idea for improving notification condition I might check later: collect active streams and topics into array (or sorted list), get all keys from array and update each key's value depending on active streams' array
+
+// TODO: random segfault happens on exit (probably while the module is fetching)
 
 typedef struct {
 	char* data;
@@ -59,6 +62,22 @@ char* twitchGenerateUrl(char** streams, int start, int stop) {
 	return output;
 }
 
+bool twitchRefreshToken(FetchingModule* fetchingModule) {
+	// TODO: implement
+	fprintf(stderr, "[Twitch] Token refreshing is not implemented yet.\n");
+
+	// saving token to stash - uncomment after this function is implemented
+	/*
+	TwitchConfig* config = fetchingModule->config;
+	char* tokenKeyName = malloc(strlen("token_") + strlen(config->clientId) + 1);
+	sprintf(tokenKeyName, "token_%s", config->clientId);
+	stashSetString("twitch", tokenKeyName, config->token);
+	free(tokenKeyName);
+	*/
+
+	return false;
+}
+
 bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	// TODO: move interval parsing to enableModule?
 
@@ -70,7 +89,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	char* streams = getFromMap(configToParse, "streams", strlen("streams"));
 	int streamCount;
 	char* clientId = getFromMap(configToParse, "id", strlen("id"));
-	char* clientSecret = getFromMap(configToParse, "secret", strlen("secret")); // TODO: currently not a secret but OAuth, fix
+	char* clientSecret = getFromMap(configToParse, "secret", strlen("secret"));
 	char* interval = getFromMap(configToParse, "interval", strlen("interval"));
 
 	if(title == NULL || body == NULL || clientId == NULL || clientSecret == NULL || interval == NULL || streams == NULL) {
@@ -86,6 +105,17 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	fetchingModule->intervalSecs = atoi(interval);
 	config->streamTitles = malloc(sizeof *config->streamTitles);
 	
+	char* tokenKeyName = malloc(strlen("token_") + strlen(config->clientId) + 1);
+	sprintf(tokenKeyName, "token_%s", config->clientId);
+	config->token = stashGetString("twitch", tokenKeyName, NULL);
+	if(config->token == NULL) {
+		twitchRefreshToken(fetchingModule);
+	} else {
+		// token has to be freed after regenerating, after duplicating we don't have to worry when to free
+		config->token = strdup(config->token);
+	}
+	free(tokenKeyName);
+
 	initMap(config->streamTitles);
 	for(int i = 0; i < config->streamCount; i++) {
 		putIntoMap(config->streamTitles, config->streams[i], strlen(config->streams[i]), NULL);
@@ -118,10 +148,10 @@ bool twitchEnable(FetchingModule* fetchingModule) {
 	bool retVal = (curl = curl_easy_init()) != NULL;
 
 	char* headerClientId = malloc(strlen("Client-ID: ") + strlen(config->clientId) + 1);
-	char* headerClientToken = malloc(strlen("Authorization: Bearer ") + strlen(config->clientSecret) + 1);
+	char* headerClientToken = malloc(strlen("Authorization: Bearer ") + strlen(config->token) + 1);
 
 	sprintf(headerClientId, "Client-ID: %s", config->clientId);
-	sprintf(headerClientToken, "Authorization: Bearer %s", config->clientSecret);
+	sprintf(headerClientToken, "Authorization: Bearer %s", config->token);
 
 	if(retVal) {
 		list = curl_slist_append(list, headerClientId);
@@ -228,6 +258,7 @@ bool twitchDisable(FetchingModule* fetchingModule) {
 	if(retVal) {
 		destroyMap(config->streamTitles);
 		free(config->streamTitles);
+		free(config->token);
 		free(config->title);
 		free(config->body);
 		for(int i = 0; i < config->streamCount; i++) {
