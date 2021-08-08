@@ -43,7 +43,8 @@ bool putIntoMap(Map* map, void* key, int keySize, void* value) {
 		}
 
 		if(cmpResult == 0) {
-			return false;
+			checkedElement->value = value;
+			return true;
 		} else if(cmpResult > 0) {
 			insertionIndexMin = checkedIndex + 1;
 		} else { // cmpResult < 0
