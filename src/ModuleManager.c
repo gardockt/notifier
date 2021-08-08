@@ -4,8 +4,11 @@
 #include "Displays/Display.h"
 
 // fetching modules
+#include "FetchingModules/Github.h"
 #include "FetchingModules/HelloWorld.h"
 #include "FetchingModules/Twitch.h"
+
+#define ADDMODULE(templateFunc,name) ((template=malloc(sizeof *template)) != NULL && templateFunc(template) && putIntoMap(&moduleManager->availableModules, name, strlen(name), template))
 
 bool initModuleManager(ModuleManager* moduleManager) {
 	FetchingModule* template;
@@ -16,8 +19,9 @@ bool initModuleManager(ModuleManager* moduleManager) {
 	}
 
 	// adding modules to template map
-	if(!((template = malloc(sizeof *template)) != NULL && helloWorldTemplate(template) && putIntoMap(&moduleManager->availableModules, "HelloWorld", strlen("HelloWorld"), template)) ||
-	   !((template = malloc(sizeof *template)) != NULL && twitchTemplate(template) && putIntoMap(&moduleManager->availableModules, "Twitch", strlen("Twitch"), template))) {
+	if(!ADDMODULE(helloWorldTemplate, "HelloWorld") ||
+	   !ADDMODULE(githubTemplate, "Github") ||
+	   !ADDMODULE(twitchTemplate, "Twitch")) {
 		return false;
 	}
 
