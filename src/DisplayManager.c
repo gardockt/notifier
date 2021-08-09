@@ -1,7 +1,10 @@
+#include "StringOperations.h"
 #include "DisplayManager.h"
 
 // displays
 #include "Displays/Dunst.h"
+
+#define ADDDISPLAY(structure,name) (structure(display) && putIntoMap(&displayManager->displays, name, strlen(name), display))
 
 bool initDisplayManager(DisplayManager* displayManager) {
 	Display* display = malloc(sizeof *display);
@@ -11,9 +14,8 @@ bool initDisplayManager(DisplayManager* displayManager) {
 		return false;
 	}
 
-	// adding displays to map
-	// TODO: make names case-insensitive?
-	if(!(dunstStructure(display) && putIntoMap(&displayManager->displays, "dunst", strlen("dunst"), display))) {
+	// adding displays to map; enter names lower-case
+	if(!ADDDISPLAY(dunstStructure, "dunst")) {
 		return false;
 	}
 
@@ -31,5 +33,8 @@ void destroyDisplayManager(DisplayManager* displayManager) {
 }
 
 Display* getDisplay(DisplayManager* displayManager, char* displayName) {
-	return getFromMap(&displayManager->displays, displayName, strlen(displayName));
+	char* displayNameLowerCase = toLowerCase(displayName);
+	Display* display = getFromMap(&displayManager->displays, displayNameLowerCase, strlen(displayNameLowerCase));
+	free(displayNameLowerCase);
+	return display;
 }

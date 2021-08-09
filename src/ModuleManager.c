@@ -1,3 +1,4 @@
+#include "StringOperations.h"
 #include "ModuleManager.h"
 #include "Structures/Map.h"
 #include "FetchingModules/FetchingModule.h"
@@ -18,10 +19,10 @@ bool initModuleManager(ModuleManager* moduleManager) {
 		return false;
 	}
 
-	// adding modules to template map
-	if(!ADDMODULE(githubTemplate, "Github") ||
-	   !ADDMODULE(isodTemplate, "Isod") ||
-	   !ADDMODULE(twitchTemplate, "Twitch")) {
+	// adding modules to template map; enter names lower-case
+	if(!ADDMODULE(githubTemplate, "github") ||
+	   !ADDMODULE(isodTemplate, "isod") ||
+	   !ADDMODULE(twitchTemplate, "twitch")) {
 		return false;
 	}
 
@@ -61,8 +62,13 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 		return false;
 	}
 
-	FetchingModule* moduleTemplate = getFromMap(&moduleManager->availableModules, moduleType, strlen(moduleType));
+	char* moduleTypeLowerCase = toLowerCase(moduleType);
+
+	FetchingModule* moduleTemplate = getFromMap(&moduleManager->availableModules, moduleTypeLowerCase, strlen(moduleTypeLowerCase));
 	FetchingModule* module;
+
+	free(moduleTypeLowerCase);
+
 	if(moduleTemplate == NULL) {
 		return false;
 	}
