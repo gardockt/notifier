@@ -1,4 +1,4 @@
-LIBS = Main.o ModuleManager.o Map.o FetchingModule.o HelloWorld.o DisplayManager.o Dunst.o Stash.o Twitch.o StringOperations.o Github.o Dirs.o
+LIBS = Main.o ModuleManager.o Map.o FetchingModule.o HelloWorld.o DisplayManager.o Dunst.o Stash.o Twitch.o StringOperations.o Github.o Dirs.o Isod.o
 OUTPUT = notifier
 FLAGS = -lpthread -liniparser `pkg-config --cflags --libs libnotify` -lm `curl-config --libs` -ljson-c -ggdb
 
