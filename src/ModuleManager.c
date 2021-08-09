@@ -5,7 +5,6 @@
 
 // fetching modules
 #include "FetchingModules/Github.h"
-#include "FetchingModules/HelloWorld.h"
 #include "FetchingModules/Isod.h"
 #include "FetchingModules/Twitch.h"
 
@@ -20,8 +19,7 @@ bool initModuleManager(ModuleManager* moduleManager) {
 	}
 
 	// adding modules to template map
-	if(!ADDMODULE(helloWorldTemplate, "HelloWorld") ||
-	   !ADDMODULE(githubTemplate, "Github") ||
+	if(!ADDMODULE(githubTemplate, "Github") ||
 	   !ADDMODULE(isodTemplate, "Isod") ||
 	   !ADDMODULE(twitchTemplate, "Twitch")) {
 		return false;
