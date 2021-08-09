@@ -144,36 +144,40 @@ void githubFetch(FetchingModule* fetchingModule) {
 	CURLcode code = curl_easy_perform(config->curl);
 
 	// parsing response
-	json_object* root = json_tokener_parse(response.data);
-	int unreadNotifications = json_object_array_length(root);
-	char* newLastRead = NULL;
+	if(code == CURLE_OK) {
+		json_object* root = json_tokener_parse(response.data);
+		int unreadNotifications = json_object_array_length(root);
+		char* newLastRead = NULL;
 
-	for(int i = 0; i < unreadNotifications; i++) {
-		json_object* notification = json_object_array_get_idx(root, i);
-		char* lastUpdated = JSON_STRING(notification, "updated_at");
+		for(int i = 0; i < unreadNotifications; i++) {
+			json_object* notification = json_object_array_get_idx(root, i);
+			char* lastUpdated = JSON_STRING(notification, "updated_at");
 
-		if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
-			if(newLastRead != NULL) {
-				free(newLastRead);
+			if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
+				if(newLastRead != NULL) {
+					free(newLastRead);
+				}
+				newLastRead = strdup(lastUpdated);
+
+				json_object* subject    = json_object_object_get(notification, "subject");
+				json_object* repository = json_object_object_get(notification, "repository");
+				notificationData.title        = JSON_STRING(subject,    "title");
+				notificationData.repoName     = JSON_STRING(repository, "name");
+				notificationData.repoFullName = JSON_STRING(repository, "full_name");
+				githubDisplayNotification(fetchingModule, &notificationData);
 			}
-			newLastRead = strdup(lastUpdated);
 
-			json_object* subject    = json_object_object_get(notification, "subject");
-			json_object* repository = json_object_object_get(notification, "repository");
-			notificationData.title        = JSON_STRING(subject,    "title");
-			notificationData.repoName     = JSON_STRING(repository, "name");
-			notificationData.repoFullName = JSON_STRING(repository, "full_name");
-			githubDisplayNotification(fetchingModule, &notificationData);
+			json_object_put(root);
 		}
-
-		json_object_put(root);
-	}
-	if(newLastRead != NULL) {
-		config->lastRead = newLastRead;
-		char* sectionName = malloc(strlen("last_read_") + strlen(config->token) + 1);
-		sprintf(sectionName, "last_read_%s", config->token);
-		stashSetString("github", sectionName, config->lastRead);
-		free(sectionName);
+		if(newLastRead != NULL) {
+			config->lastRead = newLastRead;
+			char* sectionName = malloc(strlen("last_read_") + strlen(config->token) + 1);
+			sprintf(sectionName, "last_read_%s", config->token);
+			stashSetString("github", sectionName, config->lastRead);
+			free(sectionName);
+		}
+	} else {
+		fprintf(stderr, "[GitHub] Request failed with code %d: %s\n", code, response.data);
 	}
 	free(response.data);
 }

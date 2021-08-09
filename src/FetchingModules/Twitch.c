@@ -9,8 +9,6 @@
 // TODO: REFACTOR!!
 // idea for improving notification condition I might check later: collect active streams and topics into array (or sorted list), get all keys from array and update each key's value depending on active streams' array
 
-// TODO: random segfault happens on exit (probably while the module is fetching)
-
 typedef struct {
 	char* data;
 	int size;
@@ -211,33 +209,37 @@ void twitchFetch(FetchingModule* fetchingModule) {
 		CURLcode code = curl_easy_perform(config->curl);
 
 		// parsing response
-		json_object* root = json_tokener_parse(response.data);
-		json_object* data = json_object_object_get(root, "data");
-		int activeStreamers = json_object_array_length(data);
+		if(code == CURLE_OK) {
+			json_object* root = json_tokener_parse(response.data);
+			json_object* data = json_object_object_get(root, "data");
+			int activeStreamers = json_object_array_length(data);
 
-		for(int i = 0; i < activeStreamers; i++) {
-			json_object* stream = json_object_array_get_idx(data, i);
-			char* activeStreamerName = JSON_STRING(stream, "user_name");
+			for(int i = 0; i < activeStreamers; i++) {
+				json_object* stream = json_object_array_get_idx(data, i);
+				char* activeStreamerName = JSON_STRING(stream, "user_name");
 
-			for(int j = 0; j < config->streamCount; j++) {
-				if(!strcasecmp(activeStreamerName, streamsFromMap[j])) {
-					streamerName[j]    = activeStreamerName;
-					streamsNewTopic[j] = JSON_STRING(stream, "title");
-					break;
+				for(int j = 0; j < config->streamCount; j++) {
+					if(!strcasecmp(activeStreamerName, streamsFromMap[j])) {
+						streamerName[j]    = activeStreamerName;
+						streamsNewTopic[j] = JSON_STRING(stream, "title");
+						break;
+					}
 				}
 			}
-		}
 
-		for(int i = 0; i < config->streamCount; i++) {
-			if(getFromMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i])) == NULL && streamsNewTopic[i] != NULL) {
-				notificationData.streamerName = streamerName[i];
-				notificationData.title        = streamsNewTopic[i];
-				twitchDisplayNotification(fetchingModule, &notificationData);
+			for(int i = 0; i < config->streamCount; i++) {
+				if(getFromMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i])) == NULL && streamsNewTopic[i] != NULL) {
+					notificationData.streamerName = streamerName[i];
+					notificationData.title        = streamsNewTopic[i];
+					twitchDisplayNotification(fetchingModule, &notificationData);
+				}
+				putIntoMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i]), streamsNewTopic[i]); // value get uninitialized, but we are only checking whether it is NULL
 			}
-			putIntoMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i]), streamsNewTopic[i]); // value get uninitialized, but we are only checking whether it is NULL
-		}
 
-		json_object_put(root);
+			json_object_put(root);
+		} else {
+			fprintf(stderr, "[Twitch] Request failed with code %d: %s\n", code, response.data);
+		}
 		free(response.data);
 	}
 
