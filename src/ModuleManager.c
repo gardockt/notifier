@@ -30,17 +30,26 @@ bool initModuleManager(ModuleManager* moduleManager) {
 
 void destroyModuleManager(ModuleManager* moduleManager) {
 	Map mapToFree;
+	int mapToFreeSize;
+	char** keysToFree;
 
 	mapToFree = moduleManager->availableModules;
-	for(int i = 0; i < mapToFree.size; i++) {
-		free(mapToFree.elements[i].value);
+	mapToFreeSize = getMapSize(&mapToFree);
+	keysToFree = malloc(mapToFreeSize * sizeof *keysToFree);
+	getMapKeys(&mapToFree, keysToFree);
+	for(int i = 0; i < mapToFreeSize; i++) {
+		free(getFromMap(&mapToFree, keysToFree[i], strlen(keysToFree[i])));
 	}
+	free(keysToFree);
 
 	mapToFree = moduleManager->activeModules;
-	for(int i = 0; i < mapToFree.size; i++) {
-		char* moduleName = (char*)(mapToFree.elements[i].key);
-		disableModule(moduleManager, moduleName);
+	mapToFreeSize = getMapSize(&mapToFree);
+	keysToFree = malloc(mapToFreeSize * sizeof *keysToFree);
+	getMapKeys(&mapToFree, keysToFree);
+	for(int i = 0; i < mapToFreeSize; i++) {
+		disableModule(moduleManager, keysToFree[i]);
 	}
+	free(keysToFree);
 
 	destroyMap(&moduleManager->availableModules);
 	destroyMap(&moduleManager->activeModules);
