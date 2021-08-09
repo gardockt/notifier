@@ -19,6 +19,6 @@ typedef struct {
 	char* lastRead;
 } GithubConfig;
 
-bool github(FetchingModule*);
+bool githubTemplate(FetchingModule*);
 
 #endif // ifndef GITHUB_H
