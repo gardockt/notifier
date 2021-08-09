@@ -1,13 +1,16 @@
+#include "Dirs.h"
 #include "Stash.h"
 
 dictionary* stash = NULL;
 
 bool stashInit() {
-	stash = iniparser_load(STASH_FILE);
+	char* stashDirectory = getStashDirectory();
+	stash = iniparser_load(stashDirectory);
 	if(stash == NULL) {
 		fprintf(stderr, "Warning: Stash file was not found, creating new stash\n");
 		stash = dictionary_new(0);
 	}
+	free(stashDirectory);
 	return stash != NULL;
 }
 
@@ -20,13 +23,21 @@ bool stashSave() {
 		return false;
 	}
 
-	FILE* filePointer = fopen(STASH_FILE, "w");
-	if(filePointer != NULL) {
-		iniparser_dump_ini(stash, filePointer);
+	char* stashDirectory = getStashDirectory();
+	FILE* filePointer = fopen(stashDirectory, "w");
+	if(filePointer == NULL) {
+		if(createStashDirectory()) {
+			filePointer = fopen(stashDirectory, "w");
+		} else {
+			free(stashDirectory);
+			return false;
+		}
 	}
+	iniparser_dump_ini(stash, filePointer);
 
+	free(stashDirectory);
 	fclose(filePointer);
-	return filePointer != NULL;
+	return true;
 }
 
 // returned value has to be freed

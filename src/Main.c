@@ -3,6 +3,7 @@
 #include "Displays/Display.h"
 #include "FetchingModules/FetchingModule.h"
 #include "Stash.h"
+#include "Dirs.h"
 #include "Main.h"
 
 // TODO: move config to another source file?
@@ -26,7 +27,9 @@ void onExit(int signal) {
 }
 
 bool loadConfig() {
-	config = iniparser_load(CONFIG_FILE);
+	char* configDirectory = getConfigDirectory();
+	config = iniparser_load(configDirectory);
+	free(configDirectory);
 	return config != NULL;
 }
 

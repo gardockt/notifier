@@ -9,8 +9,6 @@
 #include <stdio.h>
 #include <math.h>
 
-#define STASH_FILE "stash.ini"
-
 bool stashInit();
 void stashDestroy();
 
