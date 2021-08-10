@@ -1,14 +1,10 @@
-#include "Github.h"
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
 #include "../Stash.h"
+#include "../Network.h"
+#include "Github.h"
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
-
-typedef struct {
-	char* data;
-	int size;
-} Memory;
 
 typedef struct {
 	char* title;
@@ -18,18 +14,6 @@ typedef struct {
 
 int githubCompareDates(char* a, char* b) {
 	return strcmp(a, b);
-}
-
-size_t githubCurlCallback(char* ptr, size_t size, size_t nmemb, void* userdata) {
-	Memory* memory = (Memory*)userdata;
-	int sizeBefore = memory->size;
-	int sizeAdded = size * nmemb;
-
-	memory->size = sizeBefore + sizeAdded;
-	memory->data = realloc(memory->data, memory->size);
-	strncpy(&memory->data[sizeBefore], ptr, sizeAdded);
-
-	return sizeAdded;
 }
 
 bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
@@ -97,7 +81,7 @@ bool githubEnable(FetchingModule* fetchingModule) {
 		config->list = curl_slist_append(config->list, headerToken);
 
 		curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
-		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, githubCurlCallback);
+		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 		curl_easy_setopt(config->curl, CURLOPT_URL, "https://api.github.com/notifications");
 
 		retVal = fetchingModuleCreateThread(fetchingModule);
@@ -137,7 +121,7 @@ void githubFetch(FetchingModule* fetchingModule) {
 	GithubConfig* config = fetchingModule->config;
 	GithubNotificationData notificationData;
 	Message message;
-	Memory response = {NULL, 0};
+	NetworkResponse response = {NULL, 0};
 
 	// getting response
 	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);

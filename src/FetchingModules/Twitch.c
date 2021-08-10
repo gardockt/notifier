@@ -1,7 +1,8 @@
-#include "Twitch.h"
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
 #include "../Stash.h"
+#include "../Network.h"
+#include "Twitch.h"
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
 #define MIN(x,y) ((x)<(y)?(x):(y))
@@ -10,26 +11,9 @@
 // idea for improving notification condition I might check later: collect active streams and topics into array (or sorted list), get all keys from array and update each key's value depending on active streams' array
 
 typedef struct {
-	char* data;
-	int size;
-} Memory;
-
-typedef struct {
 	char* streamerName;
 	char* title;
 } TwitchNotificationData;
-
-size_t twitchCurlCallback(char* ptr, size_t size, size_t nmemb, void* userdata) {
-	Memory* memory = (Memory*)userdata;
-	int sizeBefore = memory->size;
-	int sizeAdded = size * nmemb;
-
-	memory->size = sizeBefore + sizeAdded;
-	memory->data = realloc(memory->data, memory->size);
-	strncpy(&memory->data[sizeBefore], ptr, sizeAdded);
-
-	return sizeAdded;
-}
 
 char* twitchGenerateUrl(char** streams, int start, int stop) {
 	const char* base = "https://api.twitch.tv/helix/streams";
@@ -155,7 +139,7 @@ bool twitchEnable(FetchingModule* fetchingModule) {
 		config->list = curl_slist_append(config->list, headerClientToken);
 
 		curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
-		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, twitchCurlCallback);
+		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 
 		retVal = fetchingModuleCreateThread(fetchingModule);
 		printf("Twitch enabled\n");
@@ -191,7 +175,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
 	TwitchNotificationData notificationData;
 	Message message;
-	Memory response = {NULL, 0};
+	NetworkResponse response = {NULL, 0};
 	char* url;
 
 	char** streamsFromMap  = malloc(config->streamCount * sizeof *streamsFromMap);

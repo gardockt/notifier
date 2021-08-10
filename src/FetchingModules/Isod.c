@@ -1,17 +1,13 @@
-#include "Isod.h"
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
 #include "../Stash.h"
+#include "../Network.h"
+#include "Isod.h"
 
 // TODO: replace stash identifiers with module custom name
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
 #define SORTDATE(date) {date[6], date[7], date[8], date[9], date[3], date[4], date[0], date[1], date[11], date[12], date[14], date[15], '\0'}
-
-typedef struct {
-	char* data;
-	int size;
-} Memory;
 
 typedef struct {
 	char* title;
@@ -36,18 +32,6 @@ char* isodGenerateLastReadKeyName(FetchingModule* fetchingModule) {
 	char* sectionName = malloc(strlen("last_read_") + strlen(config->username) + 1);
 	sprintf(sectionName, "last_read_%s", config->username);
 	return sectionName;
-}
-
-size_t isodCurlCallback(char* ptr, size_t size, size_t nmemb, void* userdata) {
-	Memory* memory = (Memory*)userdata;
-	int sizeBefore = memory->size;
-	int sizeAdded = size * nmemb;
-
-	memory->size = sizeBefore + sizeAdded;
-	memory->data = realloc(memory->data, memory->size);
-	strncpy(&memory->data[sizeBefore], ptr, sizeAdded);
-
-	return sizeAdded;
 }
 
 bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
@@ -109,7 +93,7 @@ bool isodEnable(FetchingModule* fetchingModule) {
 	char* url = isodGenerateUrl(fetchingModule);
 
 	if(retVal) {
-		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, isodCurlCallback);
+		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 		curl_easy_setopt(config->curl, CURLOPT_URL, url);
 
 		retVal = fetchingModuleCreateThread(fetchingModule);
@@ -139,7 +123,7 @@ void isodFetch(FetchingModule* fetchingModule) {
 	IsodConfig* config = fetchingModule->config;
 	IsodNotificationData notificationData;
 	Message message;
-	Memory response = {NULL, 0};
+	NetworkResponse response = {NULL, 0};
 
 	// getting response
 	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
