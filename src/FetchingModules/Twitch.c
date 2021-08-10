@@ -192,37 +192,43 @@ void twitchFetch(FetchingModule* fetchingModule) {
 
 		CURLcode code = curl_easy_perform(config->curl);
 
+		// TODO: look for illegal characters while loading config (example: dot in streams)
+
 		// parsing response
 		if(code == CURLE_OK) {
 			json_object* root = json_tokener_parse(response.data);
 			json_object* data = json_object_object_get(root, "data");
-			int activeStreamers = json_object_array_length(data);
+			if(json_object_get_type(data) == json_type_array) {
+				int activeStreamers = json_object_array_length(data);
 
-			for(int i = 0; i < activeStreamers; i++) {
-				json_object* stream = json_object_array_get_idx(data, i);
-				char* activeStreamerName = JSON_STRING(stream, "user_name");
+				for(int i = 0; i < activeStreamers; i++) {
+					json_object* stream = json_object_array_get_idx(data, i);
+					char* activeStreamerName = JSON_STRING(stream, "user_name");
 
-				for(int j = 0; j < config->streamCount; j++) {
-					if(!strcasecmp(activeStreamerName, streamsFromMap[j])) {
-						streamerName[j]    = activeStreamerName;
-						streamsNewTopic[j] = JSON_STRING(stream, "title");
-						break;
+					for(int j = 0; j < config->streamCount; j++) {
+						if(!strcasecmp(activeStreamerName, streamsFromMap[j])) {
+							streamerName[j]    = activeStreamerName;
+							streamsNewTopic[j] = JSON_STRING(stream, "title");
+							break;
+						}
 					}
 				}
-			}
 
-			for(int i = 0; i < config->streamCount; i++) {
-				if(getFromMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i])) == NULL && streamsNewTopic[i] != NULL) {
-					notificationData.streamerName = streamerName[i];
-					notificationData.title        = streamsNewTopic[i];
-					twitchDisplayNotification(fetchingModule, &notificationData);
+				for(int i = 0; i < config->streamCount; i++) {
+					if(getFromMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i])) == NULL && streamsNewTopic[i] != NULL) {
+						notificationData.streamerName = streamerName[i];
+						notificationData.title        = streamsNewTopic[i];
+						twitchDisplayNotification(fetchingModule, &notificationData);
+					}
+					putIntoMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i]), streamsNewTopic[i]); // value get uninitialized, but we are only checking whether it is NULL
 				}
-				putIntoMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i]), streamsNewTopic[i]); // value get uninitialized, but we are only checking whether it is NULL
-			}
 
-			json_object_put(root);
+				json_object_put(root);
+			} else {
+				fprintf(stderr, "[Twitch] Invalid response:\n%s\n", response.data); // TODO: read and print error, example error response: {"error":"Bad Request","status":400,"message":"Malformed query params."}
+			}
 		} else {
-			fprintf(stderr, "[Twitch] Request failed with code %d: %s\n", code, response.data);
+			fprintf(stderr, "[Twitch] Request failed with code %d\n", code);
 		}
 		free(response.data);
 	}

@@ -133,40 +133,44 @@ void isodFetch(FetchingModule* fetchingModule) {
 	if(code == CURLE_OK) {
 		json_object* root = json_tokener_parse(response.data);
 		json_object* items = json_object_object_get(root, "items");
-		int notificationCount = json_object_array_length(items);
-		char* newLastRead = NULL;
+		if(json_object_get_type(items) == json_type_array) {
+			int notificationCount = json_object_array_length(items);
+			char* newLastRead = NULL;
 
-		for(int i = notificationCount - 1; i >= 0; i--) {
-			json_object* notification = json_object_array_get_idx(items, i);
-			char* modifiedDate = JSON_STRING(notification, "modifiedDate");
-			char* modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);
-			if(modifiedDate[1] == '.') { // day is one digit long
-				sprintf(modifiedDateWithFixedFormat, "0%s", modifiedDate);
-			} else { // for consistent freeing
-				modifiedDateWithFixedFormat = strdup(modifiedDate);
-			}
-
-			if(isodCompareDates(modifiedDateWithFixedFormat, config->lastRead) > 0) {
-				if(newLastRead != NULL) {
-					free(newLastRead);
+			for(int i = notificationCount - 1; i >= 0; i--) {
+				json_object* notification = json_object_array_get_idx(items, i);
+				char* modifiedDate = JSON_STRING(notification, "modifiedDate");
+				char* modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);
+				if(modifiedDate[1] == '.') { // day is one digit long
+					sprintf(modifiedDateWithFixedFormat, "0%s", modifiedDate);
+				} else { // for consistent freeing
+					modifiedDateWithFixedFormat = strdup(modifiedDate);
 				}
-				newLastRead = strdup(modifiedDateWithFixedFormat);
 
-				notificationData.title = JSON_STRING(notification, "subject");
-				isodDisplayNotification(fetchingModule, &notificationData);
+				if(isodCompareDates(modifiedDateWithFixedFormat, config->lastRead) > 0) {
+					if(newLastRead != NULL) {
+						free(newLastRead);
+					}
+					newLastRead = strdup(modifiedDateWithFixedFormat);
+
+					notificationData.title = JSON_STRING(notification, "subject");
+					isodDisplayNotification(fetchingModule, &notificationData);
+				}
+
+				free(modifiedDateWithFixedFormat);
 			}
-
-			free(modifiedDateWithFixedFormat);
-		}
-		json_object_put(root);
-		if(newLastRead != NULL) {
-			config->lastRead = newLastRead;
-			char* sectionName = isodGenerateLastReadKeyName(fetchingModule);
-			stashSetString("isod", sectionName, config->lastRead);
-			free(sectionName);
+			json_object_put(root);
+			if(newLastRead != NULL) {
+				config->lastRead = newLastRead;
+				char* sectionName = isodGenerateLastReadKeyName(fetchingModule);
+				stashSetString("isod", sectionName, config->lastRead);
+				free(sectionName);
+			}
+		} else {
+			fprintf(stderr, "[ISOD] Invalid response:\n%s\n", response.data);
 		}
 	} else {
-		fprintf(stderr, "[ISOD] Request failed with code %d: %s\n", code, response.data);
+		fprintf(stderr, "[ISOD] Request failed with code %d\n", code);
 	}
 	free(response.data);
 }
