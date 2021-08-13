@@ -6,6 +6,7 @@
 typedef struct {
 	char* title;
 	char* text;
+	char* url;
 } Message;
 
 typedef struct {

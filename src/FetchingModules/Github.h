@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #define REQUIRED_CURL
 #include <curl/curl.h>

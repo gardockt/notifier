@@ -10,10 +10,49 @@ typedef struct {
 	char* title;
 	char* repoName;
 	char* repoFullName;
+	json_object* notificationObject;
 } GithubNotificationData;
 
 int githubCompareDates(char* a, char* b) {
 	return strcmp(a, b);
+}
+
+char* githubGenerateNotificationUrl(json_object* notification) {
+	// TODO: only issue/PR support, implement other notifications
+
+	json_object* subject = json_object_object_get(notification, "subject");
+	if(json_object_get_type(subject) != json_type_object) {
+		return NULL;
+	}
+	json_object* baseUrlObject = json_object_object_get(subject, "url");
+	if(json_object_get_type(baseUrlObject) != json_type_string) {
+		return NULL;
+	}
+	json_object* commentUrlObject = json_object_object_get(subject, "latest_comment_url");
+	if(json_object_get_type(commentUrlObject) != json_type_string) {
+		return NULL;
+	}
+
+	char* baseUrl = json_object_get_string(baseUrlObject);
+	char* commentUrl = json_object_get_string(commentUrlObject);
+
+	char* baseUrlBody = baseUrl + strlen("https://api.github.com/repos/");
+	char* commentId = commentUrl + strlen("https://api.github.com/repos/");
+
+	int commentIdPointer;
+	do {
+		commentIdPointer = 0;
+		for(; commentId[commentIdPointer] != '\0'; commentIdPointer++) {
+			if(!isdigit(commentId[commentIdPointer])) {
+				commentId++;
+				break;
+			}
+		}
+	} while(commentId[commentIdPointer] != '\0');
+
+	char* url = malloc(strlen("https://github.com/") + strlen(baseUrlBody) + strlen("#issuecomment-") + strlen(commentId) + 1);
+	sprintf(url, "https://github.com/%s#issuecomment-%s", baseUrlBody, commentId);
+	return url;
 }
 
 bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
@@ -112,9 +151,11 @@ void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificatio
 
 	message.title = githubReplaceVariables(config->title, notificationData);
 	message.text = githubReplaceVariables(config->body, notificationData);
+	message.url = githubGenerateNotificationUrl(notificationData->notificationObject);
 	fetchingModule->display->displayMessage(&message);
 	free(message.title);
 	free(message.text);
+	free(message.url);
 }
 
 void githubFetch(FetchingModule* fetchingModule) {
@@ -149,6 +190,7 @@ void githubFetch(FetchingModule* fetchingModule) {
 					notificationData.title        = JSON_STRING(subject,    "title");
 					notificationData.repoName     = JSON_STRING(repository, "name");
 					notificationData.repoFullName = JSON_STRING(repository, "full_name");
+					notificationData.notificationObject = notification;
 					githubDisplayNotification(fetchingModule, &notificationData);
 				}
 

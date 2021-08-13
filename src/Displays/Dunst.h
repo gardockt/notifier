@@ -1,6 +1,7 @@
 #ifndef DUNST_H
 #define DUNST_H
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <libnotify/notify.h>

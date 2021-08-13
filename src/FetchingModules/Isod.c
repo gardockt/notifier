@@ -114,6 +114,7 @@ void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationDat
 
 	message.title = isodReplaceVariables(config->title, notificationData);
 	message.text = isodReplaceVariables(config->body, notificationData);
+	message.url = NULL;
 	fetchingModule->display->displayMessage(&message);
 	free(message.title);
 	free(message.text);
