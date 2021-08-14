@@ -59,8 +59,6 @@ bool twitchRefreshToken(FetchingModule* fetchingModule) {
 }
 
 bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
-	// TODO: move interval parsing to enableModule?
-
 	TwitchConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 

@@ -56,8 +56,6 @@ char* githubGenerateNotificationUrl(json_object* notification) {
 }
 
 bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
-	// TODO: move interval parsing to enableModule?
-
 	GithubConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 

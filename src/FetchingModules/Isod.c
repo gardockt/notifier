@@ -35,8 +35,6 @@ char* isodGenerateLastReadKeyName(FetchingModule* fetchingModule) {
 }
 
 bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
-	// TODO: move interval parsing to enableModule?
-
 	IsodConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
