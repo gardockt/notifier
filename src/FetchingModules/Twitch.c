@@ -168,7 +168,7 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 	TwitchConfig* config = fetchingModule->config;
 	Message message;
 
-	char* url = malloc(strlen("https://twitch.tv/" + strlen(notificationData->streamerName) + 1));
+	char* url = malloc(strlen("https://twitch.tv/") + strlen(notificationData->streamerName) + 1);
 	sprintf(url, "https://twitch.tv/%s", notificationData->streamerName);
 
 	message.title = twitchReplaceVariables(config->title, notificationData);
