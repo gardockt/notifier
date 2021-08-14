@@ -1,6 +1,5 @@
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
-#include "../Stash.h"
 #include "../Network.h"
 #include "Github.h"
 
@@ -75,12 +74,7 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	fetchingModule->intervalSecs = atoi(interval);
 
 	config->list = NULL;
-
-	char* sectionName = malloc(strlen("last_read_") + strlen(config->token) + 1);
-	sprintf(sectionName, "last_read_%s", config->token);
-	config->lastRead = stashGetString("github", sectionName, "1970-01-01T00:00:00Z");
-	config->lastRead = strdup(config->lastRead);
-	free(sectionName);
+	config->lastRead = strdup("1970-01-01T00:00:00Z");
 	
 	int keyCount = getMapSize(configToParse);
 	char** keys = malloc(keyCount * sizeof *keys);
@@ -196,10 +190,6 @@ void githubFetch(FetchingModule* fetchingModule) {
 			}
 			if(newLastRead != NULL) {
 				config->lastRead = newLastRead;
-				char* sectionName = malloc(strlen("last_read_") + strlen(config->token) + 1);
-				sprintf(sectionName, "last_read_%s", config->token);
-				stashSetString("github", sectionName, config->lastRead);
-				free(sectionName);
 			}
 		} else {
 			fprintf(stderr, "[GitHub] Invalid response:\n%s\n", response.data);
