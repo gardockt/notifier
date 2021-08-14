@@ -13,6 +13,7 @@
 typedef struct {
 	char* streamerName;
 	char* title;
+	char* category;
 } TwitchNotificationData;
 
 char* twitchGenerateUrl(char** streams, int start, int stop) {
@@ -157,6 +158,9 @@ char* twitchReplaceVariables(char* text, TwitchNotificationData* notificationDat
 	temp = replace(text, "<streamer-name>", notificationData->streamerName);
 	ret = replace(temp, "<stream-title>", notificationData->title);
 	free(temp);
+	temp = ret;
+	ret = replace(temp, "<category>", notificationData->category);
+	free(temp);
 	return ret;
 }
 
@@ -183,9 +187,10 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	NetworkResponse response = {NULL, 0};
 	char* url;
 
-	char** streamsFromMap  = malloc(config->streamCount * sizeof *streamsFromMap);
-	char** streamerName    = malloc(config->streamCount * sizeof *streamerName);
-	char** streamsNewTopic = malloc(config->streamCount * sizeof *streamsNewTopic);
+	char** streamsFromMap     = malloc(config->streamCount * sizeof *streamsFromMap);
+	char** streamerName       = malloc(config->streamCount * sizeof *streamerName);
+	char** streamsNewTopic    = malloc(config->streamCount * sizeof *streamsNewTopic);
+	char** streamsNewCategory = malloc(config->streamCount * sizeof *streamsNewCategory);
 	getMapKeys(config->streamTitles, streamsFromMap);
 	streamsNewTopic = memset(streamsNewTopic, 0, config->streamCount * sizeof *streamsNewTopic);
 
@@ -214,6 +219,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 						if(!strcasecmp(activeStreamerName, streamsFromMap[j])) {
 							streamerName[j]    = activeStreamerName;
 							streamsNewTopic[j] = JSON_STRING(stream, "title");
+							streamsNewCategory[j] = JSON_STRING(stream, "game_name");
 							break;
 						}
 					}
@@ -223,6 +229,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 					if(getFromMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i])) == NULL && streamsNewTopic[i] != NULL) {
 						notificationData.streamerName = streamerName[i];
 						notificationData.title        = streamsNewTopic[i];
+						notificationData.category     = streamsNewCategory[i];
 						twitchDisplayNotification(fetchingModule, &notificationData);
 					}
 					putIntoMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i]), streamsNewTopic[i]); // value get uninitialized, but we are only checking whether it is NULL
