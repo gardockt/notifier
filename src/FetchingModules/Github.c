@@ -16,42 +16,36 @@ int githubCompareDates(char* a, char* b) {
 	return strcmp(a, b);
 }
 
-char* githubGenerateNotificationUrl(json_object* notification) {
-	// TODO: only issue/PR support, implement other notifications
+char* githubGenerateNotificationUrl(FetchingModule* fetchingModule, json_object* notification) {
+	GithubConfig* config = fetchingModule->config;
+	NetworkResponse response = {NULL, 0};
 
 	json_object* subject = json_object_object_get(notification, "subject");
 	if(json_object_get_type(subject) != json_type_object) {
 		return NULL;
 	}
-	json_object* baseUrlObject = json_object_object_get(subject, "url");
-	if(json_object_get_type(baseUrlObject) != json_type_string) {
-		return NULL;
-	}
-	json_object* commentUrlObject = json_object_object_get(subject, "latest_comment_url");
-	if(json_object_get_type(commentUrlObject) != json_type_string) {
+	json_object* commentApiUrlObject = json_object_object_get(subject, "latest_comment_url");
+	if(json_object_get_type(commentApiUrlObject) != json_type_string) {
 		return NULL;
 	}
 
-	char* baseUrl = json_object_get_string(baseUrlObject);
-	char* commentUrl = json_object_get_string(commentUrlObject);
+	char* commentApiUrl = json_object_get_string(commentApiUrlObject);
+	curl_easy_setopt(config->curl, CURLOPT_URL, commentApiUrl);
+	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
+	CURLcode code = curl_easy_perform(config->curl);
 
-	char* baseUrlBody = baseUrl + strlen("https://api.github.com/repos/");
-	char* commentId = commentUrl + strlen("https://api.github.com/repos/");
+	json_object* commentRoot = json_tokener_parse(response.data);
+	if(json_object_get_type(commentRoot) != json_type_object) {
+		return NULL;
+	}
+	json_object* commentUrl = json_object_object_get(commentRoot, "html_url");
+	if(json_object_get_type(commentUrl) != json_type_string) {
+		return NULL;
+	}
 
-	int commentIdPointer;
-	do {
-		commentIdPointer = 0;
-		for(; commentId[commentIdPointer] != '\0'; commentIdPointer++) {
-			if(!isdigit(commentId[commentIdPointer])) {
-				commentId++;
-				break;
-			}
-		}
-	} while(commentId[commentIdPointer] != '\0');
-
-	char* url = malloc(strlen("https://github.com/") + strlen(baseUrlBody) + strlen("#issuecomment-") + strlen(commentId) + 1);
-	sprintf(url, "https://github.com/%s#issuecomment-%s", baseUrlBody, commentId);
-	return url;
+	char* ret = strdup(json_object_get_string(commentUrl));
+	json_object_put(commentUrl);
+	return ret;
 }
 
 bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
@@ -113,7 +107,6 @@ bool githubEnable(FetchingModule* fetchingModule) {
 
 		curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
 		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
-		curl_easy_setopt(config->curl, CURLOPT_URL, "https://api.github.com/notifications");
 
 		retVal = fetchingModuleCreateThread(fetchingModule);
 		printf("Github enabled\n");
@@ -143,7 +136,7 @@ void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificatio
 
 	message->title = githubReplaceVariables(config->title, notificationData);
 	message->text = githubReplaceVariables(config->body, notificationData);
-	message->url = githubGenerateNotificationUrl(notificationData->notificationObject);
+	message->url = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
 	fetchingModule->display->displayMessage(message);
 	//free(message.title);
 	//free(message.text);
@@ -158,6 +151,7 @@ void githubFetch(FetchingModule* fetchingModule) {
 	NetworkResponse response = {NULL, 0};
 
 	// getting response
+	curl_easy_setopt(config->curl, CURLOPT_URL, "https://api.github.com/notifications"); // as GenerateNotificationUrl can change it
 	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
 	CURLcode code = curl_easy_perform(config->curl);
 
