@@ -164,18 +164,19 @@ char* twitchReplaceVariables(char* text, TwitchNotificationData* notificationDat
 
 void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificationData* notificationData) {
 	TwitchConfig* config = fetchingModule->config;
-	Message message;
+	Message* message = malloc(sizeof *message);
 
 	char* url = malloc(strlen("https://twitch.tv/") + strlen(notificationData->streamerName) + 1);
 	sprintf(url, "https://twitch.tv/%s", notificationData->streamerName);
 
-	message.title = twitchReplaceVariables(config->title, notificationData);
-	message.text = twitchReplaceVariables(config->body, notificationData);
-	message.url = url;
-	fetchingModule->display->displayMessage(&message);
-	free(message.title);
-	free(message.text);
-	free(message.url);
+	message->title = twitchReplaceVariables(config->title, notificationData);
+	message->text = twitchReplaceVariables(config->body, notificationData);
+	message->url = url;
+	fetchingModule->display->displayMessage(message);
+	//free(message.title);
+	//free(message.text);
+	//free(message.url);
+	// TODO: message object is not freed
 }
 
 void twitchFetch(FetchingModule* fetchingModule) {

@@ -108,14 +108,15 @@ char* isodReplaceVariables(char* text, IsodNotificationData* notificationData) {
 
 void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationData* notificationData) {
 	IsodConfig* config = fetchingModule->config;
-	Message message;
+	Message* message = malloc(sizeof *message);
 
-	message.title = isodReplaceVariables(config->title, notificationData);
-	message.text = isodReplaceVariables(config->body, notificationData);
-	message.url = NULL;
-	fetchingModule->display->displayMessage(&message);
-	free(message.title);
-	free(message.text);
+	message->title = isodReplaceVariables(config->title, notificationData);
+	message->text = isodReplaceVariables(config->body, notificationData);
+	message->url = NULL;
+	fetchingModule->display->displayMessage(message);
+	//free(message.title);
+	//free(message.text);
+	// TODO: message object is not freed
 }
 
 void isodFetch(FetchingModule* fetchingModule) {
