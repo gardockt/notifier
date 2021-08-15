@@ -139,15 +139,16 @@ char* githubReplaceVariables(char* text, GithubNotificationData* notificationDat
 
 void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificationData* notificationData) {
 	GithubConfig* config = fetchingModule->config;
-	Message message;
+	Message* message = malloc(sizeof *message);
 
-	message.title = githubReplaceVariables(config->title, notificationData);
-	message.text = githubReplaceVariables(config->body, notificationData);
-	message.url = githubGenerateNotificationUrl(notificationData->notificationObject);
-	fetchingModule->display->displayMessage(&message);
-	free(message.title);
-	free(message.text);
-	free(message.url);
+	message->title = githubReplaceVariables(config->title, notificationData);
+	message->text = githubReplaceVariables(config->body, notificationData);
+	message->url = githubGenerateNotificationUrl(notificationData->notificationObject);
+	fetchingModule->display->displayMessage(message);
+	//free(message.title);
+	//free(message.text);
+	//free(message.url);
+	// TODO: message object is not freed
 }
 
 void githubFetch(FetchingModule* fetchingModule) {
@@ -172,10 +173,10 @@ void githubFetch(FetchingModule* fetchingModule) {
 				char* lastUpdated = JSON_STRING(notification, "updated_at");
 
 				if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
-					if(newLastRead != NULL) {
+					if(newLastRead == NULL || githubCompareDates(lastUpdated, newLastRead) > 0) {
 						free(newLastRead);
+						newLastRead = strdup(lastUpdated);
 					}
-					newLastRead = strdup(lastUpdated);
 
 					json_object* subject    = json_object_object_get(notification, "subject");
 					json_object* repository = json_object_object_get(notification, "repository");
@@ -186,8 +187,8 @@ void githubFetch(FetchingModule* fetchingModule) {
 					githubDisplayNotification(fetchingModule, &notificationData);
 				}
 
-				json_object_put(root);
 			}
+			json_object_put(root);
 			if(newLastRead != NULL) {
 				config->lastRead = newLastRead;
 			}

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <pthread.h>
+
 #include <libnotify/notify.h>
 
 #include "Display.h"

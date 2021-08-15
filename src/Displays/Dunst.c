@@ -1,7 +1,11 @@
 #include "Dunst.h"
 
 int initStack = 0;
-GMainLoop* mainLoop = NULL;
+
+void dunstOnNotificationClose(NotifyNotification* notification, gpointer data) {
+	// TODO: only first notification calls this function?
+	pthread_exit(0);
+}
 
 bool dunstInit() {
 	if(initStack++) {
@@ -9,8 +13,6 @@ bool dunstInit() {
 	}
 
 	notify_init("notifier");
-	mainLoop = g_main_loop_new(NULL, false);
-
 	return initStack > 0;
 }
 
@@ -27,8 +29,13 @@ void dunstOpenUrl(NotifyNotification* notification, char* action, gpointer url) 
 	free(command);
 }
 
-bool dunstDisplayMessage(Message* message) {
+void dunstDisplayMessageThread(void* messagePointer) {
+	Message* message = messagePointer;
+
 	NotifyNotification* notification = notify_notification_new(message->title, message->text, NULL);
+
+	GMainLoop* mainLoop = g_main_loop_new(NULL, false);
+	g_signal_connect(notification, "closed", G_CALLBACK(dunstOnNotificationClose), NULL);
 
 	if(message->url != NULL) {
 		notify_notification_add_action(notification, "open", "Open", NOTIFY_ACTION_CALLBACK(dunstOpenUrl), message->url, NULL);
@@ -41,6 +48,12 @@ bool dunstDisplayMessage(Message* message) {
 	}
 
 	g_object_unref(G_OBJECT(notification));
+}
+
+bool dunstDisplayMessage(Message* message) {
+	pthread_t thread;
+	bool ret = pthread_create(&thread, NULL, dunstDisplayMessageThread, message); // TODO: end thread gracefully
+	return ret;
 }
 
 bool dunstStructure(Display* display) {

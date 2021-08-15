@@ -147,10 +147,10 @@ void isodFetch(FetchingModule* fetchingModule) {
 				}
 
 				if(isodCompareDates(modifiedDateWithFixedFormat, config->lastRead) > 0) {
-					if(newLastRead != NULL) {
+					if(isodCompareDates(modifiedDateWithFixedFormat, newLastRead) > 0) {
 						free(newLastRead);
+						newLastRead = strdup(modifiedDateWithFixedFormat);
 					}
-					newLastRead = strdup(modifiedDateWithFixedFormat);
 
 					notificationData.title = JSON_STRING(notification, "subject");
 					isodDisplayNotification(fetchingModule, &notificationData);
