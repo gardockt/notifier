@@ -148,7 +148,7 @@ void isodFetch(FetchingModule* fetchingModule) {
 				}
 
 				if(isodCompareDates(modifiedDateWithFixedFormat, config->lastRead) > 0) {
-					if(isodCompareDates(modifiedDateWithFixedFormat, newLastRead) > 0) {
+					if(newLastRead == NULL || isodCompareDates(modifiedDateWithFixedFormat, newLastRead) > 0) {
 						free(newLastRead);
 						newLastRead = strdup(modifiedDateWithFixedFormat);
 					}
