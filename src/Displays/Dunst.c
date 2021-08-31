@@ -1,10 +1,13 @@
 #include "Dunst.h"
 
+// TODO: rename to libnotify
+// TODO: close notification on action
+
 int initStack = 0;
 
-void dunstOnNotificationClose(NotifyNotification* notification, gpointer data) {
-	// TODO: only first notification calls this function?
-	pthread_exit(0);
+void dunstOnNotificationClose(NotifyNotification* notification, gpointer mainLoop) {
+	g_object_unref(G_OBJECT(notification));
+	//pthread_exit(0);
 }
 
 bool dunstInit() {
@@ -29,7 +32,7 @@ void dunstOpenUrl(NotifyNotification* notification, char* action, gpointer url) 
 	free(command);
 }
 
-void dunstDisplayMessageThread(void* messagePointer) {
+void* dunstDisplayMessageThread(void* messagePointer) {
 	Message* message = messagePointer;
 
 	NotifyNotification* notification = notify_notification_new(message->title, message->text, NULL);
@@ -46,8 +49,6 @@ void dunstDisplayMessageThread(void* messagePointer) {
 	if(message->url != NULL) {
 		g_main_loop_run(mainLoop);
 	}
-
-	g_object_unref(G_OBJECT(notification));
 }
 
 bool dunstDisplayMessage(Message* message) {
