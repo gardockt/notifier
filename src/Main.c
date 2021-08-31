@@ -129,7 +129,7 @@ int main() {
 		// TODO: global display does not work, might be fixed with global managers
 		// add global settings for undefined values
 		for(int i = 0; i < globalConfigKeyCount; i++) {
-			if(!existsInMap(configMap, globalConfigKeys[i], strlen(globalConfigKeys[i]))) {
+			if(!existsInMap(configMap, globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1, strlen(globalConfigKeys[i]) - strlen(CONFIG_GLOBAL_SECTION_NAME) - 1)) {
 				char* keyTrimmed = malloc(strlen(globalConfigKeys[i]) - strlen(CONFIG_GLOBAL_SECTION_NAME));
 				char* valueTemp = iniparser_getstring(config, globalConfigKeys[i], NULL);
 				char* value = malloc(strlen(valueTemp) + 1);
