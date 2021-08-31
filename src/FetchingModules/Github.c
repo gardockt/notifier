@@ -24,7 +24,7 @@ char* githubGenerateNotificationUrl(FetchingModule* fetchingModule, json_object*
 	if(json_object_get_type(subject) != json_type_object) {
 		return NULL;
 	}
-	json_object* commentApiUrlObject = json_object_object_get(subject, "latest_comment_url");
+	json_object* commentApiUrlObject = json_object_object_get(subject, "latest_comment_url"); // can be null on PR commits
 	if(json_object_get_type(commentApiUrlObject) != json_type_string) {
 		return NULL;
 	}
@@ -136,7 +136,8 @@ void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificatio
 
 	message->title = githubReplaceVariables(config->title, notificationData);
 	message->text = githubReplaceVariables(config->body, notificationData);
-	message->url = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
+	message->actionData = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
+	message->actionType = URL;
 	fetchingModule->display->displayMessage(message);
 	//free(message.title);
 	//free(message.text);

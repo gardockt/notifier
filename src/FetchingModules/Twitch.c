@@ -171,7 +171,8 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 
 	message->title = twitchReplaceVariables(config->title, notificationData);
 	message->text = twitchReplaceVariables(config->body, notificationData);
-	message->url = url;
+	message->actionData = url;
+	message->actionType = URL;
 	fetchingModule->display->displayMessage(message);
 	//free(message.title);
 	//free(message.text);

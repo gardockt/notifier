@@ -24,11 +24,15 @@ void libnotifyUninit() {
 	}
 }
 
-void libnotifyOpenUrl(NotifyNotification* notification, char* action, gpointer url) {
-	char* command = malloc(strlen("xdg-open ") + strlen(url) + strlen(" &") + 1);
-	sprintf(command, "xdg-open %s &", url);
-	system(command);
-	free(command);
+void libnotifyStartAction(NotifyNotification* notification, char* action, gpointer messagePointer) {
+	Message* message = messagePointer;
+	switch(message->actionType) {
+		case URL:
+			char* command = malloc(strlen("xdg-open ") + strlen(message->actionData) + strlen(" &") + 1);
+			sprintf(command, "xdg-open %s &", message->actionData);
+			system(command);
+			free(command);
+	}
 }
 
 void* libnotifyDisplayMessageThread(void* messagePointer) {
@@ -39,13 +43,13 @@ void* libnotifyDisplayMessageThread(void* messagePointer) {
 	GMainLoop* mainLoop = g_main_loop_new(NULL, false);
 	g_signal_connect(notification, "closed", G_CALLBACK(libnotifyOnNotificationClose), NULL);
 
-	if(message->url != NULL) {
-		notify_notification_add_action(notification, "open", "Open", NOTIFY_ACTION_CALLBACK(libnotifyOpenUrl), message->url, NULL);
+	if(message->actionData != NULL) {
+		notify_notification_add_action(notification, "open", "Open", NOTIFY_ACTION_CALLBACK(libnotifyStartAction), message, NULL);
 	}
 
 	notify_notification_show(notification, NULL);
 
-	if(message->url != NULL) {
+	if(message->actionData != NULL) {
 		g_main_loop_run(mainLoop);
 	}
 }

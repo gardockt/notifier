@@ -3,10 +3,15 @@
 
 #include <stdbool.h>
 
+typedef enum {
+	URL
+} NotificationActionType;
+
 typedef struct {
 	char* title;
 	char* text;
-	char* url;
+	char* actionData;
+	NotificationActionType actionType;
 } Message;
 
 typedef struct {
