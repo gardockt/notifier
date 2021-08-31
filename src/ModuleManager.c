@@ -56,9 +56,8 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 	destroyMap(&moduleManager->activeModules);
 }
 
-// TODO: passing display separately feels bad, fix with global display manager?
-bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config, Display* display) {
-	if(moduleManager == NULL || moduleType == NULL || moduleCustomName == NULL || config == NULL || display == NULL) {
+bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config) {
+	if(moduleManager == NULL || moduleType == NULL || moduleCustomName == NULL || config == NULL) {
 		return false;
 	}
 
@@ -80,7 +79,6 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 
 	memcpy(module, moduleTemplate, sizeof *module);
 	if(module->parseConfig(module, config)) {
-		module->display = display;
 		module->display->init();
 		module->enable(module);
 		putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);

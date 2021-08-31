@@ -2,6 +2,7 @@
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
+#include "../GlobalManagers.h"
 #include "Isod.h"
 
 // TODO: replace stash identifiers with module custom name
@@ -38,24 +39,31 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	IsodConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	char* title = getFromMap(configToParse, "title", strlen("title"));
-	char* body = getFromMap(configToParse, "body", strlen("body"));
-	char* username = getFromMap(configToParse, "username", strlen("username"));
-	char* token = getFromMap(configToParse, "token", strlen("token"));
+	char* title       = getFromMap(configToParse, "title",        strlen("title"));
+	char* body        = getFromMap(configToParse, "body",         strlen("body"));
+	char* username    = getFromMap(configToParse, "username",     strlen("username"));
+	char* token       = getFromMap(configToParse, "token",        strlen("token"));
 	char* maxMessages = getFromMap(configToParse, "max_messages", strlen("max_messages"));
-	char* interval = getFromMap(configToParse, "interval", strlen("interval"));
+	char* interval    = getFromMap(configToParse, "interval",     strlen("interval"));
+	char* display     = getFromMap(configToParse, "display",      strlen("display"));
 
-	if(title == NULL || body == NULL || username == NULL || token == NULL || maxMessages == NULL || interval == NULL) {
+	if(title == NULL || body == NULL || username == NULL || token == NULL || maxMessages == NULL || interval == NULL || display == NULL) {
 		destroyMap(configToParse);
 		return false;
 	}
 
-	config->title = title;
-	config->body = body;
-	config->username = username;
-	config->token = token;
-	config->maxMessages = maxMessages;
-	fetchingModule->intervalSecs = atoi(interval);
+	config->title        = title;
+	config->body         = body;
+	config->username     = username;
+	config->token        = token;
+	config->maxMessages  = maxMessages;
+	fetchingModule->intervalSecs  = atoi(interval);
+	fetchingModule->display       = getDisplay(&displayManager, display);
+
+	if(fetchingModule->display == NULL) {
+		destroyMap(configToParse);
+		return false;
+	}
 
 	char* sectionName = isodGenerateLastReadKeyName(fetchingModule);
 	config->lastRead = stashGetString("isod", sectionName, "01.01.1970 00:00");

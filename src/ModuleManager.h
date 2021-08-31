@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "Structures/Map.h"
-#include "Displays/Display.h" // TODO: unncessary after removing Display argument
 
 typedef struct {
 	Map availableModules;
@@ -16,7 +15,7 @@ typedef struct {
 bool initModuleManager(ModuleManager* moduleManager);
 void destroyModuleManager(ModuleManager* moduleManager);
 
-bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config, Display* display);
+bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config);
 bool disableModule(ModuleManager* moduleManager, char* moduleCustomName);
 
 #endif // ifndef MODULEMANAGER_H

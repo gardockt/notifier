@@ -1,3 +1,4 @@
+#include "GlobalManagers.h"
 #include "ModuleManager.h"
 #include "DisplayManager.h"
 #include "Displays/Display.h"
@@ -9,7 +10,6 @@
 // TODO: move config to another source file?
 // TODO: move ini managing to another source file?
 
-// TODO: make global variables?
 ModuleManager moduleManager;
 DisplayManager displayManager;
 
@@ -82,7 +82,6 @@ int main() {
 		Map* configMap;
 		char* value;
 		char* moduleType = NULL;
-		Display* display = NULL;
 
 		char* sectionNameTemp = iniparser_getsecname(config, i);
 		sectionName = malloc(strlen(sectionNameTemp) + 1);
@@ -119,14 +118,11 @@ int main() {
 			if(!strcmp(keyTrimmed, "module")) {
 				moduleType = value;
 				free(keyTrimmed);
-			} else if(!strcmp(keyTrimmed, "display")) {
-				display = getDisplay(&displayManager, value);
 			} else {
 				putIntoMap(configMap, keyTrimmed, strlen(keyTrimmed), value);
 			}
 		}
 
-		// TODO: global display does not work, might be fixed with global managers
 		// add global settings for undefined values
 		for(int i = 0; i < globalConfigKeyCount; i++) {
 			if(!existsInMap(configMap, globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1, strlen(globalConfigKeys[i]) - strlen(CONFIG_GLOBAL_SECTION_NAME) - 1)) {
@@ -140,7 +136,7 @@ int main() {
 			}
 		}
 
-		if(!enableModule(&moduleManager, moduleType, sectionName, configMap, display)) {
+		if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
 			fprintf(stderr, "Error while enabling module %s\n", sectionName);
 		}
 

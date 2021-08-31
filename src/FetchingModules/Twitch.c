@@ -2,6 +2,7 @@
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
+#include "../GlobalManagers.h"
 #include "Twitch.h"
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
@@ -62,26 +63,33 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	TwitchConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	char* title = getFromMap(configToParse, "title", strlen("title"));
-	char* body = getFromMap(configToParse, "body", strlen("body"));
-	char* streams = getFromMap(configToParse, "streams", strlen("streams"));
+	char* title         = getFromMap(configToParse, "title",    strlen("title"));
+	char* body          = getFromMap(configToParse, "body",     strlen("body"));
+	char* streams       = getFromMap(configToParse, "streams",  strlen("streams"));
+	char* clientId      = getFromMap(configToParse, "id",       strlen("id"));
+	char* clientSecret  = getFromMap(configToParse, "secret",   strlen("secret"));
+	char* interval      = getFromMap(configToParse, "interval", strlen("interval"));
+	char* display       = getFromMap(configToParse, "display",  strlen("display"));
 	int streamCount;
-	char* clientId = getFromMap(configToParse, "id", strlen("id"));
-	char* clientSecret = getFromMap(configToParse, "secret", strlen("secret"));
-	char* interval = getFromMap(configToParse, "interval", strlen("interval"));
 
-	if(title == NULL || body == NULL || clientId == NULL || clientSecret == NULL || interval == NULL || streams == NULL) {
+	if(title == NULL || body == NULL || clientId == NULL || clientSecret == NULL || interval == NULL || streams == NULL || display == NULL) {
 		destroyMap(configToParse);
 		return false;
 	}
 
-	config->title = title;
-	config->body = body;
-	config->streamCount = split(streams, ",", &config->streams);
-	config->clientId = clientId;
-	config->clientSecret = clientSecret;
-	fetchingModule->intervalSecs = atoi(interval);
-	config->streamTitles = malloc(sizeof *config->streamTitles);
+	config->title         = title;
+	config->body          = body;
+	config->streamCount   = split(streams, ",", &config->streams);
+	config->clientId      = clientId;
+	config->clientSecret  = clientSecret;
+	config->streamTitles  = malloc(sizeof *config->streamTitles);
+	fetchingModule->intervalSecs  = atoi(interval);
+	fetchingModule->display       = getDisplay(&displayManager, display);
+
+	if(fetchingModule->display == NULL) {
+		destroyMap(configToParse);
+		return false;
+	}
 
 	config->list = NULL;
 	
