@@ -2,7 +2,7 @@
 #include "DisplayManager.h"
 
 // displays
-#include "Displays/Dunst.h"
+#include "Displays/Libnotify.h"
 
 #define ADDDISPLAY(structure,name) (structure(display) && putIntoMap(&displayManager->displays, name, strlen(name), display))
 
@@ -15,7 +15,7 @@ bool initDisplayManager(DisplayManager* displayManager) {
 	}
 
 	// adding displays to map; enter names lower-case
-	if(!ADDDISPLAY(dunstStructure, "dunst")) {
+	if(!ADDDISPLAY(libnotifyStructure, "libnotify")) {
 		return false;
 	}
 
