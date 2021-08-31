@@ -16,7 +16,6 @@ DisplayManager displayManager;
 dictionary* config;
 
 void onExit(int signal) {
-	printf("Niszczenie menedżerów...\n");
 	destroyModuleManager(&moduleManager);
 	destroyDisplayManager(&displayManager);
 	stashDestroy();
@@ -42,9 +41,7 @@ int main() {
 	signalMgmt.sa_handler = onExit;
 	sigemptyset(&signalMgmt.sa_mask);
 	signalMgmt.sa_flags = 0;
-	if(sigaction(SIGINT, &signalMgmt, NULL) == -1) {
-		// blad
-	}
+	sigaction(SIGINT, &signalMgmt, NULL); // error is not critical, we can safely ignore it
 
 	initModuleManager(&moduleManager);
 	initDisplayManager(&displayManager);
