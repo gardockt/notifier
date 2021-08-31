@@ -113,10 +113,7 @@ void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationDat
 	message->title = isodReplaceVariables(config->title, notificationData);
 	message->text = isodReplaceVariables(config->body, notificationData);
 	message->actionData = NULL;
-	fetchingModule->display->displayMessage(message);
-	//free(message.title);
-	//free(message.text);
-	// TODO: message object is not freed
+	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
 }
 
 void isodFetch(FetchingModule* fetchingModule) {

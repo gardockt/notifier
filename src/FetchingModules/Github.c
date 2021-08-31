@@ -138,11 +138,7 @@ void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificatio
 	message->text = githubReplaceVariables(config->body, notificationData);
 	message->actionData = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
 	message->actionType = URL;
-	fetchingModule->display->displayMessage(message);
-	//free(message.title);
-	//free(message.text);
-	//free(message.url);
-	// TODO: message object is not freed
+	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
 }
 
 void githubFetch(FetchingModule* fetchingModule) {

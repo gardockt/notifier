@@ -13,7 +13,7 @@
 bool libnotifyInit();
 void libnotifyUninit();
 
-bool libnotifyDisplayMessage(Message* message);
+bool libnotifyDisplayMessage(Message* message, void (*freeFunction)(Message*));
 
 bool libnotifyStructure(Display* display);
 

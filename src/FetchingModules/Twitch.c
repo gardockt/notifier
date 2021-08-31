@@ -173,11 +173,7 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 	message->text = twitchReplaceVariables(config->body, notificationData);
 	message->actionData = url;
 	message->actionType = URL;
-	fetchingModule->display->displayMessage(message);
-	//free(message.title);
-	//free(message.text);
-	//free(message.url);
-	// TODO: message object is not freed
+	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
 }
 
 void twitchFetch(FetchingModule* fetchingModule) {

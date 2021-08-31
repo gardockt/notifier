@@ -4,9 +4,17 @@
 
 int initStack = 0;
 
-void libnotifyOnNotificationClose(NotifyNotification* notification, gpointer mainLoop) {
+typedef struct {
+	Message* message;
+	void (*freeFunction)(Message* message);
+} LibnotifyThreadArgs;
+
+void libnotifyOnNotificationClose(NotifyNotification* notification, gpointer threadArgsPointer) {
+	LibnotifyThreadArgs* threadArgs = threadArgsPointer;
+	threadArgs->freeFunction(threadArgs->message);
+	free(threadArgs);
+
 	g_object_unref(G_OBJECT(notification));
-	//pthread_exit(0);
 }
 
 bool libnotifyInit() {
@@ -35,13 +43,14 @@ void libnotifyStartAction(NotifyNotification* notification, char* action, gpoint
 	}
 }
 
-void* libnotifyDisplayMessageThread(void* messagePointer) {
-	Message* message = messagePointer;
+void* libnotifyDisplayMessageThread(void* threadArgsPointer) {
+	LibnotifyThreadArgs* threadArgs = threadArgsPointer;
+	Message* message = threadArgs->message;
 
 	NotifyNotification* notification = notify_notification_new(message->title, message->text, NULL);
 
 	GMainLoop* mainLoop = g_main_loop_new(NULL, false);
-	g_signal_connect(notification, "closed", G_CALLBACK(libnotifyOnNotificationClose), NULL);
+	g_signal_connect(notification, "closed", G_CALLBACK(libnotifyOnNotificationClose), threadArgs);
 
 	if(message->actionData != NULL) {
 		notify_notification_add_action(notification, "open", "Open", NOTIFY_ACTION_CALLBACK(libnotifyStartAction), message, NULL);
@@ -54,9 +63,13 @@ void* libnotifyDisplayMessageThread(void* messagePointer) {
 	}
 }
 
-bool libnotifyDisplayMessage(Message* message) {
+bool libnotifyDisplayMessage(Message* message, void (*freeFunction)(Message*)) {
+	LibnotifyThreadArgs* threadArgs = malloc(sizeof *threadArgs);
+	threadArgs->message = message;
+	threadArgs->freeFunction = freeFunction;
+
 	pthread_t thread;
-	bool ret = pthread_create(&thread, NULL, libnotifyDisplayMessageThread, message); // TODO: end thread gracefully
+	bool ret = pthread_create(&thread, NULL, libnotifyDisplayMessageThread, threadArgs); // TODO: end thread gracefully
 	return ret;
 }
 
