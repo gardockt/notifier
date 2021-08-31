@@ -67,7 +67,7 @@ int main() {
 	int keyCount;
 
 	int globalConfigKeyCount;
-	char** globalConfigKeys;
+	const char** globalConfigKeys;
 
 	// global settings loading
 	globalConfigKeyCount = iniparser_getsecnkeys(config, CONFIG_GLOBAL_SECTION_NAME);
@@ -78,12 +78,12 @@ int main() {
 
 	for(int i = 0; i < configSectionCount; i++) {
 		char* sectionName;
-		char** keys;
+		const char** keys;
 		Map* configMap;
 		char* value;
 		char* moduleType = NULL;
 
-		char* sectionNameTemp = iniparser_getsecname(config, i);
+		const char* sectionNameTemp = iniparser_getsecname(config, i);
 		sectionName = malloc(strlen(sectionNameTemp) + 1);
 		strcpy(sectionName, sectionNameTemp);
 
@@ -111,7 +111,7 @@ int main() {
 			char* keyTrimmed = malloc(strlen(keys[i]) - strlen(sectionName));
 			strcpy(keyTrimmed, keys[i] + strlen(sectionName) + 1);
 
-			char* valueTemp = iniparser_getstring(config, keys[i], NULL);
+			const char* valueTemp = iniparser_getstring(config, keys[i], NULL);
 			value = malloc(strlen(valueTemp) + 1);
 			strcpy(value, valueTemp);
 
@@ -127,7 +127,7 @@ int main() {
 		for(int i = 0; i < globalConfigKeyCount; i++) {
 			if(!existsInMap(configMap, globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1, strlen(globalConfigKeys[i]) - strlen(CONFIG_GLOBAL_SECTION_NAME) - 1)) {
 				char* keyTrimmed = malloc(strlen(globalConfigKeys[i]) - strlen(CONFIG_GLOBAL_SECTION_NAME));
-				char* valueTemp = iniparser_getstring(config, globalConfigKeys[i], NULL);
+				const char* valueTemp = iniparser_getstring(config, globalConfigKeys[i], NULL);
 				char* value = malloc(strlen(valueTemp) + 1);
 
 				strcpy(keyTrimmed, globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1);

@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 int split(char* text, char* separators, char*** output);
-char* replace(char* text, char* before, char* after);
+char* replace(char* text, const char* before, const char* after);
 char* toLowerCase(char* text);
 
 #endif // ifndef STRINGOPERATIONS_H

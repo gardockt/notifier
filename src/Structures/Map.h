@@ -25,7 +25,7 @@ void destroyMap(Map* map);
 bool putIntoMap(Map* map, void* key, int keySize, void* value);
 void* getFromMap(Map* map, void* key, int keySize); 
 bool removeFromMap(Map* map, void* key, int keySize, void** keyAddress, void** valueAddress);
-bool existsInMap(Map* map, void* key, int keySize);
+bool existsInMap(Map* map, const void* key, int keySize);
 int getMapSize(Map* map);
 void getMapKeys(Map* map, void** keyArray);
 

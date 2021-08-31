@@ -11,7 +11,7 @@
 #define SORTDATE(date) {date[6], date[7], date[8], date[9], date[3], date[4], date[0], date[1], date[11], date[12], date[14], date[15], '\0'}
 
 typedef struct {
-	char* title;
+	const char* title;
 } IsodNotificationData;
 
 int isodCompareDates(char* a, char* b) {
@@ -66,17 +66,16 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	}
 
 	char* sectionName = isodGenerateLastReadKeyName(fetchingModule);
-	config->lastRead = stashGetString("isod", sectionName, "01.01.1970 00:00");
-	config->lastRead = strdup(config->lastRead);
+	config->lastRead = strdup(stashGetString("isod", sectionName, "01.01.1970 00:00"));
 	free(sectionName);
 	
 	int keyCount = getMapSize(configToParse);
 	char** keys = malloc(keyCount * sizeof *keys);
-	getMapKeys(configToParse, keys);
+	getMapKeys(configToParse, (void**)keys);
 
 	for(int i = 0; i < keyCount; i++) {
 		char* valueToFree;
-		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, &valueToFree); // key is already in keys[i]
+		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree); // key is already in keys[i]
 		if(strcmp(keys[i], "title") != 0 &&
 		   strcmp(keys[i], "body") != 0 &&
 		   strcmp(keys[i], "username") != 0 &&
@@ -144,7 +143,7 @@ void isodFetch(FetchingModule* fetchingModule) {
 
 			for(int i = notificationCount - 1; i >= 0; i--) {
 				json_object* notification = json_object_array_get_idx(items, i);
-				char* modifiedDate = JSON_STRING(notification, "modifiedDate");
+				const char* modifiedDate = JSON_STRING(notification, "modifiedDate");
 				char* modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);
 				if(modifiedDate[1] == '.') { // day is one digit long
 					sprintf(modifiedDateWithFixedFormat, "0%s", modifiedDate);

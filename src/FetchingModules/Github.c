@@ -7,13 +7,13 @@
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
 
 typedef struct {
-	char* title;
-	char* repoName;
-	char* repoFullName;
+	const char* title;
+	const char* repoName;
+	const char* repoFullName;
 	json_object* notificationObject;
 } GithubNotificationData;
 
-int githubCompareDates(char* a, char* b) {
+int githubCompareDates(const char* a, const char* b) {
 	return strcmp(a, b);
 }
 
@@ -30,7 +30,7 @@ char* githubGenerateNotificationUrl(FetchingModule* fetchingModule, json_object*
 		return NULL;
 	}
 
-	char* commentApiUrl = json_object_get_string(commentApiUrlObject);
+	const char* commentApiUrl = json_object_get_string(commentApiUrlObject);
 	curl_easy_setopt(config->curl, CURLOPT_URL, commentApiUrl);
 	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
 	CURLcode code = curl_easy_perform(config->curl);
@@ -80,11 +80,11 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	
 	int keyCount = getMapSize(configToParse);
 	char** keys = malloc(keyCount * sizeof *keys);
-	getMapKeys(configToParse, keys);
+	getMapKeys(configToParse, (void**)keys);
 
 	for(int i = 0; i < keyCount; i++) {
 		char* valueToFree;
-		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, &valueToFree); // key is already in keys[i]
+		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree); // key is already in keys[i]
 		if(strcmp(keys[i], "title") != 0 &&
 		   strcmp(keys[i], "body") != 0 &&
 		   strcmp(keys[i], "token") != 0) {
@@ -169,7 +169,7 @@ void githubFetch(FetchingModule* fetchingModule) {
 
 			for(int i = 0; i < unreadNotifications; i++) {
 				json_object* notification = json_object_array_get_idx(root, i);
-				char* lastUpdated = JSON_STRING(notification, "updated_at");
+				const char* lastUpdated = JSON_STRING(notification, "updated_at");
 
 				if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
 					if(newLastRead == NULL || githubCompareDates(lastUpdated, newLastRead) > 0) {

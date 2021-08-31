@@ -66,7 +66,7 @@ bool putIntoMap(Map* map, void* key, int keySize, void* value) {
 	return true;
 }
 
-int getKeyIndex(Map* map, void* key, int keySize) {
+int getKeyIndex(Map* map, const void* key, int keySize) {
 	int min = 0;
 	int max = map->size - 1;
 	int checkedIndex;
@@ -117,7 +117,7 @@ bool removeFromMap(Map* map, void* key, int keySize, void** keyAddress, void** v
 	return true;
 }
 
-bool existsInMap(Map* map, void* key, int keySize) {
+bool existsInMap(Map* map, const void* key, int keySize) {
 	int index = getKeyIndex(map, key, keySize);
 	return index >= 0;
 }

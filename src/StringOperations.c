@@ -57,7 +57,7 @@ int split(char* text, char* separators, char*** output) {
 	return textSections;
 }
 
-int find(char* text, char* substring) {
+int find(char* text, const char* substring) {
 	int textLength = strlen(text);
 	int substringLength = strlen(substring);
 
@@ -69,7 +69,7 @@ int find(char* text, char* substring) {
 	return -1;
 }
 
-char* replace(char* text, char* before, char* after) {
+char* replace(char* text, const char* before, const char* after) {
 	int outputLength = strlen(text);
 	int beforeLength = strlen(before);
 	int afterLength = strlen(after);

@@ -78,9 +78,9 @@ bool stashSetInt(char* section, char* key, int value) {
 	return result;
 }
 
-char* stashGetString(char* section, char* key, char* defaultValue) {
+const char* stashGetString(char* section, char* key, char* defaultValue) {
 	char* sectionName = stashCreateSectionName(section, key);
-	char* result = iniparser_getstring(stash, sectionName, defaultValue);
+	const char* result = iniparser_getstring(stash, sectionName, defaultValue);
 	free(sectionName);
 	return result;
 }

@@ -12,9 +12,9 @@
 // idea for improving notification condition I might check later: collect active streams and topics into array (or sorted list), get all keys from array and update each key's value depending on active streams' array
 
 typedef struct {
-	char* streamerName;
-	char* title;
-	char* category;
+	const char* streamerName;
+	const char* title;
+	const char* category;
 } TwitchNotificationData;
 
 char* twitchGenerateUrl(char** streams, int start, int stop) {
@@ -95,12 +95,12 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	
 	char* tokenKeyName = malloc(strlen("token_") + strlen(config->clientId) + 1);
 	sprintf(tokenKeyName, "token_%s", config->clientId);
-	config->token = stashGetString("twitch", tokenKeyName, NULL);
-	if(config->token == NULL) {
+	const char* token = stashGetString("twitch", tokenKeyName, NULL);
+	if(token == NULL) {
 		twitchRefreshToken(fetchingModule);
 	} else {
 		// token has to be freed after regenerating, after duplicating we don't have to worry when to free
-		config->token = strdup(config->token);
+		config->token = strdup(token);
 	}
 	free(tokenKeyName);
 
@@ -111,11 +111,11 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 
 	int keyCount = getMapSize(configToParse);
 	char** keys = malloc(keyCount * sizeof *keys);
-	getMapKeys(configToParse, keys);
+	getMapKeys(configToParse, (void**)keys);
 
 	for(int i = 0; i < keyCount; i++) {
 		char* valueToFree;
-		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, &valueToFree); // key is already in keys[i]
+		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree); // key is already in keys[i]
 		if(strcmp(keys[i], "title") != 0 &&
 		   strcmp(keys[i], "body") != 0 &&
 		   strcmp(keys[i], "id") != 0 &&
@@ -192,10 +192,10 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	char* url;
 
 	char** streamsFromMap     = malloc(config->streamCount * sizeof *streamsFromMap);
-	char** streamerName       = malloc(config->streamCount * sizeof *streamerName);
-	char** streamsNewTopic    = malloc(config->streamCount * sizeof *streamsNewTopic);
-	char** streamsNewCategory = malloc(config->streamCount * sizeof *streamsNewCategory);
-	getMapKeys(config->streamTitles, streamsFromMap);
+	const char** streamerName       = malloc(config->streamCount * sizeof *streamerName);
+	const char** streamsNewTopic    = malloc(config->streamCount * sizeof *streamsNewTopic);
+	const char** streamsNewCategory = malloc(config->streamCount * sizeof *streamsNewCategory);
+	getMapKeys(config->streamTitles, (void**)streamsFromMap);
 	streamsNewTopic = memset(streamsNewTopic, 0, config->streamCount * sizeof *streamsNewTopic);
 
 	// getting response
@@ -217,7 +217,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 
 				for(int i = 0; i < activeStreamers; i++) {
 					json_object* stream = json_object_array_get_idx(data, i);
-					char* activeStreamerName = JSON_STRING(stream, "user_name");
+					const char* activeStreamerName = JSON_STRING(stream, "user_name");
 
 					for(int j = 0; j < config->streamCount; j++) {
 						if(!strcasecmp(activeStreamerName, streamsFromMap[j])) {

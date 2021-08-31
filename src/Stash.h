@@ -15,7 +15,7 @@ void stashDestroy();
 bool stashSetString(char* section, char* key, char* value);
 bool stashSetInt(char* section, char* key, int value);
 
-char* stashGetString(char* section, char* key, char* defaultValue);
+const char* stashGetString(char* section, char* key, char* defaultValue);
 int stashGetInt(char* section, char* key, int defaultValue);
 
 #endif // ifndef STASH_H

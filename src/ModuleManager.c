@@ -37,7 +37,7 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 	mapToFree = moduleManager->availableModules;
 	mapToFreeSize = getMapSize(&mapToFree);
 	keysToFree = malloc(mapToFreeSize * sizeof *keysToFree);
-	getMapKeys(&mapToFree, keysToFree);
+	getMapKeys(&mapToFree, (void**)keysToFree);
 	for(int i = 0; i < mapToFreeSize; i++) {
 		free(getFromMap(&mapToFree, keysToFree[i], strlen(keysToFree[i])));
 	}
@@ -46,7 +46,7 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 	mapToFree = moduleManager->activeModules;
 	mapToFreeSize = getMapSize(&mapToFree);
 	keysToFree = malloc(mapToFreeSize * sizeof *keysToFree);
-	getMapKeys(&mapToFree, keysToFree);
+	getMapKeys(&mapToFree, (void**)keysToFree);
 	for(int i = 0; i < mapToFreeSize; i++) {
 		disableModule(moduleManager, keysToFree[i]);
 	}
@@ -99,7 +99,7 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 
 	module->disable(module);
 	module->display->uninit();
-	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), &keyToFree, NULL); // value is already stored in "module"
+	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), (void**)&keyToFree, NULL); // value is already stored in "module"
 	free(keyToFree);
 	free(module);
 
