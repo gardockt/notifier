@@ -9,6 +9,10 @@
 #include <curl/curl.h>
 #endif
 
+#ifdef REQUIRED_LIBXML
+#include <libxml/parser.h>
+#endif
+
 #define CONFIG_GLOBAL_SECTION_NAME  "_global"
 
 #endif // ifndef MAIN_H

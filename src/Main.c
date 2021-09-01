@@ -23,6 +23,10 @@ void onExit(int signal) {
 #ifdef REQUIRED_CURL
 	curl_global_cleanup();
 #endif
+
+#ifdef REQUIRED_LIBXML
+	xmlCleanupParser();
+#endif
 }
 
 bool loadConfig() {
@@ -58,6 +62,10 @@ int main() {
 
 #ifdef REQUIRED_CURL
 	curl_global_init(CURL_GLOBAL_DEFAULT);
+#endif
+
+#ifdef REQUIRED_LIBXML
+	LIBXML_TEST_VERSION;
 #endif
 
 	int configSectionCount = iniparser_getnsec(config);

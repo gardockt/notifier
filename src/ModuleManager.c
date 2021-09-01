@@ -7,6 +7,7 @@
 // fetching modules
 #include "FetchingModules/Github.h"
 #include "FetchingModules/Isod.h"
+#include "FetchingModules/Rss.h"
 #include "FetchingModules/Twitch.h"
 
 #define ADDMODULE(templateFunc,name) ((template=malloc(sizeof *template)) != NULL && templateFunc(template) && putIntoMap(&moduleManager->availableModules, name, strlen(name), template))
@@ -22,6 +23,7 @@ bool initModuleManager(ModuleManager* moduleManager) {
 	// adding modules to template map; enter names lower-case
 	if(!ADDMODULE(githubTemplate, "github") ||
 	   !ADDMODULE(isodTemplate, "isod") ||
+	   !ADDMODULE(rssTemplate, "rss") ||
 	   !ADDMODULE(twitchTemplate, "twitch")) {
 		return false;
 	}
