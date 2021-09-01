@@ -64,9 +64,9 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 		return false;
 	}
 
-	config->title  = title;
-	config->body   = body;
-	config->token  = token;
+	config->title  = strdup(title);
+	config->body   = strdup(body);
+	config->token  = strdup(token);
 	fetchingModule->intervalSecs  = atoi(interval);
 	fetchingModule->display       = getDisplay(&displayManager, display);
 
@@ -78,24 +78,6 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	config->list = NULL;
 	config->lastRead = strdup("1970-01-01T00:00:00Z");
 	
-	int keyCount = getMapSize(configToParse);
-	char** keys = malloc(keyCount * sizeof *keys);
-	getMapKeys(configToParse, (void**)keys);
-
-	for(int i = 0; i < keyCount; i++) {
-		char* valueToFree;
-		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree); // key is already in keys[i]
-		if(strcmp(keys[i], "title") != 0 &&
-		   strcmp(keys[i], "body") != 0 &&
-		   strcmp(keys[i], "token") != 0) {
-			free(valueToFree);
-		}
-		free(keys[i]);
-	}
-	
-	free(keys);
-	destroyMap(configToParse);
-
 	return true;
 }
 

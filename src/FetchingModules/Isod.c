@@ -52,11 +52,11 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 		return false;
 	}
 
-	config->title        = title;
-	config->body         = body;
-	config->username     = username;
-	config->token        = token;
-	config->maxMessages  = maxMessages;
+	config->title        = strdup(title);
+	config->body         = strdup(body);
+	config->username     = strdup(username);
+	config->token        = strdup(token);
+	config->maxMessages  = strdup(maxMessages);
 	fetchingModule->intervalSecs  = atoi(interval);
 	fetchingModule->display       = getDisplay(&displayManager, display);
 
@@ -69,26 +69,6 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	config->lastRead = strdup(stashGetString("isod", sectionName, "01.01.1970 00:00"));
 	free(sectionName);
 	
-	int keyCount = getMapSize(configToParse);
-	char** keys = malloc(keyCount * sizeof *keys);
-	getMapKeys(configToParse, (void**)keys);
-
-	for(int i = 0; i < keyCount; i++) {
-		char* valueToFree;
-		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree); // key is already in keys[i]
-		if(strcmp(keys[i], "title") != 0 &&
-		   strcmp(keys[i], "body") != 0 &&
-		   strcmp(keys[i], "username") != 0 &&
-		   strcmp(keys[i], "token") != 0 &&
-		   strcmp(keys[i], "max_messages") != 0) {
-			free(valueToFree);
-		}
-		free(keys[i]);
-	}
-	
-	free(keys);
-	destroyMap(configToParse);
-
 	return true;
 }
 

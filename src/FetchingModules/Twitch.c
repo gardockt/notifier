@@ -77,11 +77,11 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 		return false;
 	}
 
-	config->title         = title;
-	config->body          = body;
+	config->title         = strdup(title);
+	config->body          = strdup(body);
 	config->streamCount   = split(streams, ",", &config->streams);
-	config->clientId      = clientId;
-	config->clientSecret  = clientSecret;
+	config->clientId      = strdup(clientId);
+	config->clientSecret  = strdup(clientSecret);
 	config->streamTitles  = malloc(sizeof *config->streamTitles);
 	fetchingModule->intervalSecs  = atoi(interval);
 	fetchingModule->display       = getDisplay(&displayManager, display);
@@ -108,25 +108,6 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	for(int i = 0; i < config->streamCount; i++) {
 		putIntoMap(config->streamTitles, config->streams[i], strlen(config->streams[i]), NULL);
 	}
-
-	int keyCount = getMapSize(configToParse);
-	char** keys = malloc(keyCount * sizeof *keys);
-	getMapKeys(configToParse, (void**)keys);
-
-	for(int i = 0; i < keyCount; i++) {
-		char* valueToFree;
-		removeFromMap(configToParse, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree); // key is already in keys[i]
-		if(strcmp(keys[i], "title") != 0 &&
-		   strcmp(keys[i], "body") != 0 &&
-		   strcmp(keys[i], "id") != 0 &&
-		   strcmp(keys[i], "secret") != 0) {
-			free(valueToFree);
-		}
-		free(keys[i]);
-	}
-	
-	free(keys);
-	destroyMap(configToParse);
 
 	return true;
 }

@@ -78,7 +78,23 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 	}
 
 	memcpy(module, moduleTemplate, sizeof *module);
-	if(module->parseConfig(module, config)) {
+	bool parseConfigSuccess = module->parseConfig(module, config);
+
+	int keyCount = getMapSize(config);
+	char** keys = malloc(keyCount * sizeof *keys);
+	getMapKeys(config, (void**)keys);
+
+	for(int i = 0; i < keyCount; i++) {
+		char* valueToFree;
+		removeFromMap(config, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree); // key is already in keys[i]
+		free(valueToFree);
+		free(keys[i]);
+	}
+
+	free(keys);
+	destroyMap(config);
+
+	if(parseConfigSuccess) {
 		module->display->init();
 		module->enable(module);
 		putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
