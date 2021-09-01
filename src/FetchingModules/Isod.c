@@ -144,8 +144,9 @@ void isodFetch(FetchingModule* fetchingModule) {
 			for(int i = notificationCount - 1; i >= 0; i--) {
 				json_object* notification = json_object_array_get_idx(items, i);
 				const char* modifiedDate = JSON_STRING(notification, "modifiedDate");
-				char* modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);
+				char* modifiedDateWithFixedFormat;
 				if(modifiedDate[1] == '.') { // day is one digit long
+					modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);
 					sprintf(modifiedDateWithFixedFormat, "0%s", modifiedDate);
 				} else { // for consistent freeing
 					modifiedDateWithFixedFormat = strdup(modifiedDate);

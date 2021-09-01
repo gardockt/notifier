@@ -203,6 +203,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	for(int i = 0; i < config->streamCount; i += 100) {
 		url = twitchGenerateUrl(config->streams, i, MIN(config->streamCount - 1, i + 99));
 		curl_easy_setopt(config->curl, CURLOPT_URL, url);
+		free(url);
 
 		CURLcode code = curl_easy_perform(config->curl);
 
@@ -249,6 +250,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 		free(response.data);
 	}
 
+	free(streamsNewCategory);
 	free(streamsNewTopic);
 	free(streamerName);
 	free(streamsFromMap);
