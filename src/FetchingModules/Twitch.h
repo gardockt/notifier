@@ -11,8 +11,6 @@
 #include "FetchingModule.h"
 
 typedef struct {
-	char* title;
-	char* body;
 	char** streams;
 	int streamCount;
 	char* clientId;

@@ -81,9 +81,7 @@ bool rssParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	RssConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "title", &config->title) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "body", &config->body)) {
+	if(!moduleLoadBasicSettings(fetchingModule, configToParse)) {
 		return false;
 	}
 
@@ -129,12 +127,11 @@ char* rssReplaceVariables(char* text, RssNotificationData* notificationData) {
 }
 
 void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData* notificationData) {
-	RssConfig* config = fetchingModule->config;
 	Message* message = malloc(sizeof *message);
 
 	bzero(message, sizeof *message);
-	message->title = rssReplaceVariables(config->title, notificationData);
-	message->text = rssReplaceVariables(config->body, notificationData);
+	message->title = rssReplaceVariables(fetchingModule->notificationTitle, notificationData);
+	message->text = rssReplaceVariables(fetchingModule->notificationBody, notificationData);
 	message->actionData = strdup(notificationData->url);
 	message->actionType = URL;
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
@@ -226,8 +223,7 @@ bool rssDisable(FetchingModule* fetchingModule) {
 	}
 
 	if(retVal) {
-		free(config->title);
-		free(config->body);
+		moduleFreeBasicSettings(fetchingModule);
 		free(config->sources);
 		free(config);
 		printf("Rss disabled\n");

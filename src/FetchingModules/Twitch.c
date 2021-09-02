@@ -64,8 +64,6 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	fetchingModule->config = config;
 
 	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "title", &config->title) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "body", &config->body) ||
 	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "id", &config->clientId) ||
 	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "secret", &config->clientSecret)) {
 		return false;
@@ -142,15 +140,14 @@ char* twitchReplaceVariables(char* text, TwitchNotificationData* notificationDat
 }
 
 void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificationData* notificationData) {
-	TwitchConfig* config = fetchingModule->config;
 	Message* message = malloc(sizeof *message);
 
 	char* url = malloc(strlen("https://twitch.tv/") + strlen(notificationData->streamerName) + 1);
 	sprintf(url, "https://twitch.tv/%s", notificationData->streamerName);
 
 	bzero(message, sizeof *message);
-	message->title = twitchReplaceVariables(config->title, notificationData);
-	message->text = twitchReplaceVariables(config->body, notificationData);
+	message->title = twitchReplaceVariables(fetchingModule->notificationTitle, notificationData);
+	message->text = twitchReplaceVariables(fetchingModule->notificationBody, notificationData);
 	message->actionData = url;
 	message->actionType = URL;
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
@@ -238,10 +235,9 @@ bool twitchDisable(FetchingModule* fetchingModule) {
 
 	if(retVal) {
 		destroyMap(config->streamTitles);
+		moduleFreeBasicSettings(fetchingModule);
 		free(config->streamTitles);
 		free(config->token);
-		free(config->title);
-		free(config->body);
 		for(int i = 0; i < config->streamCount; i++) {
 			free(config->streams[i]);
 		}

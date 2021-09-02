@@ -40,8 +40,6 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	fetchingModule->config = config;
 
 	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "title", &config->title) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "body", &config->body) ||
 	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "username", &config->username) ||
 	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "token", &config->token) ||
 	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "max_messages", &config->maxMessages)) {
@@ -77,12 +75,11 @@ char* isodReplaceVariables(char* text, IsodNotificationData* notificationData) {
 }
 
 void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationData* notificationData) {
-	IsodConfig* config = fetchingModule->config;
 	Message* message = malloc(sizeof *message);
 
 	bzero(message, sizeof *message);
-	message->title = isodReplaceVariables(config->title, notificationData);
-	message->text = isodReplaceVariables(config->body, notificationData);
+	message->title = isodReplaceVariables(fetchingModule->notificationTitle, notificationData);
+	message->text = isodReplaceVariables(fetchingModule->notificationBody, notificationData);
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
 }
 
@@ -151,10 +148,9 @@ bool isodDisable(FetchingModule* fetchingModule) {
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	if(retVal) {
+		moduleFreeBasicSettings(fetchingModule);
 		free(config->maxMessages);
 		free(config->lastRead);
-		free(config->title);
-		free(config->body);
 		free(config->username);
 		free(config->token);
 		free(config);

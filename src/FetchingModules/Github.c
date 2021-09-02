@@ -54,8 +54,6 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	fetchingModule->config = config;
 
 	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "title",  &config->title) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "body", &config->body) ||
 	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "token", &config->token)) {
 		return false;
 	}
@@ -106,12 +104,11 @@ char* githubReplaceVariables(char* text, GithubNotificationData* notificationDat
 }
 
 void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificationData* notificationData) {
-	GithubConfig* config = fetchingModule->config;
 	Message* message = malloc(sizeof *message);
 
 	bzero(message, sizeof *message);
-	message->title = githubReplaceVariables(config->title, notificationData);
-	message->text = githubReplaceVariables(config->body, notificationData);
+	message->title = githubReplaceVariables(fetchingModule->notificationTitle, notificationData);
+	message->text = githubReplaceVariables(fetchingModule->notificationBody, notificationData);
 	message->actionData = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
 	message->actionType = URL;
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
@@ -177,9 +174,8 @@ bool githubDisable(FetchingModule* fetchingModule) {
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	if(retVal) {
+		moduleFreeBasicSettings(fetchingModule);
 		free(config->lastRead);
-		free(config->title);
-		free(config->body);
 		free(config->token);
 		free(config);
 		printf("Github disabled\n");

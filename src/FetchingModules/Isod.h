@@ -11,8 +11,6 @@
 #include "FetchingModule.h"
 
 typedef struct {
-	char* title;
-	char* body;
 	char* username;
 	char* token;
 	CURL* curl;

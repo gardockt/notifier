@@ -20,9 +20,11 @@ bool moduleLoadStringFromConfig(FetchingModule* fetchingModule, Map* config, cha
 	return true;
 }
 
-// loads interval and display
+// loads fetchingModule variables
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
-	if(!moduleLoadIntFromConfig(fetchingModule, config, "interval", &fetchingModule->intervalSecs)) {
+	if(!moduleLoadIntFromConfig(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
+	   !moduleLoadStringFromConfig(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
+	   !moduleLoadStringFromConfig(fetchingModule, config, "body", &fetchingModule->notificationBody)) {
 		return false;
 	}
 
@@ -36,4 +38,9 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 	}
 
 	return true;
+}
+
+void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
+	free(fetchingModule->notificationTitle);
+	free(fetchingModule->notificationBody);
 }

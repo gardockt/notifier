@@ -19,8 +19,6 @@ typedef struct {
 } RssSource;
 
 typedef struct {
-	char* title;
-	char* body;
 	RssSource* sources;
 	int sourceCount;
 	CURL* curl;

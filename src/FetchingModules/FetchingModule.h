@@ -14,6 +14,8 @@ typedef struct FetMod {
 	pthread_t thread;
 	bool busy;
 	Display* display;
+	char* notificationTitle;
+	char* notificationBody;
 
 	bool (*parseConfig)(struct FetMod*, Map*);
 	bool (*enable)(struct FetMod*);

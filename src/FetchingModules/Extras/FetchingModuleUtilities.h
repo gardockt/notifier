@@ -12,5 +12,6 @@ bool moduleLoadIntFromConfig(FetchingModule* fetchingModule, Map* config, char* 
 bool moduleLoadStringFromConfig(FetchingModule* fetchingModule, Map* config, char* key, char** output);
 
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config);
+void moduleFreeBasicSettings(FetchingModule* fetchingModule);
 
 #endif // ifndef FETCHING_MODULE_UTILITIES_H
