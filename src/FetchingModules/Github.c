@@ -185,13 +185,11 @@ bool githubDisable(FetchingModule* fetchingModule) {
 }
 
 bool githubTemplate(FetchingModule* fetchingModule) {
-	fetchingModule->intervalSecs = 1;
-	fetchingModule->config = NULL;
-	fetchingModule->busy = false;
+	bzero(fetchingModule, sizeof *fetchingModule);
+
 	fetchingModule->parseConfig = githubParseConfig;
 	fetchingModule->enable = githubEnable;
 	fetchingModule->fetch = githubFetch;
-	fetchingModule->display = NULL;
 	fetchingModule->disable = githubDisable;
 
 	return true;

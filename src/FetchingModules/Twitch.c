@@ -252,13 +252,11 @@ bool twitchDisable(FetchingModule* fetchingModule) {
 }
 
 bool twitchTemplate(FetchingModule* fetchingModule) {
-	fetchingModule->intervalSecs = 1;
-	fetchingModule->config = NULL;
-	fetchingModule->busy = false;
+	bzero(fetchingModule, sizeof *fetchingModule);
+
 	fetchingModule->parseConfig = twitchParseConfig;
 	fetchingModule->enable = twitchEnable;
 	fetchingModule->fetch = twitchFetch;
-	fetchingModule->display = NULL;
 	fetchingModule->disable = twitchDisable;
 
 	return true;

@@ -233,13 +233,11 @@ bool rssDisable(FetchingModule* fetchingModule) {
 }
 
 bool rssTemplate(FetchingModule* fetchingModule) {
-	fetchingModule->intervalSecs = 1;
-	fetchingModule->config = NULL;
-	fetchingModule->busy = false;
+	bzero(fetchingModule, sizeof *fetchingModule);
+
 	fetchingModule->parseConfig = rssParseConfig;
 	fetchingModule->enable = rssEnable;
 	fetchingModule->fetch = rssFetch;
-	fetchingModule->display = NULL;
 	fetchingModule->disable = rssDisable;
 
 	return true;

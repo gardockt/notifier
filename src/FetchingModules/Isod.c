@@ -161,13 +161,11 @@ bool isodDisable(FetchingModule* fetchingModule) {
 }
 
 bool isodTemplate(FetchingModule* fetchingModule) {
-	fetchingModule->intervalSecs = 1;
-	fetchingModule->config = NULL;
-	fetchingModule->busy = false;
+	bzero(fetchingModule, sizeof *fetchingModule);
+
 	fetchingModule->parseConfig = isodParseConfig;
 	fetchingModule->enable = isodEnable;
 	fetchingModule->fetch = isodFetch;
-	fetchingModule->display = NULL;
 	fetchingModule->disable = isodDisable;
 
 	return true;
