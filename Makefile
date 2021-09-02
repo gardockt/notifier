@@ -11,7 +11,7 @@ LIBS = -lpthread -liniparser `pkg-config --libs libnotify` -lm `curl-config --li
 
 
 
-.PHONY: clean test
+.PHONY: clean
 
 all: $(OUTPUT)
 
