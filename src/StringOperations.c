@@ -31,7 +31,6 @@ int split(char* text, char* separators, char*** output) {
 	// export each section
 	int textStart = 0;
 
-	// TODO: refactor to avoid redundancy
 	for(int i = 0; i < textSections; i++) {
 		for(int j = textStart; j <= textLength; j++) {
 			if(j < textLength) {
