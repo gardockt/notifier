@@ -2,7 +2,7 @@
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
-#include "../GlobalManagers.h"
+#include "Extras/FetchingModuleUtilities.h"
 #include "Isod.h"
 
 // TODO: replace stash identifiers with module custom name
@@ -39,29 +39,12 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	IsodConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	char* title       = getFromMap(configToParse, "title",        strlen("title"));
-	char* body        = getFromMap(configToParse, "body",         strlen("body"));
-	char* username    = getFromMap(configToParse, "username",     strlen("username"));
-	char* token       = getFromMap(configToParse, "token",        strlen("token"));
-	char* maxMessages = getFromMap(configToParse, "max_messages", strlen("max_messages"));
-	char* interval    = getFromMap(configToParse, "interval",     strlen("interval"));
-	char* display     = getFromMap(configToParse, "display",      strlen("display"));
-
-	if(title == NULL || body == NULL || username == NULL || token == NULL || maxMessages == NULL || interval == NULL || display == NULL) {
-		destroyMap(configToParse);
-		return false;
-	}
-
-	config->title        = strdup(title);
-	config->body         = strdup(body);
-	config->username     = strdup(username);
-	config->token        = strdup(token);
-	config->maxMessages  = strdup(maxMessages);
-	fetchingModule->intervalSecs  = atoi(interval);
-	fetchingModule->display       = getDisplay(&displayManager, display);
-
-	if(fetchingModule->display == NULL) {
-		destroyMap(configToParse);
+	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "title", &config->title) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "body", &config->body) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "username", &config->username) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "token", &config->token) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "max_messages", &config->maxMessages)) {
 		return false;
 	}
 

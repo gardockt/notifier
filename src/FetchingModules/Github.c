@@ -1,7 +1,7 @@
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
 #include "../Network.h"
-#include "../GlobalManagers.h"
+#include "Extras/FetchingModuleUtilities.h"
 #include "Github.h"
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
@@ -53,25 +53,10 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	GithubConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	char* title     = getFromMap(configToParse, "title",    strlen("title"));
-	char* body      = getFromMap(configToParse, "body",     strlen("body"));
-	char* token     = getFromMap(configToParse, "token",    strlen("token"));
-	char* interval  = getFromMap(configToParse, "interval", strlen("interval"));
-	char* display   = getFromMap(configToParse, "display",  strlen("display"));
-
-	if(title == NULL || body == NULL || token == NULL || interval == NULL || display == NULL) {
-		destroyMap(configToParse);
-		return false;
-	}
-
-	config->title  = strdup(title);
-	config->body   = strdup(body);
-	config->token  = strdup(token);
-	fetchingModule->intervalSecs  = atoi(interval);
-	fetchingModule->display       = getDisplay(&displayManager, display);
-
-	if(fetchingModule->display == NULL) {
-		destroyMap(configToParse);
+	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "title",  &config->title) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "body", &config->body) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "token", &config->token)) {
 		return false;
 	}
 

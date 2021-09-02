@@ -2,7 +2,7 @@
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
-#include "../GlobalManagers.h"
+#include "Extras/FetchingModuleUtilities.h"
 #include "Rss.h"
 
 typedef struct {
@@ -81,30 +81,19 @@ bool rssParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	RssConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	char* title       = getFromMap(configToParse, "title",    strlen("title"));
-	char* body        = getFromMap(configToParse, "body",     strlen("body"));
-	char* sourcesRaw  = getFromMap(configToParse, "sources",  strlen("sources"));
-	char* interval    = getFromMap(configToParse, "interval", strlen("interval"));
-	char* display     = getFromMap(configToParse, "display",  strlen("display"));
-
-	if(title == NULL || body == NULL || sourcesRaw == NULL || interval == NULL || display == NULL) {
-		destroyMap(configToParse);
+	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "title", &config->title) ||
+	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "body", &config->body)) {
 		return false;
 	}
 
-	fetchingModule->display = getDisplay(&displayManager, display);
-	if(fetchingModule->display == NULL) {
-		destroyMap(configToParse);
+	char* sourcesRaw = getFromMap(configToParse, "sources",  strlen("sources"));
+	if(sourcesRaw == NULL) {
 		return false;
 	}
 
 	char** sources;
-
-	config->title        = strdup(title);
-	config->body         = strdup(body);
-	config->sourceCount  = split(sourcesRaw, "; ", &sources);
-	fetchingModule->intervalSecs  = atoi(interval);
-
+	config->sourceCount = split(sourcesRaw, "; ", &sources);
 	config->sources = malloc(config->sourceCount * sizeof *config->sources);
 	for(int i = 0; i < config->sourceCount; i++) {
 		config->sources[i].url = sources[i];
