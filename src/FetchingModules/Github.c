@@ -109,6 +109,7 @@ void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificatio
 	GithubConfig* config = fetchingModule->config;
 	Message* message = malloc(sizeof *message);
 
+	bzero(message, sizeof *message);
 	message->title = githubReplaceVariables(config->title, notificationData);
 	message->text = githubReplaceVariables(config->body, notificationData);
 	message->actionData = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);

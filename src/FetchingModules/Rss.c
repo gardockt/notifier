@@ -132,6 +132,7 @@ void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData*
 	RssConfig* config = fetchingModule->config;
 	Message* message = malloc(sizeof *message);
 
+	bzero(message, sizeof *message);
 	message->title = rssReplaceVariables(config->title, notificationData);
 	message->text = rssReplaceVariables(config->body, notificationData);
 	message->actionData = strdup(notificationData->url);

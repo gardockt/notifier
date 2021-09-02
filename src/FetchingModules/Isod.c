@@ -80,9 +80,9 @@ void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationDat
 	IsodConfig* config = fetchingModule->config;
 	Message* message = malloc(sizeof *message);
 
+	bzero(message, sizeof *message);
 	message->title = isodReplaceVariables(config->title, notificationData);
 	message->text = isodReplaceVariables(config->body, notificationData);
-	message->actionData = NULL;
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
 }
 
