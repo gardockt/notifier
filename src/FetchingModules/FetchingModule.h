@@ -9,6 +9,7 @@
 #include "../Displays/Display.h"
 
 typedef struct FetMod {
+	char* name;
 	int intervalSecs;
 	void* config;
 	pthread_t thread;

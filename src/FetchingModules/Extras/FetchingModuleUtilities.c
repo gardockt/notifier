@@ -24,7 +24,8 @@ bool moduleLoadStringFromConfig(FetchingModule* fetchingModule, Map* config, cha
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 	if(!moduleLoadIntFromConfig(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
 	   !moduleLoadStringFromConfig(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
-	   !moduleLoadStringFromConfig(fetchingModule, config, "body", &fetchingModule->notificationBody)) {
+	   !moduleLoadStringFromConfig(fetchingModule, config, "body", &fetchingModule->notificationBody) ||
+	   !moduleLoadStringFromConfig(fetchingModule, config, "_name", &fetchingModule->name)) {
 		return false;
 	}
 
@@ -45,6 +46,7 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
 	free(fetchingModule->notificationTitle);
 	free(fetchingModule->notificationBody);
+	free(fetchingModule->name);
 }
 
 void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg) {

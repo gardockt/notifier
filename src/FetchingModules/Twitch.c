@@ -35,7 +35,6 @@ char* twitchGenerateUrl(char** streams, int start, int stop) {
 		outputPointer += sprintf(&output[outputPointer], "%cuser_login=%s", (i == start ? '?' : '&'), streams[i]);
 	}
 
-	printf("%s\n", output);
 	return output;
 }
 

@@ -88,8 +88,7 @@ int main() {
 		char* value;
 		char* moduleType = NULL;
 
-		const char* sectionNameTemp = iniparser_getsecname(config, i);
-		sectionName = strdup(sectionNameTemp);
+		sectionName = strdup(iniparser_getsecname(config, i));
 
 		// TODO: add global section config
 
@@ -105,6 +104,9 @@ int main() {
 		initMap(configMap);
 		keys = malloc(keyCount * sizeof *keys);
 		iniparser_getseckeys(config, sectionName, keys);
+
+		char* nameSectionName = strdup("_name");
+		putIntoMap(configMap, nameSectionName, strlen(nameSectionName), strdup(sectionName));
 
 		for(int i = 0; i < keyCount; i++) {
 			if(keys[i][strlen(sectionName) + 1] == '_') {
