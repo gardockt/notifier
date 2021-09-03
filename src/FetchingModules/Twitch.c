@@ -32,14 +32,10 @@ char* twitchGenerateUrl(char** streams, int start, int stop) {
 	outputPointer = strlen(base);
 
 	for(int i = start; i <= stop; i++) {
-		output[outputPointer++] = (i == start ? '?' : '&');
-		strcpy(&output[outputPointer], "user_login=");
-		outputPointer += strlen("user_login=");
-		strcpy(&output[outputPointer], streams[i]);
-		outputPointer += strlen(streams[i]);
+		outputPointer += sprintf(&output[outputPointer], "%cuser_login=%s", (i == start ? '?' : '&'), streams[i]);
 	}
 
-	output[totalLength] = '\0';
+	printf("%s\n", output);
 	return output;
 }
 

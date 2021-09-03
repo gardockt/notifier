@@ -89,8 +89,7 @@ int main() {
 		char* moduleType = NULL;
 
 		const char* sectionNameTemp = iniparser_getsecname(config, i);
-		sectionName = malloc(strlen(sectionNameTemp) + 1);
-		strcpy(sectionName, sectionNameTemp);
+		sectionName = strdup(sectionNameTemp);
 
 		// TODO: add global section config
 
@@ -113,12 +112,10 @@ int main() {
 				continue;
 			}
 
-			char* keyTrimmed = malloc(strlen(keys[i]) - strlen(sectionName));
-			strcpy(keyTrimmed, keys[i] + strlen(sectionName) + 1);
+			char* keyTrimmed = strdup(keys[i] + strlen(sectionName) + 1);
 
 			const char* valueTemp = iniparser_getstring(config, keys[i], NULL);
-			value = malloc(strlen(valueTemp) + 1);
-			strcpy(value, valueTemp);
+			value = strdup(valueTemp);
 
 			if(!strcmp(keyTrimmed, "module")) {
 				moduleType = value;
@@ -131,12 +128,8 @@ int main() {
 		// add global settings for undefined values
 		for(int i = 0; i < globalConfigKeyCount; i++) {
 			if(!existsInMap(configMap, globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1, strlen(globalConfigKeys[i]) - strlen(CONFIG_GLOBAL_SECTION_NAME) - 1)) {
-				char* keyTrimmed = malloc(strlen(globalConfigKeys[i]) - strlen(CONFIG_GLOBAL_SECTION_NAME));
-				const char* valueTemp = iniparser_getstring(config, globalConfigKeys[i], NULL);
-				char* value = malloc(strlen(valueTemp) + 1);
-
-				strcpy(keyTrimmed, globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1);
-				strcpy(value, valueTemp);
+				char* keyTrimmed = strdup(globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1);
+				char* value = strdup(iniparser_getstring(config, globalConfigKeys[i], NULL));
 				putIntoMap(configMap, keyTrimmed, strlen(keyTrimmed), value);
 			}
 		}

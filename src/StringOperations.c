@@ -43,9 +43,7 @@ int split(char* text, char* separators, char*** output) {
 					break;
 				}
 			} else {
-				(*output)[i] = malloc(textLength - textStart + 1);
-				strcpy((*output)[i], &text[textStart]);
-				(*output)[i][j - textStart] = '\0';
+				(*output)[i] = strdup(&text[textStart]);
 			}
 		}
 		while(textStart < textLength && isCharacterSeparator(text[textStart], separators)) {
