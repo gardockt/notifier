@@ -47,7 +47,7 @@ void* libnotifyDisplayMessageThread(void* threadArgsPointer) {
 	LibnotifyThreadArgs* threadArgs = threadArgsPointer;
 	Message* message = threadArgs->message;
 
-	NotifyNotification* notification = notify_notification_new(message->title, message->text, NULL);
+	NotifyNotification* notification = notify_notification_new(message->title, message->body, NULL);
 
 	GMainLoop* mainLoop = g_main_loop_new(NULL, false);
 	g_signal_connect(notification, "closed", G_CALLBACK(libnotifyOnNotificationClose), threadArgs);

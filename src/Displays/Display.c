@@ -2,7 +2,7 @@
 
 void defaultMessageFreeFunction(Message* message) {
 	free(message->title);
-	free(message->text);
+	free(message->body);
 	free(message->actionData);
 	free(message);
 }

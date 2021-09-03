@@ -108,7 +108,7 @@ void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificatio
 
 	bzero(message, sizeof *message);
 	message->title = githubReplaceVariables(fetchingModule->notificationTitle, notificationData);
-	message->text = githubReplaceVariables(fetchingModule->notificationBody, notificationData);
+	message->body = githubReplaceVariables(fetchingModule->notificationBody, notificationData);
 	message->actionData = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
 	message->actionType = URL;
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);

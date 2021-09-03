@@ -79,7 +79,7 @@ void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationDat
 
 	bzero(message, sizeof *message);
 	message->title = isodReplaceVariables(fetchingModule->notificationTitle, notificationData);
-	message->text = isodReplaceVariables(fetchingModule->notificationBody, notificationData);
+	message->body = isodReplaceVariables(fetchingModule->notificationBody, notificationData);
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
 }
 

@@ -10,7 +10,7 @@ typedef enum {
 
 typedef struct {
 	char* title;
-	char* text;
+	char* body;
 	char* actionData;
 	NotificationActionType actionType;
 } Message;

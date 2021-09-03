@@ -147,7 +147,7 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 
 	bzero(message, sizeof *message);
 	message->title = twitchReplaceVariables(fetchingModule->notificationTitle, notificationData);
-	message->text = twitchReplaceVariables(fetchingModule->notificationBody, notificationData);
+	message->body = twitchReplaceVariables(fetchingModule->notificationBody, notificationData);
 	message->actionData = url;
 	message->actionType = URL;
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
