@@ -52,6 +52,14 @@ void* libnotifyDisplayMessageThread(void* threadArgsPointer) {
 	GMainLoop* mainLoop = g_main_loop_new(NULL, false);
 	g_signal_connect(notification, "closed", G_CALLBACK(libnotifyOnNotificationClose), threadArgs);
 
+	if(message->iconPath != NULL) {
+		GError *error = NULL;
+		GdkPixbuf *icon = gdk_pixbuf_new_from_file(message->iconPath, &error);
+		if(error == NULL) {
+			notify_notification_set_image_from_pixbuf(notification, icon);
+		}
+	}
+
 	if(message->actionData != NULL) {
 		notify_notification_add_action(notification, "open", "Open", NOTIFY_ACTION_CALLBACK(libnotifyStartAction), message, NULL);
 	}

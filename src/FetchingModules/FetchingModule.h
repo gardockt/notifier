@@ -16,6 +16,7 @@ typedef struct FetMod {
 	Display* display;
 	char* notificationTitle;
 	char* notificationBody;
+	char* iconPath;
 
 	bool (*parseConfig)(struct FetMod*, Map*);
 	bool (*enable)(struct FetMod*);

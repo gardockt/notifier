@@ -130,8 +130,7 @@ void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData*
 	Message* message = malloc(sizeof *message);
 
 	bzero(message, sizeof *message);
-	message->title = rssReplaceVariables(fetchingModule->notificationTitle, notificationData);
-	message->body = rssReplaceVariables(fetchingModule->notificationBody, notificationData);
+	moduleFillBasicMessage(fetchingModule, message, rssReplaceVariables, notificationData);
 	message->actionData = strdup(notificationData->url);
 	message->actionType = URL;
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);

@@ -146,8 +146,7 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 	sprintf(url, "https://twitch.tv/%s", notificationData->streamerName);
 
 	bzero(message, sizeof *message);
-	message->title = twitchReplaceVariables(fetchingModule->notificationTitle, notificationData);
-	message->body = twitchReplaceVariables(fetchingModule->notificationBody, notificationData);
+	moduleFillBasicMessage(fetchingModule, message, twitchReplaceVariables, notificationData);
 	message->actionData = url;
 	message->actionType = URL;
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);

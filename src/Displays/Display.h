@@ -13,6 +13,7 @@ typedef struct {
 	char* body;
 	char* actionData;
 	NotificationActionType actionType;
+	char* iconPath;
 } Message;
 
 typedef struct {

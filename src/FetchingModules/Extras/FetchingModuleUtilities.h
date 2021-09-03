@@ -14,4 +14,6 @@ bool moduleLoadStringFromConfig(FetchingModule* fetchingModule, Map* config, cha
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config);
 void moduleFreeBasicSettings(FetchingModule* fetchingModule);
 
+void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg);
+
 #endif // ifndef FETCHING_MODULE_UTILITIES_H

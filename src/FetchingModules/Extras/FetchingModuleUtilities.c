@@ -28,6 +28,8 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 		return false;
 	}
 
+	moduleLoadStringFromConfig(fetchingModule, config, "icon", &fetchingModule->iconPath);
+
 	char* displayName = getFromMap(config, "display", strlen("display"));
 	if(displayName == NULL) {
 		return false;
@@ -43,4 +45,10 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
 	free(fetchingModule->notificationTitle);
 	free(fetchingModule->notificationBody);
+}
+
+void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg) {
+	message->title = textEditingFunction(fetchingModule->notificationTitle, textEditingFunctionArg);
+	message->body = textEditingFunction(fetchingModule->notificationBody, textEditingFunctionArg);
+	message->iconPath = fetchingModule->iconPath;
 }
