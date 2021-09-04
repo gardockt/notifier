@@ -11,12 +11,15 @@ LIBS = -lpthread -liniparser `pkg-config --libs libnotify` -lm `curl-config --li
 
 
 
-.PHONY: clean
+.PHONY: clean install
 
 all: $(OUTPUT)
 
 clean:
 	-rm -r $(BUILD_DIR)/* $(OUTPUT)
+
+install: $(OUTPUT)
+	install -D -m0755 $(OUTPUT) /usr/bin
 
 
 
