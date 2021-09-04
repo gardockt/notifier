@@ -126,7 +126,7 @@ char* twitchReplaceVariables(char* text, TwitchNotificationData* notificationDat
 	char* ret;
 
 	temp = replace(text, "<streamer-name>", notificationData->streamerName);
-	ret = replace(temp, "<stream-title>", notificationData->title);
+	ret = replace(temp, "<title>", notificationData->title);
 	free(temp);
 	temp = ret;
 	ret = replace(temp, "<category>", notificationData->category);
