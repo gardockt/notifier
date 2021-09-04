@@ -7,9 +7,6 @@
 #include "Dirs.h"
 #include "Main.h"
 
-// TODO: move config to another source file?
-// TODO: move ini managing to another source file?
-
 ModuleManager moduleManager;
 DisplayManager displayManager;
 
