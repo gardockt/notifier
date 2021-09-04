@@ -54,3 +54,16 @@ void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, ch
 	message->body = textEditingFunction(fetchingModule->notificationBody, textEditingFunctionArg);
 	message->iconPath = fetchingModule->iconPath;
 }
+
+void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...) {
+	// TODO: implement verbosity
+	char* customFormat = malloc(strlen(fetchingModule->name) + strlen("[] \n") + strlen(format) + 1);
+	sprintf(customFormat, "[%s] %s\n", fetchingModule->name, format);
+
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, customFormat, args);
+	va_end(args);
+
+	free(customFormat);
+}

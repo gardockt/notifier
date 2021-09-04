@@ -82,7 +82,7 @@ bool githubEnable(FetchingModule* fetchingModule) {
 		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 
 		retVal = fetchingModuleCreateThread(fetchingModule);
-		printf("Github enabled\n");
+		moduleLog(fetchingModule, 1, "Module enabled");
 	}
 
 	free(headerUserAgent);
@@ -156,10 +156,10 @@ void githubFetch(FetchingModule* fetchingModule) {
 				config->lastRead = newLastRead;
 			}
 		} else {
-			fprintf(stderr, "[GitHub] Invalid response:\n%s\n", response.data);
+			moduleLog(fetchingModule, 0, "Invalid response:\n%s", response.data);
 		}
 	} else {
-		fprintf(stderr, "[GitHub] Request failed with code %d\n", code);
+		moduleLog(fetchingModule, 0, "Request failed with code %d", code);
 	}
 	free(response.data);
 }
@@ -173,11 +173,11 @@ bool githubDisable(FetchingModule* fetchingModule) {
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	if(retVal) {
+		moduleLog(fetchingModule, 1, "Module disabled");
 		moduleFreeBasicSettings(fetchingModule);
 		free(config->lastRead);
 		free(config->token);
 		free(config);
-		printf("Github disabled\n");
 	}
 
 	return retVal;

@@ -91,7 +91,7 @@ bool rssParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	}
 
 	char** sources;
-	config->sourceCount = split(sourcesRaw, "; ", &sources);
+	config->sourceCount = split(sourcesRaw, FETCHING_MODULE_LIST_ENTRY_SEPARATORS, &sources);
 	config->sources = malloc(config->sourceCount * sizeof *config->sources);
 	for(int i = 0; i < config->sourceCount; i++) {
 		config->sources[i].url = sources[i];
@@ -113,7 +113,7 @@ bool rssEnable(FetchingModule* fetchingModule) {
 		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 
 		retVal = fetchingModuleCreateThread(fetchingModule);
-		printf("Rss enabled\n");
+		moduleLog(fetchingModule, 1, "Module enabled");
 	}
 
 	return retVal;
@@ -204,7 +204,7 @@ void rssFetch(FetchingModule* fetchingModule) {
 			xmlFreeDoc(doc);
 
 		} else {
-			fprintf(stderr, "[RSS] Request failed with code %d\n", code);
+			moduleLog(fetchingModule, 0, "Request failed with code %d", code);
 		}
 		free(response.data);
 	}
@@ -222,10 +222,10 @@ bool rssDisable(FetchingModule* fetchingModule) {
 	}
 
 	if(retVal) {
+		moduleLog(fetchingModule, 1, "Module disabled");
 		moduleFreeBasicSettings(fetchingModule);
 		free(config->sources);
 		free(config);
-		printf("Rss disabled\n");
 	}
 
 	return retVal;

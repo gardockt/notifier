@@ -63,7 +63,7 @@ bool isodEnable(FetchingModule* fetchingModule) {
 		curl_easy_setopt(config->curl, CURLOPT_URL, url);
 
 		retVal = fetchingModuleCreateThread(fetchingModule);
-		printf("Isod enabled\n");
+		moduleLog(fetchingModule, 1, "Module enabled");
 	}
 
 	free(url);
@@ -131,10 +131,10 @@ void isodFetch(FetchingModule* fetchingModule) {
 				free(sectionName);
 			}
 		} else {
-			fprintf(stderr, "[ISOD] Invalid response:\n%s\n", response.data);
+			moduleLog(fetchingModule, 0, "Invalid response:\n%s", response.data);
 		}
 	} else {
-		fprintf(stderr, "[ISOD] Request failed with code %d\n", code);
+		moduleLog(fetchingModule, 0, "Request failed with code %d", code);
 	}
 	free(response.data);
 }
@@ -147,13 +147,13 @@ bool isodDisable(FetchingModule* fetchingModule) {
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	if(retVal) {
+		moduleLog(fetchingModule, 1, "Module disabled");
 		moduleFreeBasicSettings(fetchingModule);
 		free(config->maxMessages);
 		free(config->lastRead);
 		free(config->username);
 		free(config->token);
 		free(config);
-		printf("Isod disabled\n");
 	}
 
 	return retVal;

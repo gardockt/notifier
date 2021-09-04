@@ -40,7 +40,7 @@ char* twitchGenerateUrl(char** streams, int start, int stop) {
 
 bool twitchRefreshToken(FetchingModule* fetchingModule) {
 	// TODO: implement
-	fprintf(stderr, "[Twitch] Token refreshing is not implemented yet.\n");
+	moduleLog(fetchingModule, 0, "Token refreshing is not implemented yet.");
 
 	// saving token to stash - uncomment after this function is implemented
 	/*
@@ -71,7 +71,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 		return false;
 	}
 
-	config->streamCount   = split(streams, ",", &config->streams);
+	config->streamCount   = split(streams, FETCHING_MODULE_LIST_ENTRY_SEPARATORS, &config->streams);
 	config->streamTitles  = malloc(sizeof *config->streamTitles);
 
 	config->list = NULL;
@@ -113,7 +113,7 @@ bool twitchEnable(FetchingModule* fetchingModule) {
 		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 
 		retVal = fetchingModuleCreateThread(fetchingModule);
-		printf("Twitch enabled\n");
+		moduleLog(fetchingModule, 1, "Module enabled");
 	}
 
 	free(headerClientId);
@@ -205,10 +205,10 @@ void twitchFetch(FetchingModule* fetchingModule) {
 
 				json_object_put(root);
 			} else {
-				fprintf(stderr, "[Twitch] Invalid response:\n%s\n", response.data); // TODO: read and print error, example error response: {"error":"Bad Request","status":400,"message":"Malformed query params."}
+				moduleLog(fetchingModule, 0, "Invalid response:\n%s", response.data); // TODO: read and print error, example error response: {"error":"Bad Request","status":400,"message":"Malformed query params."}
 			}
 		} else {
-			fprintf(stderr, "[Twitch] Request failed with code %d\n", code);
+			moduleLog(fetchingModule, 0, "Request failed with code %d", code);
 		}
 		free(response.data);
 	}
@@ -228,6 +228,7 @@ bool twitchDisable(FetchingModule* fetchingModule) {
 	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	if(retVal) {
+		moduleLog(fetchingModule, 1, "Module disabled");
 		destroyMap(config->streamTitles);
 		moduleFreeBasicSettings(fetchingModule);
 		free(config->streamTitles);
@@ -239,7 +240,6 @@ bool twitchDisable(FetchingModule* fetchingModule) {
 		free(config->clientId);
 		free(config->clientSecret);
 		free(config);
-		printf("Twitch disabled\n");
 	}
 
 	return retVal;
