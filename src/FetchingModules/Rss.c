@@ -105,7 +105,11 @@ bool rssParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	return true;
 }
 
-bool rssEnable(FetchingModule* fetchingModule) {
+bool rssEnable(FetchingModule* fetchingModule, Map* configToParse) {
+	if(!rssParseConfig(fetchingModule, configToParse)) {
+		return false;
+	}
+
 	RssConfig* config = fetchingModule->config;
 	bool retVal = (config->curl = curl_easy_init()) != NULL;
 
@@ -234,7 +238,6 @@ bool rssDisable(FetchingModule* fetchingModule) {
 bool rssTemplate(FetchingModule* fetchingModule) {
 	bzero(fetchingModule, sizeof *fetchingModule);
 
-	fetchingModule->parseConfig = rssParseConfig;
 	fetchingModule->enable = rssEnable;
 	fetchingModule->fetch = rssFetch;
 	fetchingModule->disable = rssDisable;

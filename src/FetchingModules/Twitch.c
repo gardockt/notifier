@@ -95,7 +95,11 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	return true;
 }
 
-bool twitchEnable(FetchingModule* fetchingModule) {
+bool twitchEnable(FetchingModule* fetchingModule, Map* configToParse) {
+	if(!twitchParseConfig(fetchingModule, configToParse)) {
+		return false;
+	}
+
 	TwitchConfig* config = fetchingModule->config;
 	bool retVal = (config->curl = curl_easy_init()) != NULL;
 
@@ -248,7 +252,6 @@ bool twitchDisable(FetchingModule* fetchingModule) {
 bool twitchTemplate(FetchingModule* fetchingModule) {
 	bzero(fetchingModule, sizeof *fetchingModule);
 
-	fetchingModule->parseConfig = twitchParseConfig;
 	fetchingModule->enable = twitchEnable;
 	fetchingModule->fetch = twitchFetch;
 	fetchingModule->disable = twitchDisable;

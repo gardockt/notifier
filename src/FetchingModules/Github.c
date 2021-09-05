@@ -64,7 +64,11 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	return true;
 }
 
-bool githubEnable(FetchingModule* fetchingModule) {
+bool githubEnable(FetchingModule* fetchingModule, Map* configToParse) {
+	if(!githubParseConfig(fetchingModule, configToParse)) {
+		return false;
+	}
+
 	GithubConfig* config = fetchingModule->config;
 	bool retVal = (config->curl = curl_easy_init()) != NULL;
 
@@ -186,7 +190,6 @@ bool githubDisable(FetchingModule* fetchingModule) {
 bool githubTemplate(FetchingModule* fetchingModule) {
 	bzero(fetchingModule, sizeof *fetchingModule);
 
-	fetchingModule->parseConfig = githubParseConfig;
 	fetchingModule->enable = githubEnable;
 	fetchingModule->fetch = githubFetch;
 	fetchingModule->disable = githubDisable;

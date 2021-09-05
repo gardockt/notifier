@@ -53,7 +53,11 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	return true;
 }
 
-bool isodEnable(FetchingModule* fetchingModule) {
+bool isodEnable(FetchingModule* fetchingModule, Map* configToParse) {
+	if(!isodParseConfig(fetchingModule, configToParse)) {
+		return false;
+	}
+
 	IsodConfig* config = fetchingModule->config;
 	bool retVal = (config->curl = curl_easy_init()) != NULL;
 	char* url = isodGenerateUrl(fetchingModule);
@@ -162,7 +166,6 @@ bool isodDisable(FetchingModule* fetchingModule) {
 bool isodTemplate(FetchingModule* fetchingModule) {
 	bzero(fetchingModule, sizeof *fetchingModule);
 
-	fetchingModule->parseConfig = isodParseConfig;
 	fetchingModule->enable = isodEnable;
 	fetchingModule->fetch = isodFetch;
 	fetchingModule->disable = isodDisable;

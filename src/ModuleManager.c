@@ -80,7 +80,7 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 	}
 
 	memcpy(module, moduleTemplate, sizeof *module);
-	bool parseConfigSuccess = module->parseConfig(module, config);
+	bool enableModuleSuccess = module->enable(module, config);
 
 	int keyCount = getMapSize(config);
 	char** keys = malloc(keyCount * sizeof *keys);
@@ -96,13 +96,10 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 	free(keys);
 	destroyMap(config);
 
-	if(parseConfigSuccess) {
-		module->enable(module);
+	if(enableModuleSuccess) {
 		putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
-		return true;
-	} else {
-		return false;
 	}
+	return enableModuleSuccess;
 }
 
 bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
