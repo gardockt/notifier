@@ -97,7 +97,6 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 	destroyMap(config);
 
 	if(parseConfigSuccess) {
-		module->display->init();
 		module->enable(module);
 		putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
 		return true;
@@ -116,7 +115,6 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	char* keyToFree;
 
 	module->disable(module);
-	module->display->uninit();
 	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), (void**)&keyToFree, NULL); // value is already stored in "module"
 	free(keyToFree);
 	free(module);

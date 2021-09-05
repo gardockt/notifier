@@ -39,11 +39,15 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 	if(fetchingModule->display == NULL) {
 		return false;
 	}
+	if(!fetchingModule->display->init()) {
+		return false;
+	}
 
 	return true;
 }
 
 void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
+	fetchingModule->display->uninit();
 	free(fetchingModule->notificationTitle);
 	free(fetchingModule->notificationBody);
 	free(fetchingModule->name);
