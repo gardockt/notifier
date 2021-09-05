@@ -54,7 +54,7 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	fetchingModule->config = config;
 
 	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "token", &config->token)) {
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "token", &config->token)) {
 		return false;
 	}
 

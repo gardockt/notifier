@@ -87,6 +87,7 @@ bool rssParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 
 	char* sourcesRaw = getFromMap(configToParse, "sources",  strlen("sources"));
 	if(sourcesRaw == NULL) {
+		moduleLog(fetchingModule, 0, "Invalid sources");
 		return false;
 	}
 

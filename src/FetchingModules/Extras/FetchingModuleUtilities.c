@@ -20,12 +20,28 @@ bool moduleLoadStringFromConfig(FetchingModule* fetchingModule, Map* config, cha
 	return true;
 }
 
+bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, int* output) {
+	bool success = moduleLoadIntFromConfig(fetchingModule, config, key, output);
+	if(!success) {
+		moduleLog(fetchingModule, 0, "Invalid %s", key);
+	}
+	return success;
+}
+
+bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, char** output) {
+	bool success = moduleLoadStringFromConfig(fetchingModule, config, key, output);
+	if(!success) {
+		moduleLog(fetchingModule, 0, "Invalid %s", key);
+	}
+	return success;
+}
+
 // loads fetchingModule variables
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
-	if(!moduleLoadIntFromConfig(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
-	   !moduleLoadStringFromConfig(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
-	   !moduleLoadStringFromConfig(fetchingModule, config, "body", &fetchingModule->notificationBody) ||
-	   !moduleLoadStringFromConfig(fetchingModule, config, "_name", &fetchingModule->name)) {
+	if(!moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "body", &fetchingModule->notificationBody) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "_name", &fetchingModule->name)) {
 		return false;
 	}
 
@@ -33,13 +49,16 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 
 	char* displayName = getFromMap(config, "display", strlen("display"));
 	if(displayName == NULL) {
+		moduleLog(fetchingModule, 0, "Invalid display");
 		return false;
 	}
 	fetchingModule->display = getDisplay(&displayManager, displayName);
 	if(fetchingModule->display == NULL) {
+		moduleLog(fetchingModule, 0, "Display does not exist");
 		return false;
 	}
 	if(!fetchingModule->display->init()) {
+		moduleLog(fetchingModule, 0, "Failed to init display");
 		return false;
 	}
 

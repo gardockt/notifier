@@ -40,9 +40,9 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	fetchingModule->config = config;
 
 	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "username", &config->username) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "token", &config->token) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "max_messages", &config->maxMessages)) {
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "username", &config->username) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "token", &config->token) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "max_messages", &config->maxMessages)) {
 		return false;
 	}
 

@@ -59,8 +59,8 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	fetchingModule->config = config;
 
 	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "id", &config->clientId) ||
-	   !moduleLoadStringFromConfig(fetchingModule, configToParse, "secret", &config->clientSecret)) {
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "id", &config->clientId) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "secret", &config->clientSecret)) {
 		return false;
 	}
 
@@ -68,6 +68,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	int streamCount;
 
 	if(streams == NULL) {
+		moduleLog(fetchingModule, 0, "Invalid streams");
 		return false;
 	}
 
