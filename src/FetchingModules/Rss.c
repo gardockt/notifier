@@ -162,52 +162,55 @@ void rssFetch(FetchingModule* fetchingModule) {
 			xmlXPathObject* xPathObject;
 
 			doc = xmlReadMemory(response.data, response.size, config->sources[i].url, NULL, 0);
-			xPathContext = xmlXPathNewContext(doc);
+			if(doc != NULL) {
+				xPathContext = xmlXPathNewContext(doc);
 
-			xPathObject = xmlXPathEvalExpression("/rss/channel/title", xPathContext);
-			char* title = strdup(xmlNodeGetContent(xPathObject->nodesetval->nodeTab[0]));
-			xmlXPathFreeObject(xPathObject);
+				xPathObject = xmlXPathEvalExpression("/rss/channel/title", xPathContext);
+				char* title = strdup(xmlNodeGetContent(xPathObject->nodesetval->nodeTab[0]));
+				xmlXPathFreeObject(xPathObject);
 
-			xPathObject = xmlXPathEvalExpression("/rss/channel/item", xPathContext);
-			RssNotificationData* newMessages = malloc(xPathObject->nodesetval->nodeNr * sizeof *newMessages);
+				xPathObject = xmlXPathEvalExpression("/rss/channel/item", xPathContext);
+				RssNotificationData* newMessages = malloc(xPathObject->nodesetval->nodeNr * sizeof *newMessages);
 
-			xmlNodeSet* nodes = xPathObject->nodesetval;
-			int unreadMessagesPointer = 0;
-			char* newLastRead = NULL;
-			for(; unreadMessagesPointer < nodes->nodeNr; unreadMessagesPointer++) {
-				char* formattedDate = rssFormatDate(rssGetDateFromNode(nodes->nodeTab[unreadMessagesPointer]));
-				bool isUnread = rssCompareDates(config->sources[i].lastRead, formattedDate) < 0;
+				xmlNodeSet* nodes = xPathObject->nodesetval;
+				int unreadMessagesPointer = 0;
+				char* newLastRead = NULL;
+				for(; unreadMessagesPointer < nodes->nodeNr; unreadMessagesPointer++) {
+					char* formattedDate = rssFormatDate(rssGetDateFromNode(nodes->nodeTab[unreadMessagesPointer]));
+					bool isUnread = rssCompareDates(config->sources[i].lastRead, formattedDate) < 0;
 
-				if(isUnread && unreadMessagesPointer == 0) { // we are assuming chronological order
-					newLastRead = formattedDate;
-				} else {
-					free(formattedDate);
+					if(isUnread && unreadMessagesPointer == 0) { // we are assuming chronological order
+						newLastRead = formattedDate;
+					} else {
+						free(formattedDate);
+					}
+					if(!isUnread) {
+						break;
+					}
 				}
-				if(!isUnread) {
-					break;
+
+				unreadMessagesPointer--;
+				if(newLastRead != NULL) { // unread messages exist
+					char* sectionName = rssGenerateLastReadKeyName(config->sources[i].url);
+					stashSetString("rss", sectionName, newLastRead);
+					free(sectionName);
+					free(newLastRead);
 				}
+
+				for(int j = unreadMessagesPointer - 1; j >= 0; j--) {
+					bzero(&newMessages[j], sizeof newMessages[j]);
+					rssFillNotificationData(&newMessages[j], nodes->nodeTab[j]);
+					newMessages[j].sourceName = title;
+					rssDisplayNotification(fetchingModule, &newMessages[j]);
+				}
+
+				free(title);
+				xmlXPathFreeObject(xPathObject);
+				xmlXPathFreeContext(xPathContext);
+				xmlFreeDoc(doc);
+			} else {
+				moduleLog(fetchingModule, 0, "Error parsing feed %s", config->sources[i].url);
 			}
-
-			unreadMessagesPointer--;
-			if(newLastRead != NULL) { // unread messages exist
-				char* sectionName = rssGenerateLastReadKeyName(config->sources[i].url);
-				stashSetString("rss", sectionName, newLastRead);
-				free(sectionName);
-				free(newLastRead);
-			}
-
-			for(int j = unreadMessagesPointer - 1; j >= 0; j--) {
-				bzero(&newMessages[j], sizeof newMessages[j]);
-				rssFillNotificationData(&newMessages[j], nodes->nodeTab[j]);
-				newMessages[j].sourceName = title;
-				rssDisplayNotification(fetchingModule, &newMessages[j]);
-			}
-
-			free(title);
-			xmlXPathFreeObject(xPathObject);
-			xmlXPathFreeContext(xPathContext);
-			xmlFreeDoc(doc);
-
 		} else {
 			moduleLog(fetchingModule, 0, "Request failed with code %d", code);
 		}
