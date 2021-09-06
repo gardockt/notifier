@@ -3,10 +3,11 @@ notifier
 A program that fetches notifications from given sources and displays them on desktop.  
 **Note: The program is currently in early stages of development, and breaking changes may occur frequently.**
 
-# Availability
+## Availability
 Currently the program works only on Linux, though Windows support is planned.
 
-# Dependencies
+## Building
+Required dpendencies:
 - gcc
 - make
 - iniparser
@@ -15,7 +16,6 @@ Currently the program works only on Linux, though Windows support is planned.
 - libcurl
 - libxml2
 
-# Building
 Linux:
 ```
 git clone https://github.com/gardockt/notifier.git
@@ -23,14 +23,16 @@ cd notifier
 make
 ```
 
-# Configuration
-Configuration file is an INI file that should be placed in `$HOME/.config/notifier/notifier.ini`. For each module a section has to be made - it should contain following fields:
+## Configuration
+Configuration file is an INI file that should be placed in `$HOME/.config/notifier/notifier.ini`. For each module a section has to be made - alongside with fields required by module, it should contain following fields:
 - `module` - notifications module to be used
 - `display` - display module used for notifying user
 - `interval` - interval in seconds between checking for notifications
 - `title` - notification's title
 - `body` - notification's body
 - `icon` - path to icon displayed in notifications (optional)
+
+Text in `title` and `body` may contain variables, depending on module.
 
 Available notification modules:
 - `github` - GitHub notifications
@@ -41,35 +43,36 @@ Available notification modules:
 Available display modules:
 - `libnotify`
 
-Text in `title` and `body` can contain variables, depending on module:
+Module configuration details:
 - GitHub
-	- `<repo-name>` - repository's name
-	- `<repo-full-name>` - repository's full name (containing owner)
-	- `<title>` - notification's title
+	- Required fields:
+		- `token` - OAuth token
+	- Available variables:
+		- `<repo-name>` - repository's name
+		- `<repo-full-name>` - repository's full name (containing owner)
+		- `<title>` - notification's title
 - ISOD
-	- `<title>` - message's title
+	- Required fields:
+		- `max_messages` - max amount of new messages to be displayed
+		- `token` - API token
+		- `username` - username
+	- Available variables:
+		- `<title>` - message's title
 - RSS
-	- `<source-name>` - name of RSS feed
-	- `<title>` - message's title
+	- Required fields:
+		- `sources` - whitespace-separated list of RSS URLs
+	- Available variables:
+		- `<source-name>` - name of RSS feed
+		- `<title>` - message's title
 - Twitch
-	- `<category>` - streamed game/category
-	- `<title>` - stream's title
-	- `<streamer-name>` - streamer's nickname
-
-Additionally, each module requires additional fields:
-- GitHub
-	- `token` - OAuth token
-- ISOD
-	- `max_messages` - max amount of new messages to be displayed
-	- `token` - API token
-	- `username` - username
-- RSS
-	- `sources` - list of RSS URLs
-- Twitch
-	- `id` - app ID used to access Twitch API
-	- `secret` - OAuth secret for refreshing the token
-	- `streams` - list containing nicknames of streamers to be checked
-Lists' entries have to be whitespace-separated.
+	- Required fields:
+		- `id` - app ID used to access Twitch API
+		- `secret` - OAuth secret for refreshing the token
+		- `streams` - whitespace-separated list containing nicknames of streamers to be checked
+	- Available variables:
+		- `<category>` - streamed game/category
+		- `<title>` - stream's title
+		- `<streamer-name>` - streamer's nickname
 
 Configuration file can also contain a section `_global`, consisting of default values for each field.
 
