@@ -151,6 +151,7 @@ void rssFetch(FetchingModule* fetchingModule) {
 
 	// getting response
 	for(int i = 0; i < config->sourceCount; i++) {
+		response.data = NULL;
 		curl_easy_setopt(config->curl, CURLOPT_URL, config->sources[i].url);
 		curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
 		CURLcode code = curl_easy_perform(config->curl);
