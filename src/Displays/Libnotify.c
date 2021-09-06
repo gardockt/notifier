@@ -1,7 +1,5 @@
 #include "Libnotify.h"
 
-// TODO: close notification on action
-
 int initStack = 0;
 
 typedef struct {
@@ -41,6 +39,8 @@ void libnotifyStartAction(NotifyNotification* notification, char* action, gpoint
 			system(command);
 			free(command);
 	}
+
+	notify_notification_close(notification, NULL);
 }
 
 void* libnotifyDisplayMessageThread(void* threadArgsPointer) {
