@@ -4,7 +4,7 @@ A program that fetches notifications from given sources and displays them on des
 **Note: The program is currently in early stages of development, and breaking changes may occur frequently.**
 
 ## Availability
-Currently the program works only on Linux, though Windows support is planned.
+Currently the program works only on Linux.
 
 ## Building
 Required dpendencies:
@@ -87,7 +87,7 @@ module = twitch
 title = <streamer-name> is streaming <category>!
 id = ENTER_YOUR_ID_HERE
 secret = ENTER_YOUR_SECRET_HERE
-streams = gamesdonequick,twitchplayspokemon
+streams = gamesdonequick twitchplayspokemon
 interval = 30
 icon = /usr/share/local/icons/twitch.png
 
