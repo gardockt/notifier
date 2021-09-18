@@ -1,3 +1,5 @@
+#ifndef DISABLE_MODULE_GITHUB
+
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
 #include "../Network.h"
@@ -196,3 +198,5 @@ bool githubTemplate(FetchingModule* fetchingModule) {
 
 	return true;
 }
+
+#endif // ifndef DISABLE_MODULE_GITHUB

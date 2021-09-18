@@ -1,3 +1,5 @@
+#ifndef DISABLE_MODULE_ISOD
+
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
 #include "../Stash.h"
@@ -172,3 +174,5 @@ bool isodTemplate(FetchingModule* fetchingModule) {
 
 	return true;
 }
+
+#endif // ifndef DISABLE_MODULE_ISOD

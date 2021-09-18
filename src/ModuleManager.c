@@ -21,10 +21,20 @@ bool initModuleManager(ModuleManager* moduleManager) {
 	}
 
 	// adding modules to template map; enter names lower-case
-	if(!ADDMODULE(githubTemplate, "github") ||
-	   !ADDMODULE(isodTemplate, "isod") ||
-	   !ADDMODULE(rssTemplate, "rss") ||
-	   !ADDMODULE(twitchTemplate, "twitch")) {
+	if(
+#ifndef DISABLE_MODULE_GITHUB
+	   !ADDMODULE(githubTemplate,    "github") ||
+#endif
+#ifndef DISABLE_MODULE_ISOD
+	   !ADDMODULE(isodTemplate,      "isod") ||
+#endif
+#ifndef DISABLE_MODULE_RSS
+	   !ADDMODULE(rssTemplate,       "rss") ||
+#endif
+#ifndef DISABLE_MODULE_TWITCH
+	   !ADDMODULE(twitchTemplate,    "twitch") ||
+#endif
+	   false) {
 		return false;
 	}
 

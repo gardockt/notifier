@@ -1,3 +1,5 @@
+#ifndef DISABLE_MODULE_RSS
+
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
 #include "../Stash.h"
@@ -249,3 +251,5 @@ bool rssTemplate(FetchingModule* fetchingModule) {
 
 	return true;
 }
+
+#endif // ifndef DISABLE_MODULE_RSS

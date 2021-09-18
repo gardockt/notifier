@@ -1,6 +1,8 @@
 #ifndef TWITCH_H
 #define TWITCH_H
 
+#ifndef DISABLE_MODULE_TWITCH
+
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -22,5 +24,7 @@ typedef struct {
 } TwitchConfig;
 
 bool twitchTemplate(FetchingModule*);
+
+#endif // ifndef DISABLE_MODULE_TWITCH
 
 #endif // ifndef TWITCH_H

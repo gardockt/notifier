@@ -1,6 +1,8 @@
 #ifndef RSS_H
 #define RSS_H
 
+#ifndef DISABLE_MODULE_RSS
+
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -26,4 +28,5 @@ typedef struct {
 
 bool rssTemplate(FetchingModule*);
 
+#endif // ifndef DISABLE_MODULE_RSS
 #endif // ifndef RSS_H

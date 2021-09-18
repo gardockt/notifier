@@ -1,6 +1,8 @@
 #ifndef LIBNOTIFY_H
 #define LIBNOTIFY_H
 
+#ifndef DISABLE_DISPLAY_LIBNOTIFY
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -16,5 +18,7 @@ void libnotifyUninit();
 bool libnotifyDisplayMessage(Message* message, void (*freeFunction)(Message*));
 
 bool libnotifyStructure(Display* display);
+
+#endif // ifndef DISABLE_DISPLAY_LIBNOTIFY
 
 #endif // ifndef LIBNOTIFY_H

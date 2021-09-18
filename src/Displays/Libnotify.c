@@ -1,3 +1,5 @@
+#ifndef DISABLE_DISPLAY_LIBNOTIFY
+
 #include "Libnotify.h"
 
 int initStack = 0;
@@ -88,3 +90,5 @@ bool libnotifyStructure(Display* display) {
 
 	return true;
 }
+
+#endif // ifndef DISABLE_DISPLAY_LIBNOTIFY

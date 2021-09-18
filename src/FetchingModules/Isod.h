@@ -1,6 +1,8 @@
 #ifndef ISOD_H
 #define ISOD_H
 
+#ifndef DISABLE_MODULE_ISOD
+
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -19,5 +21,7 @@ typedef struct {
 } IsodConfig;
 
 bool isodTemplate(FetchingModule*);
+
+#endif // ifndef DISABLE_MODULE_ISOD
 
 #endif // ifndef ISOD_H

@@ -1,3 +1,5 @@
+#ifndef DISABLE_MODULE_TWITCH
+
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
 #include "../Stash.h"
@@ -259,3 +261,5 @@ bool twitchTemplate(FetchingModule* fetchingModule) {
 
 	return true;
 }
+
+#endif // ifndef DISABLE_MODULE_TWITCH
