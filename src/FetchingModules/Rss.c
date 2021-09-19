@@ -1,4 +1,4 @@
-#ifndef DISABLE_MODULE_RSS
+#ifdef ENABLE_MODULE_RSS
 
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
@@ -252,4 +252,4 @@ bool rssTemplate(FetchingModule* fetchingModule) {
 	return true;
 }
 
-#endif // ifndef DISABLE_MODULE_RSS
+#endif // ifdef ENABLE_MODULE_RSS

@@ -1,4 +1,4 @@
-#ifndef DISABLE_MODULE_GITHUB
+#ifdef ENABLE_MODULE_GITHUB
 
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
@@ -199,4 +199,4 @@ bool githubTemplate(FetchingModule* fetchingModule) {
 	return true;
 }
 
-#endif // ifndef DISABLE_MODULE_GITHUB
+#endif // ifdef ENABLE_MODULE_GITHUB

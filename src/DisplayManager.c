@@ -16,7 +16,7 @@ bool initDisplayManager(DisplayManager* displayManager) {
 
 	// adding displays to map; enter names lower-case
 	if(
-#ifndef DISABLE_DISPLAY_LIBNOTIFY
+#ifdef ENABLE_DISPLAY_LIBNOTIFY
 	   !ADDDISPLAY(libnotifyStructure, "libnotify") ||
 #endif
 		false) {

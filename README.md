@@ -8,18 +8,24 @@ Currently the program works only on Linux.
 
 ## Building
 Required dpendencies:
-- gcc
+- GCC
+- CMake
 - make
 - iniparser
-- libnotify
-- json-c
 - libcurl
-- libxml2
+
+Optional dependencies:
+- libnotify - for libnotify display
+- json-c - for GitHub/ISOD/Twitch modules
+- libxml2 - for RSS module
 
 Linux:
 ```
 git clone https://github.com/gardockt/notifier.git
 cd notifier
+mkdir build
+cd build
+cmake ..
 make
 ```
 

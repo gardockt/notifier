@@ -1,7 +1,7 @@
 #ifndef GITHUB_H
 #define GITHUB_H
 
-#ifndef DISABLE_MODULE_GITHUB
+#ifdef ENABLE_MODULE_GITHUB
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -22,6 +22,6 @@ typedef struct {
 
 bool githubTemplate(FetchingModule*);
 
-#endif // ifndef DISABLE_MODULE_GITHUB
+#endif // ifdef ENABLE_MODULE_GITHUB
 
 #endif // ifndef GITHUB_H

@@ -22,16 +22,16 @@ bool initModuleManager(ModuleManager* moduleManager) {
 
 	// adding modules to template map; enter names lower-case
 	if(
-#ifndef DISABLE_MODULE_GITHUB
+#ifdef ENABLE_MODULE_GITHUB
 	   !ADDMODULE(githubTemplate,    "github") ||
 #endif
-#ifndef DISABLE_MODULE_ISOD
+#ifdef ENABLE_MODULE_ISOD
 	   !ADDMODULE(isodTemplate,      "isod") ||
 #endif
-#ifndef DISABLE_MODULE_RSS
+#ifdef ENABLE_MODULE_RSS
 	   !ADDMODULE(rssTemplate,       "rss") ||
 #endif
-#ifndef DISABLE_MODULE_TWITCH
+#ifdef ENABLE_MODULE_TWITCH
 	   !ADDMODULE(twitchTemplate,    "twitch") ||
 #endif
 	   false) {

@@ -1,7 +1,7 @@
 #ifndef LIBNOTIFY_H
 #define LIBNOTIFY_H
 
-#ifndef DISABLE_DISPLAY_LIBNOTIFY
+#ifdef ENABLE_DISPLAY_LIBNOTIFY
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +19,6 @@ bool libnotifyDisplayMessage(Message* message, void (*freeFunction)(Message*));
 
 bool libnotifyStructure(Display* display);
 
-#endif // ifndef DISABLE_DISPLAY_LIBNOTIFY
+#endif // ifdef ENABLE_DISPLAY_LIBNOTIFY
 
 #endif // ifndef LIBNOTIFY_H

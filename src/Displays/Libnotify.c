@@ -1,4 +1,4 @@
-#ifndef DISABLE_DISPLAY_LIBNOTIFY
+#ifdef ENABLE_DISPLAY_LIBNOTIFY
 
 #include "Libnotify.h"
 
@@ -91,4 +91,4 @@ bool libnotifyStructure(Display* display) {
 	return true;
 }
 
-#endif // ifndef DISABLE_DISPLAY_LIBNOTIFY
+#endif // ifdef ENABLE_DISPLAY_LIBNOTIFY
