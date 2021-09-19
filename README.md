@@ -7,7 +7,7 @@ A program that fetches notifications from given sources and displays them on des
 Currently the program works only on Linux.
 
 ## Building
-Required dpendencies:
+Required dependencies:
 - GCC
 - CMake
 - make
