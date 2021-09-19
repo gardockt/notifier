@@ -128,7 +128,8 @@ bool twitchEnable(FetchingModule* fetchingModule, Map* configToParse) {
 	return retVal;
 }
 
-char* twitchReplaceVariables(char* text, TwitchNotificationData* notificationData) {
+char* twitchReplaceVariables(char* text, void* notificationDataPtr) {
+	TwitchNotificationData* notificationData = notificationDataPtr;
 	char* temp;
 	char* ret;
 

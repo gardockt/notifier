@@ -76,7 +76,8 @@ bool isodEnable(FetchingModule* fetchingModule, Map* configToParse) {
 	return retVal;
 }
 
-char* isodReplaceVariables(char* text, IsodNotificationData* notificationData) {
+char* isodReplaceVariables(char* text, void* notificationDataPtr) {
+	IsodNotificationData* notificationData = notificationDataPtr;
 	return replace(text, "<title>", notificationData->title);
 }
 

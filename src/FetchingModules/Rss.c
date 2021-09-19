@@ -126,7 +126,8 @@ bool rssEnable(FetchingModule* fetchingModule, Map* configToParse) {
 	return retVal;
 }
 
-char* rssReplaceVariables(char* text, RssNotificationData* notificationData) {
+char* rssReplaceVariables(char* text, void* notificationDataPtr) {
+	RssNotificationData* notificationData = notificationDataPtr;
 	char* temp = replace(text, "<title>", notificationData->title);
 	char* ret = replace(temp, "<source-name>", notificationData->sourceName);
 	free(temp);

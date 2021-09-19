@@ -96,7 +96,8 @@ bool githubEnable(FetchingModule* fetchingModule, Map* configToParse) {
 	return retVal;
 }
 
-char* githubReplaceVariables(char* text, GithubNotificationData* notificationData) {
+char* githubReplaceVariables(char* text, void* notificationDataPtr) {
+	GithubNotificationData* notificationData = notificationDataPtr;
 	char* temp;
 	char* ret;
 
