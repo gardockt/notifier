@@ -84,7 +84,7 @@ char* isodReplaceVariables(char* text, void* notificationDataPtr) {
 void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationData* notificationData) {
 	Message* message = malloc(sizeof *message);
 
-	bzero(message, sizeof *message);
+	memset(message, 0, sizeof *message);
 	moduleFillBasicMessage(fetchingModule, message, isodReplaceVariables, notificationData);
 	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
 }
@@ -167,7 +167,7 @@ bool isodDisable(FetchingModule* fetchingModule) {
 }
 
 bool isodTemplate(FetchingModule* fetchingModule) {
-	bzero(fetchingModule, sizeof *fetchingModule);
+	memset(fetchingModule, 0, sizeof *fetchingModule);
 
 	fetchingModule->enable = isodEnable;
 	fetchingModule->fetch = isodFetch;

@@ -137,7 +137,7 @@ char* rssReplaceVariables(char* text, void* notificationDataPtr) {
 void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData* notificationData) {
 	Message* message = malloc(sizeof *message);
 
-	bzero(message, sizeof *message);
+	memset(message, 0, sizeof *message);
 	moduleFillBasicMessage(fetchingModule, message, rssReplaceVariables, notificationData);
 	message->actionData = strdup(notificationData->url);
 	message->actionType = URL;
@@ -202,7 +202,7 @@ void rssFetch(FetchingModule* fetchingModule) {
 				}
 
 				for(int j = unreadMessagesPointer - 1; j >= 0; j--) {
-					bzero(&newMessages[j], sizeof newMessages[j]);
+					memset(&newMessages[j], 0, sizeof newMessages[j]);
 					rssFillNotificationData(&newMessages[j], nodes->nodeTab[j]);
 					newMessages[j].sourceName = title;
 					rssDisplayNotification(fetchingModule, &newMessages[j]);
@@ -244,7 +244,7 @@ bool rssDisable(FetchingModule* fetchingModule) {
 }
 
 bool rssTemplate(FetchingModule* fetchingModule) {
-	bzero(fetchingModule, sizeof *fetchingModule);
+	memset(fetchingModule, 0, sizeof *fetchingModule);
 
 	fetchingModule->enable = rssEnable;
 	fetchingModule->fetch = rssFetch;

@@ -145,7 +145,7 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 	char* url = malloc(strlen("https://twitch.tv/") + strlen(notificationData->streamerName) + 1);
 	sprintf(url, "https://twitch.tv/%s", notificationData->streamerName);
 
-	bzero(message, sizeof *message);
+	memset(message, 0, sizeof *message);
 	moduleFillBasicMessage(fetchingModule, message, twitchReplaceVariables, notificationData);
 	message->actionData = url;
 	message->actionType = URL;
@@ -260,7 +260,7 @@ bool twitchDisable(FetchingModule* fetchingModule) {
 }
 
 bool twitchTemplate(FetchingModule* fetchingModule) {
-	bzero(fetchingModule, sizeof *fetchingModule);
+	memset(fetchingModule, 0, sizeof *fetchingModule);
 
 	fetchingModule->enable = twitchEnable;
 	fetchingModule->fetch = twitchFetch;

@@ -113,7 +113,7 @@ char* githubReplaceVariables(char* text, void* notificationDataPtr) {
 void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificationData* notificationData) {
 	Message* message = malloc(sizeof *message);
 
-	bzero(message, sizeof *message);
+	memset(message, 0, sizeof *message);
 	moduleFillBasicMessage(fetchingModule, message, githubReplaceVariables, notificationData);
 	message->actionData = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
 	message->actionType = URL;
@@ -191,7 +191,7 @@ bool githubDisable(FetchingModule* fetchingModule) {
 }
 
 bool githubTemplate(FetchingModule* fetchingModule) {
-	bzero(fetchingModule, sizeof *fetchingModule);
+	memset(fetchingModule, 0, sizeof *fetchingModule);
 
 	fetchingModule->enable = githubEnable;
 	fetchingModule->fetch = githubFetch;
