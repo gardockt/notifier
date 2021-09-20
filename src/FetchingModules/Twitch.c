@@ -9,6 +9,7 @@
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
 #define MIN(x,y) ((x)<(y)?(x):(y))
+#define IS_VALID_STREAMS_CHARACTER(c) ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || strchr(FETCHING_MODULE_LIST_ENTRY_SEPARATORS, c) != NULL)
 
 typedef struct {
 	const char* streamerName;
@@ -69,6 +70,13 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	if(streams == NULL) {
 		moduleLog(fetchingModule, 0, "Invalid streams");
 		return false;
+	}
+
+	for(int i = 0; streams[i] != '\0'; i++) {
+		if(!IS_VALID_STREAMS_CHARACTER(streams[i])) {
+			moduleLog(fetchingModule, 0, "Streams contain illegal character \"%c\"", streams[i]);
+			return false;
+		}
 	}
 
 	config->streamCount   = split(streams, FETCHING_MODULE_LIST_ENTRY_SEPARATORS, &config->streams);
@@ -174,8 +182,6 @@ void twitchFetch(FetchingModule* fetchingModule) {
 		free(url);
 
 		CURLcode code = curl_easy_perform(config->curl);
-
-		// TODO: look for illegal characters while loading config (example: dot in streams)
 
 		// parsing response
 		if(code == CURLE_OK) {
