@@ -10,9 +10,6 @@
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
 #define MIN(x,y) ((x)<(y)?(x):(y))
 
-// TODO: REFACTOR!!
-// idea for improving notification condition I might check later: collect active streams and topics into array (or sorted list), get all keys from array and update each key's value depending on active streams' array
-
 typedef struct {
 	const char* streamerName;
 	const char* title;
@@ -162,11 +159,11 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	NetworkResponse response = {NULL, 0};
 	char* url;
 
-	char** streamsFromMap     = malloc(config->streamCount * sizeof *streamsFromMap);
+	char** checkedStreamNames       = malloc(config->streamCount * sizeof *checkedStreamNames);
+	char** streamsNewTopic          = malloc(config->streamCount * sizeof *streamsNewTopic);
 	const char** streamerName       = malloc(config->streamCount * sizeof *streamerName);
-	const char** streamsNewTopic    = malloc(config->streamCount * sizeof *streamsNewTopic);
 	const char** streamsNewCategory = malloc(config->streamCount * sizeof *streamsNewCategory);
-	getMapKeys(config->streamTitles, (void**)streamsFromMap);
+	getMapKeys(config->streamTitles, (void**)checkedStreamNames);
 	streamsNewTopic = memset(streamsNewTopic, 0, config->streamCount * sizeof *streamsNewTopic);
 
 	// getting response
@@ -185,16 +182,16 @@ void twitchFetch(FetchingModule* fetchingModule) {
 			json_object* root = json_tokener_parse(response.data);
 			json_object* data = json_object_object_get(root, "data");
 			if(json_object_get_type(data) == json_type_array) {
-				int activeStreamers = json_object_array_length(data);
+				int activeStreamersCount = json_object_array_length(data);
 
-				for(int i = 0; i < activeStreamers; i++) {
+				for(int i = 0; i < activeStreamersCount; i++) {
 					json_object* stream = json_object_array_get_idx(data, i);
 					const char* activeStreamerName = JSON_STRING(stream, "user_name");
 
 					for(int j = 0; j < config->streamCount; j++) {
-						if(!strcasecmp(activeStreamerName, streamsFromMap[j])) {
+						if(!strcasecmp(activeStreamerName, checkedStreamNames[j])) {
 							streamerName[j]    = activeStreamerName;
-							streamsNewTopic[j] = JSON_STRING(stream, "title");
+							streamsNewTopic[j] = strdup(JSON_STRING(stream, "title"));
 							streamsNewCategory[j] = JSON_STRING(stream, "game_name");
 							break;
 						}
@@ -202,13 +199,16 @@ void twitchFetch(FetchingModule* fetchingModule) {
 				}
 
 				for(int i = 0; i < config->streamCount; i++) {
-					if(getFromMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i])) == NULL && streamsNewTopic[i] != NULL) {
+					if(getFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i])) == NULL && streamsNewTopic[i] != NULL) {
 						notificationData.streamerName = streamerName[i];
 						notificationData.title        = streamsNewTopic[i];
 						notificationData.category     = streamsNewCategory[i];
 						twitchDisplayNotification(fetchingModule, &notificationData);
 					}
-					putIntoMap(config->streamTitles, streamsFromMap[i], strlen(streamsFromMap[i]), streamsNewTopic[i]); // value get uninitialized, but we are only checking whether it is NULL
+					char* lastStreamTopic;
+					removeFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), NULL, (void**)&lastStreamTopic);
+					free(lastStreamTopic);
+					putIntoMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), streamsNewTopic[i]);
 				}
 
 				json_object_put(root);
@@ -224,7 +224,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	free(streamsNewCategory);
 	free(streamsNewTopic);
 	free(streamerName);
-	free(streamsFromMap);
+	free(checkedStreamNames);
 }
 
 bool twitchDisable(FetchingModule* fetchingModule) {
@@ -237,6 +237,12 @@ bool twitchDisable(FetchingModule* fetchingModule) {
 
 	if(retVal) {
 		moduleLog(fetchingModule, 1, "Module disabled");
+
+		char* streamTitle;
+		for(int i = 0; i < config->streamCount; i++) {
+			removeFromMap(config->streamTitles, config->streams[i], strlen(config->streams[i]), NULL, (void**)&streamTitle);
+			free(streamTitle);
+		}
 		destroyMap(config->streamTitles);
 		moduleFreeBasicSettings(fetchingModule);
 		free(config->streamTitles);
