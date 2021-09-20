@@ -21,7 +21,7 @@ typedef struct FetMod {
 
 	bool (*enable)(struct FetMod*, Map*);
 	void (*fetch)(struct FetMod*);
-	bool (*disable)(struct FetMod*);
+	void (*disable)(struct FetMod*);
 } FetchingModule;
 
 bool fetchingModuleCreateThread(FetchingModule* fetchingModule);

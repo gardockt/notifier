@@ -55,8 +55,7 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	GithubConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "token", &config->token)) {
+	if(!moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "token", &config->token)) {
 		return false;
 	}
 
@@ -86,9 +85,6 @@ bool githubEnable(FetchingModule* fetchingModule, Map* configToParse) {
 
 		curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
 		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
-
-		retVal = fetchingModuleCreateThread(fetchingModule);
-		moduleLog(fetchingModule, 1, "Module enabled");
 	}
 
 	free(headerUserAgent);
@@ -171,23 +167,15 @@ void githubFetch(FetchingModule* fetchingModule) {
 	free(response.data);
 }
 
-bool githubDisable(FetchingModule* fetchingModule) {
+void githubDisable(FetchingModule* fetchingModule) {
 	GithubConfig* config = fetchingModule->config;
 
 	curl_slist_free_all(config->list);
 	curl_easy_cleanup(config->curl);
 
-	bool retVal = fetchingModuleDestroyThread(fetchingModule);
-
-	if(retVal) {
-		moduleLog(fetchingModule, 1, "Module disabled");
-		moduleFreeBasicSettings(fetchingModule);
-		free(config->lastRead);
-		free(config->token);
-		free(config);
-	}
-
-	return retVal;
+	free(config->lastRead);
+	free(config->token);
+	free(config);
 }
 
 bool githubTemplate(FetchingModule* fetchingModule) {

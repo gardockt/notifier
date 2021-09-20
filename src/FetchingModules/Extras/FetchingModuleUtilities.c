@@ -1,5 +1,3 @@
-#include "../../GlobalManagers.h"
-#include "../../Displays/Display.h"
 #include "FetchingModuleUtilities.h"
 
 bool moduleLoadIntFromConfig(FetchingModule* fetchingModule, Map* config, char* key, int* output) {
@@ -34,42 +32,6 @@ bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, 
 		moduleLog(fetchingModule, 0, "Invalid %s", key);
 	}
 	return success;
-}
-
-// loads fetchingModule variables
-bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
-	if(!moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "body", &fetchingModule->notificationBody) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "_name", &fetchingModule->name)) {
-		return false;
-	}
-
-	moduleLoadStringFromConfig(fetchingModule, config, "icon", &fetchingModule->iconPath);
-
-	char* displayName = getFromMap(config, "display", strlen("display"));
-	if(displayName == NULL) {
-		moduleLog(fetchingModule, 0, "Invalid display");
-		return false;
-	}
-	fetchingModule->display = getDisplay(&displayManager, displayName);
-	if(fetchingModule->display == NULL) {
-		moduleLog(fetchingModule, 0, "Display does not exist");
-		return false;
-	}
-	if(!fetchingModule->display->init()) {
-		moduleLog(fetchingModule, 0, "Failed to init display");
-		return false;
-	}
-
-	return true;
-}
-
-void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
-	fetchingModule->display->uninit();
-	free(fetchingModule->notificationTitle);
-	free(fetchingModule->notificationBody);
-	free(fetchingModule->name);
 }
 
 void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg) {

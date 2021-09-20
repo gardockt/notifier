@@ -83,10 +83,6 @@ bool rssParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	RssConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	if(!moduleLoadBasicSettings(fetchingModule, configToParse)) {
-		return false;
-	}
-
 	char* sourcesRaw = getFromMap(configToParse, "sources",  strlen("sources"));
 	if(sourcesRaw == NULL) {
 		moduleLog(fetchingModule, 0, "Invalid sources");
@@ -118,9 +114,6 @@ bool rssEnable(FetchingModule* fetchingModule, Map* configToParse) {
 
 	if(retVal) {
 		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
-
-		retVal = fetchingModuleCreateThread(fetchingModule);
-		moduleLog(fetchingModule, 1, "Module enabled");
 	}
 
 	return retVal;
@@ -222,25 +215,17 @@ void rssFetch(FetchingModule* fetchingModule) {
 	}
 }
 
-bool rssDisable(FetchingModule* fetchingModule) {
+void rssDisable(FetchingModule* fetchingModule) {
 	RssConfig* config = fetchingModule->config;
 
 	curl_easy_cleanup(config->curl);
-
-	bool retVal = fetchingModuleDestroyThread(fetchingModule);
 
 	for(int i = 0; i < config->sourceCount; i++) {
 		free(config->sources[i].url);
 	}
 
-	if(retVal) {
-		moduleLog(fetchingModule, 1, "Module disabled");
-		moduleFreeBasicSettings(fetchingModule);
-		free(config->sources);
-		free(config);
-	}
-
-	return retVal;
+	free(config->sources);
+	free(config);
 }
 
 bool rssTemplate(FetchingModule* fetchingModule) {

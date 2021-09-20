@@ -1,7 +1,9 @@
 #include "StringOperations.h"
 #include "ModuleManager.h"
+#include "GlobalManagers.h"
 #include "Structures/Map.h"
 #include "FetchingModules/FetchingModule.h"
+#include "FetchingModules/Extras/FetchingModuleUtilities.h"
 #include "Displays/Display.h"
 
 // fetching modules
@@ -68,6 +70,41 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 	destroyMap(&moduleManager->activeModules);
 }
 
+bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
+	if(!moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "body", &fetchingModule->notificationBody) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "_name", &fetchingModule->name)) {
+		return false;
+	}
+
+	moduleLoadStringFromConfig(fetchingModule, config, "icon", &fetchingModule->iconPath);
+
+	char* displayName = getFromMap(config, "display", strlen("display"));
+	if(displayName == NULL) {
+		moduleLog(fetchingModule, 0, "Invalid display");
+		return false;
+	}
+	fetchingModule->display = getDisplay(&displayManager, displayName);
+	if(fetchingModule->display == NULL) {
+		moduleLog(fetchingModule, 0, "Display does not exist");
+		return false;
+	}
+	if(!fetchingModule->display->init()) {
+		moduleLog(fetchingModule, 0, "Failed to init display");
+		return false;
+	}
+
+	return true;
+}
+
+void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
+	fetchingModule->display->uninit();
+	free(fetchingModule->notificationTitle);
+	free(fetchingModule->notificationBody);
+	free(fetchingModule->name);
+}
+
 bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config) {
 	if(moduleManager == NULL || moduleType == NULL || moduleCustomName == NULL || config == NULL) {
 		return false;
@@ -90,7 +127,7 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 	}
 
 	memcpy(module, moduleTemplate, sizeof *module);
-	bool enableModuleSuccess = module->enable(module, config);
+	bool enableModuleSuccess = moduleLoadBasicSettings(module, config) && module->enable(module, config) && fetchingModuleCreateThread(module);
 
 	int keyCount = getMapSize(config);
 	char** keys = malloc(keyCount * sizeof *keys);
@@ -107,6 +144,7 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 	destroyMap(config);
 
 	if(enableModuleSuccess) {
+		moduleLog(module, 1, "Module enabled");
 		putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
 	}
 	return enableModuleSuccess;
@@ -114,6 +152,7 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 
 bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	FetchingModule* module = getFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName));
+	char* moduleCustomNameCopy = strdup(moduleCustomName);
 
 	if(module == NULL) {
 		return false;
@@ -121,10 +160,14 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 
 	char* keyToFree;
 
+	fetchingModuleDestroyThread(module);
 	module->disable(module);
+	moduleFreeBasicSettings(module);
 	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), (void**)&keyToFree, NULL); // value is already stored in "module"
 	free(keyToFree);
 	free(module);
 
+	fprintf(stderr, "[%s] Module disabled\n", moduleCustomNameCopy); // TODO: implement verbosity support
+	free(moduleCustomNameCopy);
 	return true;
 }

@@ -58,8 +58,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	TwitchConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "id", &config->clientId) ||
+	if(!moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "id", &config->clientId) ||
 	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "secret", &config->clientSecret)) {
 		return false;
 	}
@@ -123,9 +122,6 @@ bool twitchEnable(FetchingModule* fetchingModule, Map* configToParse) {
 
 		curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
 		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
-
-		retVal = fetchingModuleCreateThread(fetchingModule);
-		moduleLog(fetchingModule, 1, "Module enabled");
 	}
 
 	free(headerClientId);
@@ -233,36 +229,27 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	free(checkedStreamNames);
 }
 
-bool twitchDisable(FetchingModule* fetchingModule) {
+void twitchDisable(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
 
 	curl_slist_free_all(config->list);
 	curl_easy_cleanup(config->curl);
 
-	bool retVal = fetchingModuleDestroyThread(fetchingModule);
-
-	if(retVal) {
-		moduleLog(fetchingModule, 1, "Module disabled");
-
-		char* streamTitle;
-		for(int i = 0; i < config->streamCount; i++) {
-			removeFromMap(config->streamTitles, config->streams[i], strlen(config->streams[i]), NULL, (void**)&streamTitle);
-			free(streamTitle);
-		}
-		destroyMap(config->streamTitles);
-		moduleFreeBasicSettings(fetchingModule);
-		free(config->streamTitles);
-		free(config->token);
-		for(int i = 0; i < config->streamCount; i++) {
-			free(config->streams[i]);
-		}
-		free(config->streams);
-		free(config->clientId);
-		free(config->clientSecret);
-		free(config);
+	char* streamTitle;
+	for(int i = 0; i < config->streamCount; i++) {
+		removeFromMap(config->streamTitles, config->streams[i], strlen(config->streams[i]), NULL, (void**)&streamTitle);
+		free(streamTitle);
 	}
-
-	return retVal;
+	destroyMap(config->streamTitles);
+	free(config->streamTitles);
+	free(config->token);
+	for(int i = 0; i < config->streamCount; i++) {
+		free(config->streams[i]);
+	}
+	free(config->streams);
+	free(config->clientId);
+	free(config->clientSecret);
+	free(config);
 }
 
 bool twitchTemplate(FetchingModule* fetchingModule) {

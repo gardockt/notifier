@@ -41,8 +41,7 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	IsodConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	if(!moduleLoadBasicSettings(fetchingModule, configToParse) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "username", &config->username) ||
+	if(!moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "username", &config->username) ||
 	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "token", &config->token) ||
 	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "max_messages", &config->maxMessages)) {
 		return false;
@@ -67,9 +66,6 @@ bool isodEnable(FetchingModule* fetchingModule, Map* configToParse) {
 	if(retVal) {
 		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 		curl_easy_setopt(config->curl, CURLOPT_URL, url);
-
-		retVal = fetchingModuleCreateThread(fetchingModule);
-		moduleLog(fetchingModule, 1, "Module enabled");
 	}
 
 	free(url);
@@ -146,24 +142,16 @@ void isodFetch(FetchingModule* fetchingModule) {
 	free(response.data);
 }
 
-bool isodDisable(FetchingModule* fetchingModule) {
+void isodDisable(FetchingModule* fetchingModule) {
 	IsodConfig* config = fetchingModule->config;
 
 	curl_easy_cleanup(config->curl);
 
-	bool retVal = fetchingModuleDestroyThread(fetchingModule);
-
-	if(retVal) {
-		moduleLog(fetchingModule, 1, "Module disabled");
-		moduleFreeBasicSettings(fetchingModule);
-		free(config->maxMessages);
-		free(config->lastRead);
-		free(config->username);
-		free(config->token);
-		free(config);
-	}
-
-	return retVal;
+	free(config->maxMessages);
+	free(config->lastRead);
+	free(config->username);
+	free(config->token);
+	free(config);
 }
 
 bool isodTemplate(FetchingModule* fetchingModule) {
