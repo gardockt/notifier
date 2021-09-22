@@ -56,9 +56,19 @@ void moduleLogCustom(char* sectionName, int desiredVerbosity, int verbosity, cha
 	free(customFormat);
 }
 
+// TODO: make it a wrapper for moduleLogCustom
 void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...) {
+	if(fetchingModule->verbosity < verbosity) {
+		return;
+	}
+
+	char* customFormat = malloc(strlen(fetchingModule->name) + strlen("[] \n") + strlen(format) + 1);
+	sprintf(customFormat, "[%s] %s\n", fetchingModule->name, format);
+
 	va_list args;
 	va_start(args, format);
-	moduleLogCustom(fetchingModule->name, fetchingModule->verbosity, verbosity, format, args);
+	vfprintf(stderr, customFormat, args);
 	va_end(args);
+
+	free(customFormat);
 }
