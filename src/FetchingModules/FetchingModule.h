@@ -13,6 +13,7 @@ typedef struct FetMod {
 	int intervalSecs;
 	void* config;
 	pthread_t thread;
+	pthread_t fetchingThread;
 	bool busy;
 	Display* display;
 	char* notificationTitle;
