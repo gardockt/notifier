@@ -79,6 +79,7 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 	}
 
 	moduleLoadStringFromConfig(fetchingModule, config, "icon", &fetchingModule->iconPath);
+	moduleLoadIntFromConfig(fetchingModule, config, "verbosity", &fetchingModule->verbosity);
 
 	char* displayName = getFromMap(config, "display", strlen("display"));
 	if(displayName == NULL) {
@@ -167,7 +168,7 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	free(keyToFree);
 	free(module);
 
-	fprintf(stderr, "[%s] Module disabled\n", moduleCustomNameCopy); // TODO: implement verbosity support
+	moduleLogCustom(moduleCustomNameCopy, module->verbosity, 1, "Module disabled");
 	free(moduleCustomNameCopy);
 	return true;
 }

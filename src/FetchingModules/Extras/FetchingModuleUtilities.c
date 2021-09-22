@@ -40,10 +40,13 @@ void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, ch
 	message->iconPath = fetchingModule->iconPath;
 }
 
-void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...) {
-	// TODO: implement verbosity
-	char* customFormat = malloc(strlen(fetchingModule->name) + strlen("[] \n") + strlen(format) + 1);
-	sprintf(customFormat, "[%s] %s\n", fetchingModule->name, format);
+void moduleLogCustom(char* sectionName, int desiredVerbosity, int verbosity, char* format, ...) {
+	if(desiredVerbosity < verbosity) {
+		return;
+	}
+
+	char* customFormat = malloc(strlen(sectionName) + strlen("[] \n") + strlen(format) + 1);
+	sprintf(customFormat, "[%s] %s\n", sectionName, format);
 
 	va_list args;
 	va_start(args, format);
@@ -51,4 +54,11 @@ void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...)
 	va_end(args);
 
 	free(customFormat);
+}
+
+void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	moduleLogCustom(fetchingModule->name, fetchingModule->verbosity, verbosity, format, args);
+	va_end(args);
 }

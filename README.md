@@ -37,6 +37,7 @@ Configuration file is an INI file that should be placed in `$HOME/.config/notifi
 - `title` - notification's title
 - `body` - notification's body
 - `icon` - path to icon displayed in notifications (optional)
+- `verbosity` - logging verbosity; number from 0 to 3, bigger value means more verbose messages will be printed (optional, default is 0)
 
 Text in `title` and `body` may contain variables, depending on module.
 
@@ -87,6 +88,7 @@ Example configuration file:
 [_global]
 interval = 120
 body = <title>
+verbosity = 1
 
 [module]
 module = twitch

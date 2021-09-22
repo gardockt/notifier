@@ -18,6 +18,7 @@ typedef struct FetMod {
 	char* notificationTitle;
 	char* notificationBody;
 	char* iconPath;
+	int verbosity;
 
 	bool (*enable)(struct FetMod*, Map*);
 	void (*fetch)(struct FetMod*);
