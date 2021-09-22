@@ -15,8 +15,8 @@
 typedef struct {
 	char** streams;
 	int streamCount;
-	char* clientId;
-	char* clientSecret;
+	char* id;
+	char* secret;
 	Map* streamTitles;
 	char* token;
 	CURL* curl;

@@ -8,8 +8,10 @@
 #include "Twitch.h"
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
+#define JSON_INT(obj, str) json_object_get_int(json_object_object_get((obj),(str)))
 #define MIN(x,y) ((x)<(y)?(x):(y))
-#define IS_VALID_STREAMS_CHARACTER(c) ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || strchr(FETCHING_MODULE_LIST_ENTRY_SEPARATORS, c) != NULL)
+#define IS_VALID_URL_CHARACTER(c) ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')
+#define IS_VALID_STREAMS_CHARACTER(c) (IS_VALID_URL_CHARACTER(c) || strchr(FETCHING_MODULE_LIST_ENTRY_SEPARATORS, c) != NULL)
 
 typedef struct {
 	const char* streamerName;
@@ -38,28 +40,82 @@ char* twitchGenerateUrl(char** streams, int start, int stop) {
 	return output;
 }
 
-bool twitchRefreshToken(FetchingModule* fetchingModule) {
-	// TODO: implement
-	moduleLog(fetchingModule, 0, "Token refreshing is not implemented yet.");
-
-	// saving token to stash - uncomment after this function is implemented
-	/*
+void twitchSetHeader(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
-	char* tokenKeyName = malloc(strlen("token_") + strlen(config->clientId) + 1);
-	sprintf(tokenKeyName, "token_%s", config->clientId);
-	stashSetString("twitch", tokenKeyName, config->token);
-	free(tokenKeyName);
-	*/
 
-	return false;
+	if(config->list != NULL) {
+		curl_slist_free_all(config->list);
+		config->list = NULL;
+	}
+
+	char* headerClientId = malloc(strlen("Client-ID: ") + strlen(config->id) + 1);
+	char* headerClientToken = malloc(strlen("Authorization: Bearer ") + strlen(config->token) + 1);
+
+	sprintf(headerClientId, "Client-ID: %s", config->id);
+	sprintf(headerClientToken, "Authorization: Bearer %s", config->token);
+
+	config->list = curl_slist_append(config->list, headerClientId);
+	config->list = curl_slist_append(config->list, headerClientToken);
+
+	curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
+	curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
+
+	free(headerClientId);
+	free(headerClientToken);
+}
+
+bool twitchRefreshToken(FetchingModule* fetchingModule) {
+	TwitchConfig* config = fetchingModule->config;
+	NetworkResponse response = {NULL, 0};
+	bool refreshSuccessful = false;
+
+	moduleLog(fetchingModule, 1, "Refreshing token...");
+
+	char* url = malloc(strlen("https://id.twitch.tv/oauth2/token?client_id=&client_secret=&grant_type=client_credentials") + strlen(config->id) + strlen(config->secret) + 1);
+	sprintf(url, "https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials", config->id, config->secret);
+	curl_easy_setopt(config->curl, CURLOPT_URL, url);
+	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
+	curl_easy_setopt(config->curl, CURLOPT_POST, 1L);
+	curl_easy_setopt(config->curl, CURLOPT_POSTFIELDS, "\n");
+	free(url);
+
+	CURLcode code = curl_easy_perform(config->curl);
+	curl_easy_setopt(config->curl, CURLOPT_POST, 0L);
+	if(code == CURLE_OK) {
+		moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
+		json_object* root = json_tokener_parse(response.data);
+		json_object* newTokenObject = json_object_object_get(root, "access_token");
+		if(json_object_get_type(newTokenObject) == json_type_string) {
+			const char* newToken = json_object_get_string(newTokenObject);
+			moduleLog(fetchingModule, 2, "New token: %s", newToken);
+			strcpy(config->token, newToken);
+			refreshSuccessful = true;
+		} else {
+			moduleLog(fetchingModule, 0, "Token refreshing failed - invalid response");
+		}
+		json_object_put(root);
+	} else {
+		moduleLog(fetchingModule, 0, "Token refreshing failed with CURL code %d", code);
+	}
+
+	if(refreshSuccessful) {
+		twitchSetHeader(fetchingModule);
+
+		char* tokenKeyName = malloc(strlen("token_") + strlen(config->id) + 1);
+		sprintf(tokenKeyName, "token_%s", config->id);
+		stashSetString("twitch", tokenKeyName, config->token);
+		free(tokenKeyName);
+	}
+
+	return refreshSuccessful;
 }
 
 bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	TwitchConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	if(!moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "id", &config->clientId) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "secret", &config->clientSecret)) {
+	if(!moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "id", &config->id) ||
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "secret", &config->secret)) {
 		return false;
 	}
 
@@ -71,6 +127,18 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 		return false;
 	}
 
+	for(int i = 0; config->id[i] != '\0'; i++) {
+		if(!IS_VALID_URL_CHARACTER(config->id[i])) {
+			moduleLog(fetchingModule, 0, "ID contains illegal character \"%c\"", config->id[i]);
+			return false;
+		}
+	}
+	for(int i = 0; config->secret[i] != '\0'; i++) {
+		if(!IS_VALID_URL_CHARACTER(config->secret[i])) {
+			moduleLog(fetchingModule, 0, "Secret contains illegal character \"%c\"", config->secret[i]);
+			return false;
+		}
+	}
 	for(int i = 0; streams[i] != '\0'; i++) {
 		if(!IS_VALID_STREAMS_CHARACTER(streams[i])) {
 			moduleLog(fetchingModule, 0, "Streams contain illegal character \"%c\"", streams[i]);
@@ -82,9 +150,9 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	config->streamTitles  = malloc(sizeof *config->streamTitles);
 
 	config->list = NULL;
-	
-	char* tokenKeyName = malloc(strlen("token_") + strlen(config->clientId) + 1);
-	sprintf(tokenKeyName, "token_%s", config->clientId);
+
+	char* tokenKeyName = malloc(strlen("token_") + strlen(config->id) + 1);
+	sprintf(tokenKeyName, "token_%s", config->id);
 	const char* token = stashGetString("twitch", tokenKeyName, NULL);
 	if(token == NULL) {
 		twitchRefreshToken(fetchingModule);
@@ -110,22 +178,10 @@ bool twitchEnable(FetchingModule* fetchingModule, Map* configToParse) {
 	TwitchConfig* config = fetchingModule->config;
 	bool retVal = (config->curl = curl_easy_init()) != NULL;
 
-	char* headerClientId = malloc(strlen("Client-ID: ") + strlen(config->clientId) + 1);
-	char* headerClientToken = malloc(strlen("Authorization: Bearer ") + strlen(config->token) + 1);
-
-	sprintf(headerClientId, "Client-ID: %s", config->clientId);
-	sprintf(headerClientToken, "Authorization: Bearer %s", config->token);
-
 	if(retVal) {
-		config->list = curl_slist_append(config->list, headerClientId);
-		config->list = curl_slist_append(config->list, headerClientToken);
-
-		curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
-		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
+		twitchSetHeader(fetchingModule);
 	}
 
-	free(headerClientId);
-	free(headerClientToken);
 	return retVal;
 }
 
@@ -162,6 +218,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	Message message;
 	NetworkResponse response = {NULL, 0};
 	char* url;
+	json_object* root;
 
 	char** checkedStreamNames       = malloc(config->streamCount * sizeof *checkedStreamNames);
 	char** streamsNewTopic          = malloc(config->streamCount * sizeof *streamsNewTopic);
@@ -212,11 +269,20 @@ void twitchFetch(FetchingModule* fetchingModule) {
 					free(lastStreamTopic);
 					putIntoMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), streamsNewTopic[i]);
 				}
-
-				json_object_put(root);
 			} else {
-				moduleLog(fetchingModule, 0, "Invalid response:\n%s", response.data); // TODO: read and print error, example error response: {"error":"Bad Request","status":400,"message":"Malformed query params."}
+				if(json_object_get_type(root) == json_type_object) {
+					int errorCode = JSON_INT(root, "status");
+					moduleLog(fetchingModule, 0, "Error %d - %s (%s)", errorCode, JSON_STRING(root, "error"), JSON_STRING(root, "message"));
+					if(errorCode == 401) { // Unauthorized
+						if(twitchRefreshToken(fetchingModule)) {
+							twitchFetch(fetchingModule);
+						}
+					}
+				} else {
+					moduleLog(fetchingModule, 0, "Invalid response:\n%s", response.data);
+				}
 			}
+			json_object_put(root);
 		} else {
 			moduleLog(fetchingModule, 0, "Request failed with code %d", code);
 		}
@@ -247,8 +313,8 @@ void twitchDisable(FetchingModule* fetchingModule) {
 		free(config->streams[i]);
 	}
 	free(config->streams);
-	free(config->clientId);
-	free(config->clientSecret);
+	free(config->id);
+	free(config->secret);
 	free(config);
 }
 
