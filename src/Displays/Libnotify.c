@@ -4,16 +4,9 @@
 
 int initStack = 0;
 
-typedef struct {
-	Message* message;
-	void (*freeFunction)(Message* message);
-} LibnotifyThreadArgs;
-
-void libnotifyOnNotificationClose(NotifyNotification* notification, gpointer threadArgsPointer) {
-	LibnotifyThreadArgs* threadArgs = threadArgsPointer;
-	threadArgs->freeFunction(threadArgs->message);
-	free(threadArgs);
-
+void libnotifyOnNotificationClose(NotifyNotification* notification, gpointer messagePointer) {
+	messageFreeAllChildren(messagePointer);
+	free(messagePointer);
 	g_object_unref(G_OBJECT(notification));
 }
 
@@ -45,14 +38,13 @@ void libnotifyStartAction(NotifyNotification* notification, char* action, gpoint
 	notify_notification_close(notification, NULL);
 }
 
-void* libnotifyDisplayMessageThread(void* threadArgsPointer) {
-	LibnotifyThreadArgs* threadArgs = threadArgsPointer;
-	Message* message = threadArgs->message;
+void* libnotifyDisplayMessageThread(void* messagePointer) {
+	Message* message = messagePointer;
 
 	NotifyNotification* notification = notify_notification_new(message->title, message->body, NULL);
 
 	GMainLoop* mainLoop = g_main_loop_new(NULL, false);
-	g_signal_connect(notification, "closed", G_CALLBACK(libnotifyOnNotificationClose), threadArgs);
+	g_signal_connect(notification, "closed", G_CALLBACK(libnotifyOnNotificationClose), message);
 
 	if(message->iconPath != NULL) {
 		GError *error = NULL;
@@ -73,13 +65,11 @@ void* libnotifyDisplayMessageThread(void* threadArgsPointer) {
 	}
 }
 
-bool libnotifyDisplayMessage(Message* message, void (*freeFunction)(Message*)) {
-	LibnotifyThreadArgs* threadArgs = malloc(sizeof *threadArgs);
-	threadArgs->message = message;
-	threadArgs->freeFunction = freeFunction;
+bool libnotifyDisplayMessage(Message* message) {
+	Message* clonedMessage = messageClone(message);
 
 	pthread_t thread;
-	bool ret = pthread_create(&thread, NULL, libnotifyDisplayMessageThread, threadArgs);
+	bool ret = pthread_create(&thread, NULL, libnotifyDisplayMessageThread, clonedMessage);
 	if(ret) {
 		pthread_detach(thread);
 	}

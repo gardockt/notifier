@@ -7,8 +7,6 @@
 #include "Extras/FetchingModuleUtilities.h"
 #include "Isod.h"
 
-// TODO: replace stash identifiers with module custom name
-
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
 #define SORTDATE(date) {date[6], date[7], date[8], date[9], date[3], date[4], date[0], date[1], date[11], date[12], date[14], date[15], '\0'}
 
@@ -78,11 +76,12 @@ char* isodReplaceVariables(char* text, void* notificationDataPtr) {
 }
 
 void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationData* notificationData) {
-	Message* message = malloc(sizeof *message);
+	Message message;
 
-	memset(message, 0, sizeof *message);
-	moduleFillBasicMessage(fetchingModule, message, isodReplaceVariables, notificationData);
-	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
+	memset(&message, 0, sizeof message);
+	moduleFillBasicMessage(fetchingModule, &message, isodReplaceVariables, notificationData);
+	fetchingModule->display->displayMessage(&message);
+	moduleDestroyBasicMessage(&message);
 }
 
 void isodFetch(FetchingModule* fetchingModule) {

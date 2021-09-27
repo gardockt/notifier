@@ -22,6 +22,7 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config);
 void moduleFreeBasicSettings(FetchingModule* fetchingModule);
 
 void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg);
+void moduleDestroyBasicMessage(Message* message);
 
 void moduleLogCustom(char* sectionName, int desiredVerbosity, int verbosity, char* format, ...);
 void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...);

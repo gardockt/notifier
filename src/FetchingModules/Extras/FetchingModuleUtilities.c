@@ -40,6 +40,11 @@ void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, ch
 	message->iconPath = fetchingModule->iconPath;
 }
 
+void moduleDestroyBasicMessage(Message* message) {
+	free(message->title);
+	free(message->body);
+}
+
 void moduleLogCustom(char* sectionName, int desiredVerbosity, int verbosity, char* format, ...) {
 	if(desiredVerbosity < verbosity) {
 		return;

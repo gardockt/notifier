@@ -206,16 +206,19 @@ char* twitchReplaceVariables(char* text, void* notificationDataPtr) {
 }
 
 void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificationData* notificationData) {
-	Message* message = malloc(sizeof *message);
+	Message message;
 
 	char* url = malloc(strlen("https://twitch.tv/") + strlen(notificationData->streamerName) + 1);
 	sprintf(url, "https://twitch.tv/%s", notificationData->streamerName);
 
-	memset(message, 0, sizeof *message);
-	moduleFillBasicMessage(fetchingModule, message, twitchReplaceVariables, notificationData);
-	message->actionData = url;
-	message->actionType = URL;
-	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
+	memset(&message, 0, sizeof message);
+	moduleFillBasicMessage(fetchingModule, &message, twitchReplaceVariables, notificationData);
+	message.actionData = url;
+	message.actionType = URL;
+	fetchingModule->display->displayMessage(&message);
+
+	moduleDestroyBasicMessage(&message);
+	free(message.actionData);
 }
 
 void twitchFetch(FetchingModule* fetchingModule) {

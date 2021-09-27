@@ -107,13 +107,16 @@ char* githubReplaceVariables(char* text, void* notificationDataPtr) {
 }
 
 void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificationData* notificationData) {
-	Message* message = malloc(sizeof *message);
+	Message message;
 
-	memset(message, 0, sizeof *message);
-	moduleFillBasicMessage(fetchingModule, message, githubReplaceVariables, notificationData);
-	message->actionData = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
-	message->actionType = URL;
-	fetchingModule->display->displayMessage(message, defaultMessageFreeFunction);
+	memset(&message, 0, sizeof message);
+	moduleFillBasicMessage(fetchingModule, &message, githubReplaceVariables, notificationData);
+	message.actionData = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
+	message.actionType = URL;
+	fetchingModule->display->displayMessage(&message);
+
+	moduleDestroyBasicMessage(&message);
+	free(message.actionData);
 }
 
 void githubFetch(FetchingModule* fetchingModule) {

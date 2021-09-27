@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef enum {
 	URL
@@ -18,10 +19,11 @@ typedef struct {
 
 typedef struct {
 	bool (*init)();
-	bool (*displayMessage)(Message* message, void (*freeFunction)(Message*));
+	bool (*displayMessage)(Message* message);
 	void (*uninit)();
 } Display;
 
-void defaultMessageFreeFunction(Message* message);
+Message* messageClone(Message* message);
+void messageFreeAllChildren(Message* message);
 
 #endif // ifndef DISPLAY_H
