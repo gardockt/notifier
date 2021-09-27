@@ -33,7 +33,7 @@ void rssFillNotificationData(RssNotificationData* notificationData, xmlNode* ite
 	}
 }
 
-const char* rssGetDateFromNode(xmlNode* itemNode) {
+char* rssGetDateFromNode(xmlNode* itemNode) {
 	xmlNode* infoNode = itemNode->children;
 
 	while(infoNode != NULL) {
@@ -163,19 +163,19 @@ void rssFetch(FetchingModule* fetchingModule) {
 				xPathContext = xmlXPathNewContext(doc);
 
 				xPathObject = xmlXPathEvalExpression("/rss/channel/title", xPathContext);
-				char* title = strdup(xmlNodeGetContent(xPathObject->nodesetval->nodeTab[0]));
+				char* title = xmlNodeGetContent(xPathObject->nodesetval->nodeTab[0]);
 				xmlXPathFreeObject(xPathObject);
 
 				xPathObject = xmlXPathEvalExpression("/rss/channel/item", xPathContext);
-				RssNotificationData* newMessages = malloc(xPathObject->nodesetval->nodeNr * sizeof *newMessages);
-
 				xmlNodeSet* nodes = xPathObject->nodesetval;
 				int unreadMessagesPointer = 0;
 				char* newLastRead = NULL;
 				for(; unreadMessagesPointer < nodes->nodeNr; unreadMessagesPointer++) {
-					char* formattedDate = rssFormatDate(rssGetDateFromNode(nodes->nodeTab[unreadMessagesPointer]));
+					char* unformattedDate = rssGetDateFromNode(nodes->nodeTab[unreadMessagesPointer]);
+					char* formattedDate = rssFormatDate(unformattedDate);
 					bool isUnread = rssCompareDates(config->sources[i].lastRead, formattedDate) < 0;
 
+					free(unformattedDate);
 					if(isUnread && unreadMessagesPointer == 0) { // we are assuming chronological order
 						newLastRead = formattedDate;
 					} else {
@@ -195,10 +195,11 @@ void rssFetch(FetchingModule* fetchingModule) {
 				}
 
 				for(int j = unreadMessagesPointer - 1; j >= 0; j--) {
-					memset(&newMessages[j], 0, sizeof newMessages[j]);
-					rssFillNotificationData(&newMessages[j], nodes->nodeTab[j]);
-					newMessages[j].sourceName = title;
-					rssDisplayNotification(fetchingModule, &newMessages[j]);
+					RssNotificationData notificationData;
+					memset(&notificationData, 0, sizeof notificationData);
+					rssFillNotificationData(&notificationData, nodes->nodeTab[j]);
+					notificationData.sourceName = title;
+					rssDisplayNotification(fetchingModule, &notificationData);
 				}
 
 				free(title);
@@ -222,6 +223,7 @@ void rssDisable(FetchingModule* fetchingModule) {
 
 	for(int i = 0; i < config->sourceCount; i++) {
 		free(config->sources[i].url);
+		free(config->sources[i].lastRead);
 	}
 
 	free(config->sources);
