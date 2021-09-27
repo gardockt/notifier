@@ -58,7 +58,6 @@ void twitchSetHeader(FetchingModule* fetchingModule) {
 	config->list = curl_slist_append(config->list, headerClientToken);
 
 	curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
-	curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 
 	free(headerClientId);
 	free(headerClientToken);
@@ -75,12 +74,12 @@ bool twitchRefreshToken(FetchingModule* fetchingModule) {
 	sprintf(url, "https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials", config->id, config->secret);
 	curl_easy_setopt(config->curl, CURLOPT_URL, url);
 	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
-	curl_easy_setopt(config->curl, CURLOPT_POST, 1L);
+	curl_easy_setopt(config->curl, CURLOPT_POST, true);
 	curl_easy_setopt(config->curl, CURLOPT_POSTFIELDS, "\n");
 	free(url);
 
 	CURLcode code = curl_easy_perform(config->curl);
-	curl_easy_setopt(config->curl, CURLOPT_POST, 0L);
+	curl_easy_setopt(config->curl, CURLOPT_POST, false);
 	if(code == CURLE_OK) {
 		moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
 		json_object* root = json_tokener_parse(response.data);
@@ -88,6 +87,10 @@ bool twitchRefreshToken(FetchingModule* fetchingModule) {
 		if(json_object_get_type(newTokenObject) == json_type_string) {
 			const char* newToken = json_object_get_string(newTokenObject);
 			moduleLog(fetchingModule, 2, "New token: %s", newToken);
+
+			if(config->token == NULL) {
+				config->token = malloc(strlen(newToken) + 1);
+			}
 			strcpy(config->token, newToken);
 			refreshSuccessful = true;
 		} else {
@@ -150,11 +153,19 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	config->streamTitles  = malloc(sizeof *config->streamTitles);
 
 	config->list = NULL;
+	config->curl = curl_easy_init();
+
+	if(config->curl == NULL) {
+		moduleLog(fetchingModule, 0, "Error initializing CURL object");
+		return false;
+	}
+	curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 
 	char* tokenKeyName = malloc(strlen("token_") + strlen(config->id) + 1);
 	sprintf(tokenKeyName, "token_%s", config->id);
 	const char* token = stashGetString("twitch", tokenKeyName, NULL);
 	if(token == NULL) {
+		config->token = NULL;
 		twitchRefreshToken(fetchingModule);
 	} else {
 		// token has to be freed after regenerating, after duplicating we don't have to worry when to free
@@ -175,14 +186,9 @@ bool twitchEnable(FetchingModule* fetchingModule, Map* configToParse) {
 		return false;
 	}
 
-	TwitchConfig* config = fetchingModule->config;
-	bool retVal = (config->curl = curl_easy_init()) != NULL;
+	twitchSetHeader(fetchingModule);
 
-	if(retVal) {
-		twitchSetHeader(fetchingModule);
-	}
-
-	return retVal;
+	return true;
 }
 
 char* twitchReplaceVariables(char* text, void* notificationDataPtr) {
