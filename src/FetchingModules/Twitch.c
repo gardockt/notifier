@@ -224,7 +224,6 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 void twitchFetch(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
 	TwitchNotificationData notificationData;
-	Message message;
 	NetworkResponse response = {NULL, 0};
 	char* url;
 	json_object* root;

@@ -122,7 +122,6 @@ void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificatio
 void githubFetch(FetchingModule* fetchingModule) {
 	GithubConfig* config = fetchingModule->config;
 	GithubNotificationData notificationData;
-	Message message;
 	NetworkResponse response = {NULL, 0};
 
 	// getting response

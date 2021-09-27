@@ -143,7 +143,6 @@ void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData*
 void rssFetch(FetchingModule* fetchingModule) {
 	RssConfig* config = fetchingModule->config;
 	RssNotificationData notificationData;
-	Message message;
 	NetworkResponse response = {NULL, 0};
 
 	// TODO: use curl_multi instead

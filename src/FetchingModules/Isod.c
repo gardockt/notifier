@@ -87,7 +87,6 @@ void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationDat
 void isodFetch(FetchingModule* fetchingModule) {
 	IsodConfig* config = fetchingModule->config;
 	IsodNotificationData notificationData;
-	Message message;
 	NetworkResponse response = {NULL, 0};
 
 	// getting response
