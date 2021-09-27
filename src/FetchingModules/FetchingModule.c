@@ -29,8 +29,9 @@ bool fetchingModuleCreateThread(FetchingModule* fetchingModule) {
 }
 
 bool fetchingModuleDestroyThread(FetchingModule* fetchingModule) {
-	return pthread_cancel(fetchingModule->fetchingThread) == 0 &&
-		   pthread_join(fetchingModule->fetchingThread, NULL) == 0 &&
-		   pthread_cancel(fetchingModule->thread) == 0 &&
-		   pthread_join(fetchingModule->thread, NULL) == 0;
+	// fetching thread quits by itself
+	pthread_join(fetchingModule->fetchingThread, NULL);
+
+	return pthread_cancel(fetchingModule->thread) == 0 &&
+	       pthread_join(fetchingModule->thread, NULL) == 0;
 }
