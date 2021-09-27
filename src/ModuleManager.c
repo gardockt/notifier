@@ -104,6 +104,7 @@ void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
 	free(fetchingModule->notificationTitle);
 	free(fetchingModule->notificationBody);
 	free(fetchingModule->name);
+	free(fetchingModule->iconPath);
 }
 
 bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config) {
@@ -154,6 +155,7 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	FetchingModule* module = getFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName));
 	char* moduleCustomNameCopy = strdup(moduleCustomName);
+	int moduleVerbosity = module->verbosity;
 
 	if(module == NULL) {
 		return false;
@@ -168,7 +170,7 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	free(keyToFree);
 	free(module);
 
-	moduleLogCustom(moduleCustomNameCopy, module->verbosity, 1, "Module disabled");
+	moduleLogCustom(moduleCustomNameCopy, moduleVerbosity, 1, "Module disabled");
 	free(moduleCustomNameCopy);
 	return true;
 }
