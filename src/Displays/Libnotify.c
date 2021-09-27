@@ -79,7 +79,10 @@ bool libnotifyDisplayMessage(Message* message, void (*freeFunction)(Message*)) {
 	threadArgs->freeFunction = freeFunction;
 
 	pthread_t thread;
-	bool ret = pthread_create(&thread, NULL, libnotifyDisplayMessageThread, threadArgs); // TODO: end thread gracefully
+	bool ret = pthread_create(&thread, NULL, libnotifyDisplayMessageThread, threadArgs);
+	if(ret) {
+		pthread_detach(thread);
+	}
 	return ret;
 }
 
