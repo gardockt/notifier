@@ -149,26 +149,29 @@ void rssParseResponse(FetchingModule* fetchingModule, char* response, int respon
 	if(doc != NULL) {
 		xPathContext = xmlXPathNewContext(doc);
 		xPathObject = xmlXPathEvalExpression("/rss/channel/title", xPathContext);
-		char* title = xmlNodeGetContent(xPathObject->nodesetval->nodeTab[0]);
-		xmlXPathFreeObject(xPathObject);
 
-		xPathObject = xmlXPathEvalExpression("/rss/channel/item", xPathContext);
-		xmlNodeSet* nodes = xPathObject->nodesetval;
-		int unreadMessagesPointer = 0;
-		char* newLastRead = NULL;
-		for(; unreadMessagesPointer < nodes->nodeNr; unreadMessagesPointer++) {
-			char* unformattedDate = rssGetDateFromNode(nodes->nodeTab[unreadMessagesPointer]);
-			char* formattedDate = rssFormatDate(unformattedDate);
-			bool isUnread = rssCompareDates(config->sources[sourceIndex].lastRead, formattedDate) < 0;
+		if(xPathObject->nodesetval->nodeTab != NULL) {
+			char* title = xmlNodeGetContent(xPathObject->nodesetval->nodeTab[0]);
+			xmlXPathFreeObject(xPathObject);
 
-			free(unformattedDate);
-			if(isUnread && unreadMessagesPointer == 0) { // we are assuming chronological order
-				newLastRead = formattedDate;
-			} else {
-				free(formattedDate);
-			}
-			if(!isUnread) {
-				break;
+			xPathObject = xmlXPathEvalExpression("/rss/channel/item", xPathContext);
+			xmlNodeSet* nodes = xPathObject->nodesetval;
+			int unreadMessagesPointer = 0;
+			char* newLastRead = NULL;
+			for(; unreadMessagesPointer < nodes->nodeNr; unreadMessagesPointer++) {
+				char* unformattedDate = rssGetDateFromNode(nodes->nodeTab[unreadMessagesPointer]);
+				char* formattedDate = rssFormatDate(unformattedDate);
+				bool isUnread = rssCompareDates(config->sources[sourceIndex].lastRead, formattedDate) < 0;
+
+				free(unformattedDate);
+				if(isUnread && unreadMessagesPointer == 0) { // we are assuming chronological order
+					newLastRead = formattedDate;
+				} else {
+					free(formattedDate);
+				}
+				if(!isUnread) {
+					break;
+				}
 			}
 
 			unreadMessagesPointer--;
@@ -187,10 +190,13 @@ void rssParseResponse(FetchingModule* fetchingModule, char* response, int respon
 			}
 
 			free(title);
-			xmlXPathFreeObject(xPathObject);
 			xmlXPathFreeContext(xPathContext);
-			xmlFreeDoc(doc);
+		} else {
+			moduleLog(fetchingModule, 0, "Could not get title of feed %s", config->sources[sourceIndex].url);
 		}
+
+		xmlXPathFreeObject(xPathObject);
+		xmlFreeDoc(doc);
 	} else {
 		moduleLog(fetchingModule, 0, "Error parsing feed %s", config->sources[sourceIndex].url);
 	}

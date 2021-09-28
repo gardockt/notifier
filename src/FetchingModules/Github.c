@@ -132,20 +132,27 @@ void githubParseResponse(FetchingModule* fetchingModule, char* response) {
 			json_object* notification = json_object_array_get_idx(root, i);
 			const char* lastUpdated = JSON_STRING(notification, "updated_at");
 
+			if(lastUpdated == NULL) {
+				moduleLog(fetchingModule, 0, "Invalid last update time in notification %d", i);
+				continue;
+			}
+
 			if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
 				if(newLastRead == NULL || githubCompareDates(lastUpdated, newLastRead) > 0) {
 					free(newLastRead);
 					newLastRead = strdup(lastUpdated);
 				}
 
-				json_object* subject     = json_object_object_get(notification, "subject");
 				json_object* repository  = json_object_object_get(notification, "repository");
+				if(json_object_get_type(repository) != json_type_object) {
+					moduleLog(fetchingModule, 0, "Invalid repository object in notification %d", i);
+					continue;
+				}
 
 				notificationData.title               = JSON_STRING(repository, "title");
 				notificationData.repoName            = JSON_STRING(repository, "name");
 				notificationData.repoFullName        = JSON_STRING(repository, "full_name");
 				notificationData.notificationObject  = notification;
-
 				githubDisplayNotification(fetchingModule, &notificationData);
 			}
 		}

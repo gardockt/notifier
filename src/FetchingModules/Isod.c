@@ -95,8 +95,18 @@ void isodParseResponse(FetchingModule* fetchingModule, char* response) {
 
 		for(int i = notificationCount - 1; i >= 0; i--) {
 			json_object* notification = json_object_array_get_idx(items, i);
+			if(json_object_get_type(notification) != json_type_object) {
+				moduleLog(fetchingModule, 0, "Invalid notification object");
+				continue;
+			}
+
 			const char* modifiedDate = JSON_STRING(notification, "modifiedDate");
 			char* modifiedDateWithFixedFormat;
+
+			if(modifiedDate == NULL) {
+				moduleLog(fetchingModule, 0, "Invalid modification date in notification %d", i);
+				continue;
+			}
 
 			if(modifiedDate[1] == '.') { // day is one digit long
 				modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);

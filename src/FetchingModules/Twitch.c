@@ -231,13 +231,20 @@ int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** c
 
 		for(int i = 0; i < activeStreamersCount; i++) {
 			json_object* stream = json_object_array_get_idx(data, i);
-			const char* activeStreamerName = JSON_STRING(stream, "user_name");
+			const char* activeStreamerName  = JSON_STRING(stream, "user_name");
+			const char* newTitle            = JSON_STRING(stream, "title");
+			const char* newCategory         = JSON_STRING(stream, "game_name");
+
+			if(activeStreamerName == NULL || newTitle == NULL || newCategory == NULL) {
+				moduleLog(fetchingModule, 0, "Invalid data for stream %d", i);
+				continue;
+			}
 
 			for(int j = 0; j < config->streamCount; j++) {
 				if(!strcasecmp(activeStreamerName, checkedStreamNames[j])) {
 					newData[j].streamerName  = strdup(activeStreamerName);
-					newData[j].title         = strdup(JSON_STRING(stream, "title"));
-					newData[j].category      = strdup(JSON_STRING(stream, "game_name"));
+					newData[j].title         = strdup(newTitle);
+					newData[j].category      = strdup(newCategory);
 					break;
 				}
 			}
@@ -258,9 +265,6 @@ int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** c
 
 void twitchFetch(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
-	TwitchNotificationData notificationData;
-	char* url;
-
 	char** checkedStreamNames = malloc(config->streamCount * sizeof *checkedStreamNames);
 	TwitchNotificationData* newData = malloc(config->streamCount * sizeof *newData);
 
@@ -269,7 +273,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 
 	for(int i = 0; i < config->streamCount; i += 100) {
 		NetworkResponse response = {NULL, 0};
-		url = twitchGenerateUrl(config->streams, i, MIN(config->streamCount - 1, i + 99));
+		char* url = twitchGenerateUrl(config->streams, i, MIN(config->streamCount - 1, i + 99));
 		curl_easy_setopt(config->curl, CURLOPT_URL, url);
 		curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, &response);
 		free(url);
@@ -294,6 +298,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 
 	for(int i = 0; i < config->streamCount; i++) {
 		if(getFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i])) == NULL && newData[i].title != NULL) {
+			TwitchNotificationData notificationData = {0};
 			notificationData.streamerName  = newData[i].streamerName;
 			notificationData.title         = newData[i].title;
 			notificationData.category      = newData[i].category;
