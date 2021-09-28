@@ -221,80 +221,93 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 	free(message.actionData);
 }
 
+int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** checkedStreamNames, char** streamsNewTopic, char** streamsNewCategory, const char** streamerName) {
+	TwitchConfig* config = fetchingModule->config;
+	json_object* root = json_tokener_parse(response);
+	json_object* data = json_object_object_get(root, "data");
+
+	if(json_object_get_type(data) == json_type_array) {
+		int activeStreamersCount = json_object_array_length(data);
+
+		for(int i = 0; i < activeStreamersCount; i++) {
+			json_object* stream = json_object_array_get_idx(data, i);
+			const char* activeStreamerName = JSON_STRING(stream, "user_name");
+
+			for(int j = 0; j < config->streamCount; j++) {
+				if(!strcasecmp(activeStreamerName, checkedStreamNames[j])) {
+					streamerName[j]        = activeStreamerName;
+					streamsNewTopic[j]     = strdup(JSON_STRING(stream, "title"));
+					streamsNewCategory[j]  = strdup(JSON_STRING(stream, "game_name"));
+					break;
+				}
+			}
+		}
+	} else {
+		if(json_object_get_type(root) == json_type_object) {
+			int errorCode = JSON_INT(root, "status");
+			moduleLog(fetchingModule, 0, "Error %d - %s (%s)", errorCode, JSON_STRING(root, "error"), JSON_STRING(root, "message"));
+			return errorCode;
+		} else {
+			moduleLog(fetchingModule, 0, "Invalid response");
+			return -1;
+		}
+	}
+	json_object_put(root);
+	return 0;
+}
+
 void twitchFetch(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
 	TwitchNotificationData notificationData;
-	NetworkResponse response = {NULL, 0};
 	char* url;
-	json_object* root;
 
-	char** checkedStreamNames       = malloc(config->streamCount * sizeof *checkedStreamNames);
-	char** streamsNewTopic          = malloc(config->streamCount * sizeof *streamsNewTopic);
-	const char** streamerName       = malloc(config->streamCount * sizeof *streamerName);
-	const char** streamsNewCategory = malloc(config->streamCount * sizeof *streamsNewCategory);
+	char** checkedStreamNames  = malloc(config->streamCount * sizeof *checkedStreamNames);
+	char** streamsNewTopic     = malloc(config->streamCount * sizeof *streamsNewTopic);
+	char** streamsNewCategory  = malloc(config->streamCount * sizeof *streamsNewCategory);
+	const char** streamerName  = malloc(config->streamCount * sizeof *streamerName);
+
 	getMapKeys(config->streamTitles, (void**)checkedStreamNames);
 	streamsNewTopic = memset(streamsNewTopic, 0, config->streamCount * sizeof *streamsNewTopic);
+	streamsNewCategory = memset(streamsNewCategory, 0, config->streamCount * sizeof *streamsNewCategory);
 
-	// getting response
-	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
 	for(int i = 0; i < config->streamCount; i += 100) {
+		NetworkResponse response = {NULL, 0};
 		url = twitchGenerateUrl(config->streams, i, MIN(config->streamCount - 1, i + 99));
 		curl_easy_setopt(config->curl, CURLOPT_URL, url);
+		curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, &response);
 		free(url);
 
 		CURLcode code = curl_easy_perform(config->curl);
-
-		// parsing response
 		if(code == CURLE_OK) {
-			json_object* root = json_tokener_parse(response.data);
-			json_object* data = json_object_object_get(root, "data");
-			if(json_object_get_type(data) == json_type_array) {
-				int activeStreamersCount = json_object_array_length(data);
-
-				for(int i = 0; i < activeStreamersCount; i++) {
-					json_object* stream = json_object_array_get_idx(data, i);
-					const char* activeStreamerName = JSON_STRING(stream, "user_name");
-
-					for(int j = 0; j < config->streamCount; j++) {
-						if(!strcasecmp(activeStreamerName, checkedStreamNames[j])) {
-							streamerName[j]    = activeStreamerName;
-							streamsNewTopic[j] = strdup(JSON_STRING(stream, "title"));
-							streamsNewCategory[j] = JSON_STRING(stream, "game_name");
-							break;
-						}
-					}
-				}
-
-				for(int i = 0; i < config->streamCount; i++) {
-					if(getFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i])) == NULL && streamsNewTopic[i] != NULL) {
-						notificationData.streamerName = streamerName[i];
-						notificationData.title        = streamsNewTopic[i];
-						notificationData.category     = streamsNewCategory[i];
-						twitchDisplayNotification(fetchingModule, &notificationData);
-					}
-					char* lastStreamTopic;
-					removeFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), NULL, (void**)&lastStreamTopic);
-					free(lastStreamTopic);
-					putIntoMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), streamsNewTopic[i]);
-				}
-			} else {
-				if(json_object_get_type(root) == json_type_object) {
-					int errorCode = JSON_INT(root, "status");
-					moduleLog(fetchingModule, 0, "Error %d - %s (%s)", errorCode, JSON_STRING(root, "error"), JSON_STRING(root, "message"));
-					if(errorCode == 401) { // Unauthorized
-						if(twitchRefreshToken(fetchingModule)) {
-							twitchFetch(fetchingModule);
-						}
-					}
+			moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
+			int errorCode = twitchParseResponse(fetchingModule, response.data, checkedStreamNames, streamsNewTopic, streamsNewCategory, streamerName);
+			if(errorCode == 401) {
+				if(twitchRefreshToken(fetchingModule)) {
+					i -= 100; // retry
 				} else {
-					moduleLog(fetchingModule, 0, "Invalid response:\n%s", response.data);
+					moduleLog(fetchingModule, 0, "Unable to refresh token, skipping fetch");
+					i = config->streamCount; // end the loop
 				}
 			}
-			json_object_put(root);
 		} else {
 			moduleLog(fetchingModule, 0, "Request failed with code %d", code);
 		}
 		free(response.data);
+	}
+
+	for(int i = 0; i < config->streamCount; i++) {
+		if(getFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i])) == NULL && streamsNewTopic[i] != NULL) {
+			notificationData.streamerName  = streamerName[i];
+			notificationData.title         = streamsNewTopic[i];
+			notificationData.category      = streamsNewCategory[i];
+			twitchDisplayNotification(fetchingModule, &notificationData);
+		}
+		char* lastStreamTopic;
+		removeFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), NULL, (void**)&lastStreamTopic);
+		free(lastStreamTopic);
+		putIntoMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), streamsNewTopic[i]);
+
+		free(streamsNewCategory[i]);
 	}
 
 	free(streamsNewCategory);

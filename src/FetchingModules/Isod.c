@@ -84,60 +84,66 @@ void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationDat
 	moduleDestroyBasicMessage(&message);
 }
 
+void isodParseResponse(FetchingModule* fetchingModule, char* response) {
+	IsodConfig* config = fetchingModule->config;
+	json_object* root = json_tokener_parse(response);
+	json_object* items = json_object_object_get(root, "items");
+
+	if(json_object_get_type(items) == json_type_array) {
+		int notificationCount = json_object_array_length(items);
+		char* newLastRead = NULL;
+
+		for(int i = notificationCount - 1; i >= 0; i--) {
+			json_object* notification = json_object_array_get_idx(items, i);
+			const char* modifiedDate = JSON_STRING(notification, "modifiedDate");
+			char* modifiedDateWithFixedFormat;
+
+			if(modifiedDate[1] == '.') { // day is one digit long
+				modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);
+				sprintf(modifiedDateWithFixedFormat, "0%s", modifiedDate);
+			} else {
+				modifiedDateWithFixedFormat = strdup(modifiedDate);
+			}
+
+			if(isodCompareDates(modifiedDateWithFixedFormat, config->lastRead) > 0) {
+				if(newLastRead == NULL || isodCompareDates(modifiedDateWithFixedFormat, newLastRead) > 0) {
+					free(newLastRead);
+					newLastRead = strdup(modifiedDateWithFixedFormat);
+				}
+
+				IsodNotificationData notificationData = {0};
+				notificationData.title = JSON_STRING(notification, "subject");
+				isodDisplayNotification(fetchingModule, &notificationData);
+			}
+
+			free(modifiedDateWithFixedFormat);
+		}
+		json_object_put(root);
+		if(newLastRead != NULL) {
+			config->lastRead = newLastRead;
+			char* sectionName = isodGenerateLastReadKeyName(fetchingModule);
+			stashSetString("isod", sectionName, config->lastRead);
+			free(sectionName);
+		}
+	} else {
+		moduleLog(fetchingModule, 0, "Invalid response");
+	}
+}
+
 void isodFetch(FetchingModule* fetchingModule) {
 	IsodConfig* config = fetchingModule->config;
-	IsodNotificationData notificationData;
 	NetworkResponse response = {NULL, 0};
 
-	// getting response
 	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
 	CURLcode code = curl_easy_perform(config->curl);
 
-	// parsing response
 	if(code == CURLE_OK) {
-		json_object* root = json_tokener_parse(response.data);
-		json_object* items = json_object_object_get(root, "items");
-		if(json_object_get_type(items) == json_type_array) {
-			int notificationCount = json_object_array_length(items);
-			char* newLastRead = NULL;
-
-			for(int i = notificationCount - 1; i >= 0; i--) {
-				json_object* notification = json_object_array_get_idx(items, i);
-				const char* modifiedDate = JSON_STRING(notification, "modifiedDate");
-				char* modifiedDateWithFixedFormat;
-				if(modifiedDate[1] == '.') { // day is one digit long
-					modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);
-					sprintf(modifiedDateWithFixedFormat, "0%s", modifiedDate);
-				} else { // for consistent freeing
-					modifiedDateWithFixedFormat = strdup(modifiedDate);
-				}
-
-				if(isodCompareDates(modifiedDateWithFixedFormat, config->lastRead) > 0) {
-					if(newLastRead == NULL || isodCompareDates(modifiedDateWithFixedFormat, newLastRead) > 0) {
-						free(newLastRead);
-						newLastRead = strdup(modifiedDateWithFixedFormat);
-					}
-
-					notificationData.title = JSON_STRING(notification, "subject");
-					isodDisplayNotification(fetchingModule, &notificationData);
-				}
-
-				free(modifiedDateWithFixedFormat);
-			}
-			json_object_put(root);
-			if(newLastRead != NULL) {
-				config->lastRead = newLastRead;
-				char* sectionName = isodGenerateLastReadKeyName(fetchingModule);
-				stashSetString("isod", sectionName, config->lastRead);
-				free(sectionName);
-			}
-		} else {
-			moduleLog(fetchingModule, 0, "Invalid response:\n%s", response.data);
-		}
+		moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
+		isodParseResponse(fetchingModule, response.data);
+		free(response.data);
 	} else {
 		moduleLog(fetchingModule, 0, "Request failed with code %d", code);
 	}
-	free(response.data);
 }
 
 void isodDisable(FetchingModule* fetchingModule) {

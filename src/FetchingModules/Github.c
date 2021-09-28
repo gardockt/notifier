@@ -119,54 +119,61 @@ void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificatio
 	free(message.actionData);
 }
 
-void githubFetch(FetchingModule* fetchingModule) {
+void githubParseResponse(FetchingModule* fetchingModule, char* response) {
 	GithubConfig* config = fetchingModule->config;
 	GithubNotificationData notificationData;
+	json_object* root = json_tokener_parse(response);
+
+	if(json_object_get_type(root) == json_type_array) {
+		int unreadNotifications = json_object_array_length(root);
+		char* newLastRead = NULL;
+
+		for(int i = 0; i < unreadNotifications; i++) {
+			json_object* notification = json_object_array_get_idx(root, i);
+			const char* lastUpdated = JSON_STRING(notification, "updated_at");
+
+			if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
+				if(newLastRead == NULL || githubCompareDates(lastUpdated, newLastRead) > 0) {
+					free(newLastRead);
+					newLastRead = strdup(lastUpdated);
+				}
+
+				json_object* subject     = json_object_object_get(notification, "subject");
+				json_object* repository  = json_object_object_get(notification, "repository");
+
+				notificationData.title               = JSON_STRING(repository, "title");
+				notificationData.repoName            = JSON_STRING(repository, "name");
+				notificationData.repoFullName        = JSON_STRING(repository, "full_name");
+				notificationData.notificationObject  = notification;
+
+				githubDisplayNotification(fetchingModule, &notificationData);
+			}
+		}
+
+		json_object_put(root);
+		if(newLastRead != NULL) {
+			config->lastRead = newLastRead;
+		}
+	} else {
+		moduleLog(fetchingModule, 0, "Invalid response");
+	}
+}
+
+void githubFetch(FetchingModule* fetchingModule) {
+	GithubConfig* config = fetchingModule->config;
 	NetworkResponse response = {NULL, 0};
 
-	// getting response
 	curl_easy_setopt(config->curl, CURLOPT_URL, "https://api.github.com/notifications"); // as GenerateNotificationUrl can change it
 	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
 	CURLcode code = curl_easy_perform(config->curl);
 
-	// parsing response
 	if(code == CURLE_OK) {
-		json_object* root = json_tokener_parse(response.data);
-		if(json_object_get_type(root) == json_type_array) {
-			int unreadNotifications = json_object_array_length(root);
-			char* newLastRead = NULL;
-
-			for(int i = 0; i < unreadNotifications; i++) {
-				json_object* notification = json_object_array_get_idx(root, i);
-				const char* lastUpdated = JSON_STRING(notification, "updated_at");
-
-				if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
-					if(newLastRead == NULL || githubCompareDates(lastUpdated, newLastRead) > 0) {
-						free(newLastRead);
-						newLastRead = strdup(lastUpdated);
-					}
-
-					json_object* subject    = json_object_object_get(notification, "subject");
-					json_object* repository = json_object_object_get(notification, "repository");
-					notificationData.title        = JSON_STRING(subject,    "title");
-					notificationData.repoName     = JSON_STRING(repository, "name");
-					notificationData.repoFullName = JSON_STRING(repository, "full_name");
-					notificationData.notificationObject = notification;
-					githubDisplayNotification(fetchingModule, &notificationData);
-				}
-
-			}
-			json_object_put(root);
-			if(newLastRead != NULL) {
-				config->lastRead = newLastRead;
-			}
-		} else {
-			moduleLog(fetchingModule, 0, "Invalid response:\n%s", response.data);
-		}
+		moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
+		githubParseResponse(fetchingModule, response.data);
+		free(response.data);
 	} else {
 		moduleLog(fetchingModule, 0, "Request failed with code %d", code);
 	}
-	free(response.data);
 }
 
 void githubDisable(FetchingModule* fetchingModule) {
