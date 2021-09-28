@@ -14,9 +14,9 @@
 #define IS_VALID_STREAMS_CHARACTER(c) (IS_VALID_URL_CHARACTER(c) || strchr(FETCHING_MODULE_LIST_ENTRY_SEPARATORS, c) != NULL)
 
 typedef struct {
-	const char* streamerName;
-	const char* title;
-	const char* category;
+	char* streamerName;
+	char* title;
+	char* category;
 } TwitchNotificationData;
 
 char* twitchGenerateUrl(char** streams, int start, int stop) {
@@ -221,7 +221,7 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 	free(message.actionData);
 }
 
-int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** checkedStreamNames, char** streamsNewTopic, char** streamsNewCategory, const char** streamerName) {
+int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** checkedStreamNames, TwitchNotificationData* newData) {
 	TwitchConfig* config = fetchingModule->config;
 	json_object* root = json_tokener_parse(response);
 	json_object* data = json_object_object_get(root, "data");
@@ -235,9 +235,9 @@ int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** c
 
 			for(int j = 0; j < config->streamCount; j++) {
 				if(!strcasecmp(activeStreamerName, checkedStreamNames[j])) {
-					streamerName[j]        = activeStreamerName;
-					streamsNewTopic[j]     = strdup(JSON_STRING(stream, "title"));
-					streamsNewCategory[j]  = strdup(JSON_STRING(stream, "game_name"));
+					newData[j].streamerName  = strdup(activeStreamerName);
+					newData[j].title         = strdup(JSON_STRING(stream, "title"));
+					newData[j].category      = strdup(JSON_STRING(stream, "game_name"));
 					break;
 				}
 			}
@@ -261,14 +261,11 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	TwitchNotificationData notificationData;
 	char* url;
 
-	char** checkedStreamNames  = malloc(config->streamCount * sizeof *checkedStreamNames);
-	char** streamsNewTopic     = malloc(config->streamCount * sizeof *streamsNewTopic);
-	char** streamsNewCategory  = malloc(config->streamCount * sizeof *streamsNewCategory);
-	const char** streamerName  = malloc(config->streamCount * sizeof *streamerName);
+	char** checkedStreamNames = malloc(config->streamCount * sizeof *checkedStreamNames);
+	TwitchNotificationData* newData = malloc(config->streamCount * sizeof *newData);
 
 	getMapKeys(config->streamTitles, (void**)checkedStreamNames);
-	streamsNewTopic = memset(streamsNewTopic, 0, config->streamCount * sizeof *streamsNewTopic);
-	streamsNewCategory = memset(streamsNewCategory, 0, config->streamCount * sizeof *streamsNewCategory);
+	newData = memset(newData, 0, config->streamCount * sizeof *newData);
 
 	for(int i = 0; i < config->streamCount; i += 100) {
 		NetworkResponse response = {NULL, 0};
@@ -280,7 +277,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 		CURLcode code = curl_easy_perform(config->curl);
 		if(code == CURLE_OK) {
 			moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
-			int errorCode = twitchParseResponse(fetchingModule, response.data, checkedStreamNames, streamsNewTopic, streamsNewCategory, streamerName);
+			int errorCode = twitchParseResponse(fetchingModule, response.data, checkedStreamNames, newData);
 			if(errorCode == 401) {
 				if(twitchRefreshToken(fetchingModule)) {
 					i -= 100; // retry
@@ -296,24 +293,23 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	}
 
 	for(int i = 0; i < config->streamCount; i++) {
-		if(getFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i])) == NULL && streamsNewTopic[i] != NULL) {
-			notificationData.streamerName  = streamerName[i];
-			notificationData.title         = streamsNewTopic[i];
-			notificationData.category      = streamsNewCategory[i];
+		if(getFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i])) == NULL && newData[i].title != NULL) {
+			notificationData.streamerName  = newData[i].streamerName;
+			notificationData.title         = newData[i].title;
+			notificationData.category      = newData[i].category;
 			twitchDisplayNotification(fetchingModule, &notificationData);
 		}
-		char* lastStreamTopic;
-		removeFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), NULL, (void**)&lastStreamTopic);
-		free(lastStreamTopic);
-		putIntoMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), streamsNewTopic[i]);
+		char* lastStreamTitle;
+		removeFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), NULL, (void**)&lastStreamTitle);
+		free(lastStreamTitle);
+		putIntoMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), newData[i].title);
 
-		free(streamsNewCategory[i]);
+		free(newData[i].streamerName);
+		free(newData[i].category);
 	}
 
-	free(streamsNewCategory);
-	free(streamsNewTopic);
-	free(streamerName);
 	free(checkedStreamNames);
+	free(newData);
 }
 
 void twitchDisable(FetchingModule* fetchingModule) {
