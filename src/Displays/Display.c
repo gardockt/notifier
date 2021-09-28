@@ -1,11 +1,13 @@
 #include "Display.h"
 
+#define STRDUP_IF_NOT_NULL(str) ((str) != NULL ? strdup(str) : NULL)
+
 Message* messageClone(Message* message) {
 	Message* ret = malloc(sizeof *ret);
-	ret->title       = strdup(message->title);
-	ret->body        = strdup(message->body);
-	ret->actionData  = strdup(message->actionData);
-	ret->iconPath    = strdup(message->iconPath);
+	ret->title       = STRDUP_IF_NOT_NULL(message->title);
+	ret->body        = STRDUP_IF_NOT_NULL(message->body);
+	ret->actionData  = STRDUP_IF_NOT_NULL(message->actionData);
+	ret->iconPath    = STRDUP_IF_NOT_NULL(message->iconPath);
 	ret->actionType  = message->actionType;
 	return ret;
 }
