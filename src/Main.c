@@ -10,6 +10,52 @@
 ModuleManager moduleManager;
 DisplayManager displayManager;
 
+Map* configLoadSection(dictionary* config, char* sectionName) {
+	// TODO: memory leaks incoming
+	int keyCount = iniparser_getsecnkeys(config, sectionName);
+	if(keyCount == 0) {
+		return NULL;
+	}
+
+	const char** keys = malloc(keyCount * sizeof *keys);
+	iniparser_getseckeys(config, sectionName, keys);
+
+	Map* ret = malloc(sizeof *ret);
+	initMap(ret);
+
+	putIntoMap(ret, strdup(CONFIG_NAME_FIELD_NAME), strlen(CONFIG_NAME_FIELD_NAME), strdup(sectionName));
+
+	for(int i = 0; i < keyCount; i++) {
+		if(keys[i][strlen(sectionName) + 1] == '_') {
+			fprintf(stderr, "Option %s contains illegal prefix, ignoring\n", keys[i]);
+			continue;
+		}
+
+		char* keyTrimmed = strdup(keys[i] + strlen(sectionName) + 1);
+		const char* value = iniparser_getstring(config, keys[i], NULL);
+		putIntoMap(ret, keyTrimmed, strlen(keyTrimmed), strdup(value));
+	}
+
+	free(keys);
+	return ret;
+}
+
+void configDestroySection(Map* section) {
+	int keyCount = getMapSize(section);
+	char** keys = malloc(keyCount * sizeof *keys);
+	getMapKeys(section, (void**)keys);
+
+	for(int i = 0; i < keyCount; i++) {
+		char* valueToFree;
+		removeFromMap(section, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree);
+		free(valueToFree);
+		free(keys[i]);
+	}
+
+	free(keys);
+	destroyMap(section);
+}
+
 bool loadConfig() {
 	dictionary* config;
 	char* configDirectory = getConfigDirectory();
@@ -33,16 +79,14 @@ bool loadConfig() {
 		iniparser_getseckeys(config, CONFIG_GLOBAL_SECTION_NAME, globalConfigKeys);
 	}
 
+	// TODO: add global section config
+
 	for(int i = 0; i < configSectionCount; i++) {
 		char* sectionName;
-		const char** keys;
 		Map* configMap;
-		char* value;
-		char* moduleType = NULL;
+		char* moduleType;
 
 		sectionName = strdup(iniparser_getsecname(config, i));
-
-		// TODO: add global section config
 
 		// non-global settings loading
 		if(sectionName[0] == '_') {
@@ -50,34 +94,8 @@ bool loadConfig() {
 			continue;
 		}
 
-		keyCount = iniparser_getsecnkeys(config, sectionName);
-
-		configMap = malloc(sizeof *configMap);
-		initMap(configMap);
-		keys = malloc(keyCount * sizeof *keys);
-		iniparser_getseckeys(config, sectionName, keys);
-
-		char* nameSectionName = strdup("_name");
-		putIntoMap(configMap, nameSectionName, strlen(nameSectionName), strdup(sectionName));
-
-		for(int i = 0; i < keyCount; i++) {
-			if(keys[i][strlen(sectionName) + 1] == '_') {
-				fprintf(stderr, "Option %s contains illegal prefix, ignoring\n", keys[i]);
-				continue;
-			}
-
-			char* keyTrimmed = strdup(keys[i] + strlen(sectionName) + 1);
-
-			const char* valueTemp = iniparser_getstring(config, keys[i], NULL);
-			value = strdup(valueTemp);
-
-			if(!strcmp(keyTrimmed, "module")) {
-				moduleType = value;
-				free(keyTrimmed);
-			} else {
-				putIntoMap(configMap, keyTrimmed, strlen(keyTrimmed), value);
-			}
-		}
+		configMap = configLoadSection(config, sectionName);
+		moduleType = getFromMap(configMap, CONFIG_TYPE_FIELD_NAME, strlen(CONFIG_TYPE_FIELD_NAME));
 
 		// add global settings for undefined values
 		for(int i = 0; i < globalConfigKeyCount; i++) {
@@ -92,9 +110,8 @@ bool loadConfig() {
 			fprintf(stderr, "Error while enabling module %s\n", sectionName);
 		}
 
+		configDestroySection(configMap);
 		free(configMap);
-		free(moduleType);
-		free(keys);
 	}
 
 	iniparser_freedict(config);

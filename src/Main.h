@@ -14,5 +14,7 @@
 #endif
 
 #define CONFIG_GLOBAL_SECTION_NAME  "_global"
+#define CONFIG_NAME_FIELD_NAME      "_name"
+#define CONFIG_TYPE_FIELD_NAME      "module"
 
 #endif // ifndef MAIN_H

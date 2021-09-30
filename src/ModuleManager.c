@@ -131,20 +131,6 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 	memcpy(module, moduleTemplate, sizeof *module);
 	bool enableModuleSuccess = moduleLoadBasicSettings(module, config) && module->enable(module, config) && fetchingModuleCreateThread(module);
 
-	int keyCount = getMapSize(config);
-	char** keys = malloc(keyCount * sizeof *keys);
-	getMapKeys(config, (void**)keys);
-
-	for(int i = 0; i < keyCount; i++) {
-		char* valueToFree;
-		removeFromMap(config, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree); // key is already in keys[i]
-		free(valueToFree);
-		free(keys[i]);
-	}
-
-	free(keys);
-	destroyMap(config);
-
 	if(enableModuleSuccess) {
 		moduleLog(module, 1, "Module enabled");
 		putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
