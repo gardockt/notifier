@@ -10,8 +10,33 @@
 ModuleManager moduleManager;
 DisplayManager displayManager;
 
+void configFillEmptyFields(Map* targetConfig, Map* sourceConfig) {
+	int targetKeyCount = getMapSize(targetConfig);
+	int sourceKeyCount = getMapSize(sourceConfig);
+	char** targetKeys = malloc(targetKeyCount * sizeof *targetKeys);
+	char** sourceKeys = malloc(sourceKeyCount * sizeof *sourceKeys);
+
+	getMapKeys(targetConfig, (void**)targetKeys);
+	getMapKeys(sourceConfig, (void**)sourceKeys);
+
+	for(int i = 0; i < sourceKeyCount; i++) {
+		for(int j = 0; j <= targetKeyCount; j++) {
+			if(j < targetKeyCount) {
+				if(!strcmp(sourceKeys[i], targetKeys[j])) {
+					break;
+				}
+			} else {
+				char* value = getFromMap(sourceConfig, sourceKeys[i], strlen(sourceKeys[i]));
+				putIntoMap(targetConfig, strdup(sourceKeys[i]), strlen(sourceKeys[i]), strdup(value));
+			}
+		}
+	}
+
+	free(targetKeys);
+	free(sourceKeys);
+}
+
 Map* configLoadSection(dictionary* config, char* sectionName) {
-	// TODO: memory leaks incoming
 	int keyCount = iniparser_getsecnkeys(config, sectionName);
 	if(keyCount == 0) {
 		return NULL;
@@ -69,15 +94,8 @@ bool loadConfig() {
 	int configSectionCount = iniparser_getnsec(config);
 	int keyCount;
 
-	int globalConfigKeyCount;
-	const char** globalConfigKeys;
-
 	// global settings loading
-	globalConfigKeyCount = iniparser_getsecnkeys(config, CONFIG_GLOBAL_SECTION_NAME);
-	if(globalConfigKeyCount > 0) {
-		globalConfigKeys = malloc(globalConfigKeyCount * sizeof *globalConfigKeys);
-		iniparser_getseckeys(config, CONFIG_GLOBAL_SECTION_NAME, globalConfigKeys);
-	}
+	Map* globalConfig = configLoadSection(config, CONFIG_GLOBAL_SECTION_NAME);
 
 	// TODO: add global section config
 
@@ -98,13 +116,7 @@ bool loadConfig() {
 		moduleType = getFromMap(configMap, CONFIG_TYPE_FIELD_NAME, strlen(CONFIG_TYPE_FIELD_NAME));
 
 		// add global settings for undefined values
-		for(int i = 0; i < globalConfigKeyCount; i++) {
-			if(!existsInMap(configMap, globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1, strlen(globalConfigKeys[i]) - strlen(CONFIG_GLOBAL_SECTION_NAME) - 1)) {
-				char* keyTrimmed = strdup(globalConfigKeys[i] + strlen(CONFIG_GLOBAL_SECTION_NAME) + 1);
-				char* value = strdup(iniparser_getstring(config, globalConfigKeys[i], NULL));
-				putIntoMap(configMap, keyTrimmed, strlen(keyTrimmed), value);
-			}
-		}
+		configFillEmptyFields(configMap, globalConfig);
 
 		if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
 			fprintf(stderr, "Error while enabling module %s\n", sectionName);
@@ -115,7 +127,8 @@ bool loadConfig() {
 	}
 
 	iniparser_freedict(config);
-	free(globalConfigKeys);
+	configDestroySection(globalConfig);
+	free(globalConfig);
 	return true;
 }
 
