@@ -81,7 +81,7 @@ Module configuration details:
 		- `<title>` - stream's title
 		- `<streamer-name>` - streamer's nickname
 
-Configuration file can also contain a section `_global`, consisting of default values for each field.
+Configuration file can also contain a section `_global`, consisting of default values for each field. Alternatively, there can also be a section named `_global.[module_type]`, which values will be applied only to modules of given type.
 
 Example configuration file:
 ```
@@ -89,6 +89,9 @@ Example configuration file:
 interval = 120
 body = <title>
 verbosity = 1
+
+[_global.github]
+title = <repo-name>
 
 [module]
 module = twitch
@@ -101,7 +104,6 @@ icon = /usr/share/local/icons/twitch.png
 
 [other_module]
 module = github
-title = <repo-name>
 token = ghp_enteryourtokenhere
 icon = /usr/share/local/icons/github.png
 
@@ -115,6 +117,5 @@ icon = /usr/share/local/icons/isod.png
 
 [last_one]
 module = github
-title = Notification from <repo-full-name>
 token = ghp_anothertoken
 ```

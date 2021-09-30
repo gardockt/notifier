@@ -11,6 +11,10 @@ ModuleManager moduleManager;
 DisplayManager displayManager;
 
 void configFillEmptyFields(Map* targetConfig, Map* sourceConfig) {
+	if(targetConfig == NULL || sourceConfig == NULL) {
+		return;
+	}
+
 	int targetKeyCount = getMapSize(targetConfig);
 	int sourceKeyCount = getMapSize(sourceConfig);
 	char** targetKeys = malloc(targetKeyCount * sizeof *targetKeys);
@@ -94,19 +98,30 @@ bool loadConfig() {
 	int configSectionCount = iniparser_getnsec(config);
 	int keyCount;
 
-	// global settings loading
-	Map* globalConfig = configLoadSection(config, CONFIG_GLOBAL_SECTION_NAME);
+	Map* specialSections = malloc(sizeof *specialSections); // map of section maps
+	initMap(specialSections);
 
-	// TODO: add global section config
+	// special sections loading (they HAVE to be loaded first)
+	for(int i = 0; i < configSectionCount; i++) {
+		char* sectionName;
 
+		sectionName = strdup(iniparser_getsecname(config, i));
+		if(sectionName[0] != '_') {
+			free(sectionName);
+			continue;
+		}
+
+		Map* specialSection = configLoadSection(config, sectionName);
+		putIntoMap(specialSections, sectionName, strlen(sectionName), specialSection);
+	}
+
+	// module sections loading
 	for(int i = 0; i < configSectionCount; i++) {
 		char* sectionName;
 		Map* configMap;
 		char* moduleType;
 
 		sectionName = strdup(iniparser_getsecname(config, i));
-
-		// non-global settings loading
 		if(sectionName[0] == '_') {
 			free(sectionName);
 			continue;
@@ -116,7 +131,19 @@ bool loadConfig() {
 		moduleType = getFromMap(configMap, CONFIG_TYPE_FIELD_NAME, strlen(CONFIG_TYPE_FIELD_NAME));
 
 		// add global settings for undefined values
-		configFillEmptyFields(configMap, globalConfig);
+		// priority: globalSection > global
+		Map* configToMerge;
+
+		// global section config
+		char* globalSectionConfigSectionName = malloc(strlen(CONFIG_GLOBAL_SECTION_NAME) + strlen(CONFIG_NAME_SEPARATOR) + strlen(moduleType) + 1);
+		sprintf(globalSectionConfigSectionName, "%s%s%s", CONFIG_GLOBAL_SECTION_NAME, CONFIG_NAME_SEPARATOR, moduleType);
+		configToMerge = getFromMap(specialSections, globalSectionConfigSectionName, strlen(globalSectionConfigSectionName));
+		free(globalSectionConfigSectionName);
+		configFillEmptyFields(configMap, configToMerge);
+
+		// global config
+		configToMerge = getFromMap(specialSections, CONFIG_GLOBAL_SECTION_NAME, strlen(CONFIG_GLOBAL_SECTION_NAME));
+		configFillEmptyFields(configMap, configToMerge);
 
 		if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
 			fprintf(stderr, "Error while enabling module %s\n", sectionName);
@@ -126,9 +153,21 @@ bool loadConfig() {
 		free(configMap);
 	}
 
+	int specialSectionCount = getMapSize(specialSections);
+	char** specialSectionNames = malloc(specialSectionCount * sizeof *specialSectionNames);
+	getMapKeys(specialSections, (void**)specialSectionNames);
+	for(int i = 0; i < specialSectionCount; i++) {
+		Map* sectionToFree;
+		removeFromMap(specialSections, specialSectionNames[i], strlen(specialSectionNames[i]), NULL, (void**)&sectionToFree);
+		configDestroySection(sectionToFree);
+		free(sectionToFree);
+		free(specialSectionNames[i]);
+	}
+	free(specialSectionNames);
+	destroyMap(specialSections);
+	free(specialSections);
+
 	iniparser_freedict(config);
-	configDestroySection(globalConfig);
-	free(globalConfig);
 	return true;
 }
 
