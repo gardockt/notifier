@@ -71,10 +71,10 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 }
 
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
-	if(!moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
+	if(!moduleLoadStringFromConfig(fetchingModule, config, "_name", &fetchingModule->name) ||
+	   !moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
 	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "body", &fetchingModule->notificationBody) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "_name", &fetchingModule->name)) {
+	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "body", &fetchingModule->notificationBody)) {
 		return false;
 	}
 
@@ -101,9 +101,9 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 
 void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
 	fetchingModule->display->uninit();
+	free(fetchingModule->name);
 	free(fetchingModule->notificationTitle);
 	free(fetchingModule->notificationBody);
-	free(fetchingModule->name);
 	free(fetchingModule->iconPath);
 }
 
