@@ -143,13 +143,19 @@ void githubParseResponse(FetchingModule* fetchingModule, char* response) {
 					newLastRead = strdup(lastUpdated);
 				}
 
+				json_object* subject  = json_object_object_get(notification, "subject");
+				if(json_object_get_type(subject) != json_type_object) {
+					moduleLog(fetchingModule, 0, "Invalid subject object in notification %d", i);
+					continue;
+				}
+
 				json_object* repository  = json_object_object_get(notification, "repository");
 				if(json_object_get_type(repository) != json_type_object) {
 					moduleLog(fetchingModule, 0, "Invalid repository object in notification %d", i);
 					continue;
 				}
 
-				notificationData.title               = JSON_STRING(repository, "title");
+				notificationData.title               = JSON_STRING(subject, "title");
 				notificationData.repoName            = JSON_STRING(repository, "name");
 				notificationData.repoFullName        = JSON_STRING(repository, "full_name");
 				notificationData.notificationObject  = notification;
