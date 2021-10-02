@@ -124,6 +124,9 @@ char* rssReplaceVariables(char* text, void* notificationDataPtr) {
 	char* temp = replace(text, "<title>", notificationData->title);
 	char* ret = replace(temp, "<source-name>", notificationData->sourceName);
 	free(temp);
+	temp = ret;
+	ret = replace(temp, "<url>", notificationData->url);
+	free(temp);
 	return ret;
 }
 

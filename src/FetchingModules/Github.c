@@ -12,7 +12,7 @@ typedef struct {
 	const char* title;
 	const char* repoName;
 	const char* repoFullName;
-	json_object* notificationObject;
+	char* url;
 } GithubNotificationData;
 
 int githubCompareDates(const char* a, const char* b) {
@@ -103,16 +103,17 @@ char* githubReplaceVariables(char* text, void* notificationDataPtr) {
 	temp = ret;
 	ret = replace(temp, "<repo-full-name>", notificationData->repoFullName);
 	free(temp);
+	temp = ret;
+	ret = replace(temp, "<url>", notificationData->url);
+	free(temp);
 	return ret;
 }
 
 void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificationData* notificationData) {
 	Message message = {0};
-	char* url = githubGenerateNotificationUrl(fetchingModule, notificationData->notificationObject);
-	moduleFillBasicMessage(fetchingModule, &message, githubReplaceVariables, notificationData, URL, url);
+	moduleFillBasicMessage(fetchingModule, &message, githubReplaceVariables, notificationData, URL, notificationData->url);
 	fetchingModule->display->displayMessage(&message);
 	moduleDestroyBasicMessage(&message);
-	free(url);
 }
 
 void githubParseResponse(FetchingModule* fetchingModule, char* response) {
@@ -154,8 +155,9 @@ void githubParseResponse(FetchingModule* fetchingModule, char* response) {
 				notificationData.title               = JSON_STRING(subject, "title");
 				notificationData.repoName            = JSON_STRING(repository, "name");
 				notificationData.repoFullName        = JSON_STRING(repository, "full_name");
-				notificationData.notificationObject  = notification;
+				notificationData.url                 = githubGenerateNotificationUrl(fetchingModule, notification);
 				githubDisplayNotification(fetchingModule, &notificationData);
+				free(notificationData.url);
 			}
 		}
 

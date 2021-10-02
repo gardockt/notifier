@@ -17,6 +17,7 @@ typedef struct {
 	char* streamerName;
 	char* title;
 	char* category;
+	char* url;
 } TwitchNotificationData;
 
 char* twitchGenerateUrl(char** streams, int start, int stop) {
@@ -202,18 +203,17 @@ char* twitchReplaceVariables(char* text, void* notificationDataPtr) {
 	temp = ret;
 	ret = replace(temp, "<category>", notificationData->category);
 	free(temp);
+	temp = ret;
+	ret = replace(temp, "<url>", notificationData->url);
+	free(temp);
 	return ret;
 }
 
 void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificationData* notificationData) {
 	Message message = {0};
-	char* url = malloc(strlen("https://twitch.tv/") + strlen(notificationData->streamerName) + 1);
-	sprintf(url, "https://twitch.tv/%s", notificationData->streamerName);
-
-	moduleFillBasicMessage(fetchingModule, &message, twitchReplaceVariables, notificationData, URL, url);
+	moduleFillBasicMessage(fetchingModule, &message, twitchReplaceVariables, notificationData, URL, notificationData->url);
 	fetchingModule->display->displayMessage(&message);
 	moduleDestroyBasicMessage(&message);
-	free(url);
 }
 
 int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** checkedStreamNames, TwitchNotificationData* newData) {
@@ -240,6 +240,9 @@ int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** c
 					newData[j].streamerName  = strdup(activeStreamerName);
 					newData[j].title         = strdup(newTitle);
 					newData[j].category      = strdup(newCategory);
+					newData[j].url           = malloc(strlen("https://twitch.tv/") + strlen(activeStreamerName) + 1);
+					sprintf(newData[j].url, "https://twitch.tv/%s", activeStreamerName);
+
 					break;
 				}
 			}
@@ -297,6 +300,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 			notificationData.streamerName  = newData[i].streamerName;
 			notificationData.title         = newData[i].title;
 			notificationData.category      = newData[i].category;
+			notificationData.url           = newData[i].url;
 			twitchDisplayNotification(fetchingModule, &notificationData);
 		}
 		char* lastStreamTitle;
@@ -306,6 +310,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 
 		free(newData[i].streamerName);
 		free(newData[i].category);
+		free(newData[i].url);
 	}
 
 	free(checkedStreamNames);

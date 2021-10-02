@@ -58,6 +58,7 @@ Module configuration details:
 		- `<repo-name>` - repository's name
 		- `<repo-full-name>` - repository's full name (containing owner)
 		- `<title>` - notification's title
+		- `<url>` - notification's target URL
 - ISOD
 	- Required fields:
 		- `max_messages` - max amount of new messages to be displayed
@@ -71,6 +72,7 @@ Module configuration details:
 	- Available variables:
 		- `<source-name>` - name of RSS feed
 		- `<title>` - message's title
+		- `<url>` - message's URL
 - Twitch
 	- Required fields:
 		- `id` - app ID used to access Twitch API
@@ -80,6 +82,7 @@ Module configuration details:
 		- `<category>` - streamed game/category
 		- `<title>` - stream's title
 		- `<streamer-name>` - streamer's nickname
+		- `<url>` - stream's URL
 
 Configuration file can also contain a section `_global`, consisting of default values for each field. Alternatively, there can also be a section named `_global.[module_type]`, which values will be applied only to modules of given type.
 
