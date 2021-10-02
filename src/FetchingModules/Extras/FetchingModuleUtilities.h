@@ -21,7 +21,7 @@ bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, 
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config);
 void moduleFreeBasicSettings(FetchingModule* fetchingModule);
 
-void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg);
+void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg, NotificationActionType defaultActionType, char* defaultNotificationData);
 void moduleDestroyBasicMessage(Message* message);
 
 void moduleLogCustom(char* sectionName, int desiredVerbosity, int verbosity, char* format, ...);

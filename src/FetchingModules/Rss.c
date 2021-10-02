@@ -128,16 +128,10 @@ char* rssReplaceVariables(char* text, void* notificationDataPtr) {
 }
 
 void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData* notificationData) {
-	Message message;
-
-	memset(&message, 0, sizeof message);
-	moduleFillBasicMessage(fetchingModule, &message, rssReplaceVariables, notificationData);
-	message.actionData = strdup(notificationData->url);
-	message.actionType = URL;
+	Message message = {0};
+	moduleFillBasicMessage(fetchingModule, &message, rssReplaceVariables, notificationData, URL, notificationData->url);
 	fetchingModule->display->displayMessage(&message);
-
 	moduleDestroyBasicMessage(&message);
-	free(message.actionData);
 }
 
 void rssParseResponse(FetchingModule* fetchingModule, char* response, int responseSize, int sourceIndex) {

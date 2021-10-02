@@ -76,10 +76,8 @@ char* isodReplaceVariables(char* text, void* notificationDataPtr) {
 }
 
 void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationData* notificationData) {
-	Message message;
-
-	memset(&message, 0, sizeof message);
-	moduleFillBasicMessage(fetchingModule, &message, isodReplaceVariables, notificationData);
+	Message message = {0};
+	moduleFillBasicMessage(fetchingModule, &message, isodReplaceVariables, notificationData, NONE, NULL);
 	fetchingModule->display->displayMessage(&message);
 	moduleDestroyBasicMessage(&message);
 }

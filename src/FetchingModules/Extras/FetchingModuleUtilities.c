@@ -1,4 +1,7 @@
 #include "FetchingModuleUtilities.h"
+#include "../../Displays/Display.h"
+
+#define STRDUP_IF_NOT_NULL(x) ((x) != NULL ? strdup(x) : NULL)
 
 bool moduleLoadIntFromConfig(FetchingModule* fetchingModule, Map* config, char* key, int* output) {
 	char* rawValueFromMap = getFromMap(config, key, strlen(key));
@@ -34,15 +37,18 @@ bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, 
 	return success;
 }
 
-void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg) {
+void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg, NotificationActionType defaultActionType, char* defaultActionData) {
 	message->title = textEditingFunction(fetchingModule->notificationTitle, textEditingFunctionArg);
 	message->body = textEditingFunction(fetchingModule->notificationBody, textEditingFunctionArg);
+	message->actionType = defaultActionType;
+	message->actionData = STRDUP_IF_NOT_NULL(defaultActionData);
 	message->iconPath = fetchingModule->iconPath;
 }
 
 void moduleDestroyBasicMessage(Message* message) {
 	free(message->title);
 	free(message->body);
+	free(message->actionData);
 }
 
 void moduleLogCustom(char* sectionName, int desiredVerbosity, int verbosity, char* format, ...) {
