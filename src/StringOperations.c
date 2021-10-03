@@ -67,6 +67,10 @@ int find(char* text, const char* substring) {
 }
 
 char* replace(char* text, const char* before, const char* after) {
+	if(text == NULL || before == NULL || after == NULL) {
+		return NULL;
+	}
+
 	int outputLength = strlen(text);
 	int beforeLength = strlen(before);
 	int afterLength = strlen(after);
