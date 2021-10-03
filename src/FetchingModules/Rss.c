@@ -7,6 +7,8 @@
 #include "Extras/FetchingModuleUtilities.h"
 #include "Rss.h"
 
+#define RSS_FORMATTED_DATE_TEMPLATE "RRRR-MM-DD HH:MM:SS"
+
 typedef struct {
 	char* title;
 	char* sourceName;
@@ -17,15 +19,50 @@ typedef struct {
 	int year, month, day, hour, minute, second;
 } RssDate;
 
-void rssFillNotificationData(RssNotificationData* notificationData, xmlNode* itemNode) {
+typedef enum {
+	UNKNOWN,
+	RSS,
+	ATOM
+} RssStandard;
+
+typedef struct {
+	RssStandard standard;
+	const char* title;
+	const char* items;
+	const char* dateNode;
+	const char* titleNode;
+	const char* urlNode;
+	const char* defaultDate;
+} RssStandardInfo;
+
+char* rssBase16Table = "0123456789abcdef";
+
+// base 16 encoding's output is 2x longer than input
+
+char* rssBase16Encode(char* input) {
+	if(input == NULL) {
+		return NULL;
+	}
+
+	char* output = malloc(2 * strlen(input) + 1);
+	int inputPointer = 0;
+	do {
+		output[inputPointer * 2 + 0] = rssBase16Table[input[inputPointer] >> 4];
+		output[inputPointer * 2 + 1] = rssBase16Table[input[inputPointer] & ((1 << 4) - 1)];
+	} while(input[++inputPointer] != '\0');
+	output[inputPointer * 2] = '\0';
+	return output;
+}
+
+void rssFillNotificationData(RssNotificationData* notificationData, xmlNode* itemNode, RssStandardInfo* standardData) {
 	xmlNode* infoNode = itemNode->children;
 
 	while(infoNode != NULL) {
 		const char* infoNodeName = infoNode->name;
 
-		if(!strcmp(infoNodeName, "title")) {
+		if(!strcmp(infoNodeName, standardData->titleNode)) {
 			notificationData->title = xmlNodeGetContent(infoNode);
-		} else if(!strcmp(infoNodeName, "link")) {
+		} else if(!strcmp(infoNodeName, standardData->urlNode)) {
 			notificationData->url = xmlNodeGetContent(infoNode);
 		}
 
@@ -33,13 +70,13 @@ void rssFillNotificationData(RssNotificationData* notificationData, xmlNode* ite
 	}
 }
 
-char* rssGetDateFromNode(xmlNode* itemNode) {
+char* rssGetDateFromNode(xmlNode* itemNode, RssStandardInfo* standardData) {
 	xmlNode* infoNode = itemNode->children;
 
 	while(infoNode != NULL) {
 		const char* infoNodeName = infoNode->name;
 
-		if(!strcmp(infoNodeName, "pubDate")) {
+		if(!strcmp(infoNodeName, standardData->dateNode)) {
 			return xmlNodeGetContent(infoNode);
 		}
 
@@ -47,24 +84,31 @@ char* rssGetDateFromNode(xmlNode* itemNode) {
 	}
 }
 
-char* rssFormatDate(const char* pubDate) {
-	RssDate dateStruct;
-	char* dateString;
-	char* unformattedMonth = malloc(16);
-	const char* monthShortNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+char* rssFormatDate(const char* unformattedDate, RssStandardInfo* standardInfo) {
+	int desiredLength = strlen(RSS_FORMATTED_DATE_TEMPLATE);
+	char* dateString = malloc(desiredLength + 1);
 
-	sscanf(pubDate, "%*s %d %s %d %d:%d:%d %*s", &dateStruct.day, unformattedMonth, &dateStruct.year, &dateStruct.hour, &dateStruct.minute, &dateStruct.second);
+	if(standardInfo->standard == RSS) { // date format: Tue, 08 Jun 2021 06:32:03 +0000
+		RssDate dateStruct;
+		char* unformattedMonth = malloc(16);
+		const char* monthShortNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-	for(int i = 0; i < sizeof monthShortNames / sizeof *monthShortNames; i++) {
-		if(!strcmp(unformattedMonth, monthShortNames[i])) {
-			dateStruct.month = i + 1;
-			break;
+		sscanf(unformattedDate, "%*s %d %s %d %d:%d:%d %*s", &dateStruct.day, unformattedMonth, &dateStruct.year, &dateStruct.hour, &dateStruct.minute, &dateStruct.second);
+
+		for(int i = 0; i < sizeof monthShortNames / sizeof *monthShortNames; i++) {
+			if(!strcmp(unformattedMonth, monthShortNames[i])) {
+				dateStruct.month = i + 1;
+				break;
+			}
 		}
-	}
 
-	free(unformattedMonth);
-	dateString = malloc(strlen("RRRR-MM-DD HH:MM:SS") + 1);
-	sprintf(dateString, "%04d-%02d-%02d %02d:%02d:%02d", dateStruct.year, dateStruct.month, dateStruct.day, dateStruct.hour, dateStruct.minute, dateStruct.second);
+		free(unformattedMonth);
+		sprintf(dateString, "%04d-%02d-%02d %02d:%02d:%02d", dateStruct.year, dateStruct.month, dateStruct.day, dateStruct.hour, dateStruct.minute, dateStruct.second);
+	} else if(standardInfo->standard == ATOM) {// date format: 1970-01-01T00:00:00+00:00
+		strncpy(dateString, unformattedDate, desiredLength);
+		dateString[10] = ' '; // replace T with space
+		dateString[desiredLength] = '\0';
+	}
 
 	return dateString;
 }
@@ -74,8 +118,10 @@ int rssCompareDates(char* a, char* b) {
 }
 
 char* rssGenerateLastReadKeyName(char* url) {
-	char* sectionName = malloc(strlen("last_read_") + strlen(url) + 1);
-	sprintf(sectionName, "last_read_%s", url);
+	char* encodedUrl = rssBase16Encode(url);
+	char* sectionName = malloc(strlen("last_read_") + strlen(encodedUrl) + 1);
+	sprintf(sectionName, "last_read_%s", encodedUrl);
+	free(encodedUrl);
 	return sectionName;
 }
 
@@ -137,62 +183,113 @@ void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData*
 	moduleDestroyBasicMessage(&message);
 }
 
+void rssDetectStandard(xmlXPathContext* xmlContext, RssStandardInfo* output) {
+	xmlXPathObject* xmlObject;
+	bool found = false;
+
+	// RSS
+	xmlObject = xmlXPathEvalExpression("/rss", xmlContext);
+	if(xmlObject->nodesetval->nodeNr > 0) {
+		output->standard = RSS;
+		output->title = "/rss/channel/title";
+		output->items = "/rss/channel/item";
+		output->dateNode = "pubDate";
+		output->titleNode = "title";
+		output->urlNode = "link";
+		found = true;
+	}
+	xmlXPathFreeObject(xmlObject);
+	if(found) {
+		return;
+	}
+
+	// Atom
+	xmlXPathRegisterNs(xmlContext, "atom", "http://www.w3.org/2005/Atom");
+	xmlObject = xmlXPathEvalExpression("/atom:feed", xmlContext);
+	if(xmlObject->nodesetval->nodeNr > 0) {
+		output->standard = ATOM;
+		output->title = "/atom:feed/atom:title";
+		output->items = "/atom:feed/atom:entry";
+		output->dateNode = "updated";
+		output->titleNode = "title";
+		output->urlNode = "link";
+		found = true;
+	}
+	xmlXPathFreeObject(xmlObject);
+	if(found) {
+		return;
+	}
+
+	output->standard = UNKNOWN;
+	return;
+}
+
 void rssParseResponse(FetchingModule* fetchingModule, char* response, int responseSize, int sourceIndex) {
 	RssConfig* config = fetchingModule->config;
 	xmlXPathContext* xPathContext;
 	xmlXPathObject* xPathObject;
 	xmlDoc* doc = xmlReadMemory(response, responseSize, config->sources[sourceIndex].url, NULL, 0);
+	RssStandardInfo standardData = {0};
 
 	if(doc != NULL) {
 		xPathContext = xmlXPathNewContext(doc);
-		xPathObject = xmlXPathEvalExpression("/rss/channel/title", xPathContext);
+		rssDetectStandard(xPathContext, &standardData);
+		if(standardData.standard != UNKNOWN) {
+			xPathObject = xmlXPathEvalExpression(standardData.title, xPathContext);
 
-		if(xPathObject->nodesetval->nodeTab != NULL) {
-			char* title = xmlNodeGetContent(xPathObject->nodesetval->nodeTab[0]);
+			if(xPathObject->nodesetval->nodeTab != NULL) {
+				char* title = xmlNodeGetContent(xPathObject->nodesetval->nodeTab[0]);
+				xmlXPathFreeObject(xPathObject);
+
+				xPathObject = xmlXPathEvalExpression(standardData.items, xPathContext);
+				xmlNodeSet* nodes = xPathObject->nodesetval;
+				int unreadMessagesPointer = 0;
+				char* newLastRead = NULL;
+				for(; unreadMessagesPointer < nodes->nodeNr; unreadMessagesPointer++) {
+					char* unformattedDate = rssGetDateFromNode(nodes->nodeTab[unreadMessagesPointer], &standardData);
+					if(unformattedDate == NULL) {
+						moduleLog(fetchingModule, 0, "Could not get date for feed %s, message %d", config->sources[sourceIndex].url, unreadMessagesPointer);
+						break;
+					}
+					char* formattedDate = rssFormatDate(unformattedDate, &standardData);
+					bool isUnread = rssCompareDates(config->sources[sourceIndex].lastRead, formattedDate) < 0;
+
+					free(unformattedDate);
+					if(isUnread && unreadMessagesPointer == 0) { // we are assuming chronological order
+						newLastRead = formattedDate;
+					} else {
+						free(formattedDate);
+					}
+					if(!isUnread) {
+						break;
+					}
+				}
+
+				unreadMessagesPointer--;
+				if(newLastRead != NULL) { // unread messages exist
+					char* sectionName = rssGenerateLastReadKeyName(config->sources[sourceIndex].url);
+					stashSetString("rss", sectionName, newLastRead);
+					free(sectionName);
+					free(newLastRead);
+				}
+
+				for(int j = unreadMessagesPointer - 1; j >= 0; j--) {
+					RssNotificationData notificationData = {0};
+					rssFillNotificationData(&notificationData, nodes->nodeTab[j], &standardData);
+					notificationData.sourceName = title;
+					rssDisplayNotification(fetchingModule, &notificationData);
+				}
+
+				free(title);
+				xmlXPathFreeContext(xPathContext);
+			} else {
+				moduleLog(fetchingModule, 0, "Could not get title of feed %s", config->sources[sourceIndex].url);
+			}
+
 			xmlXPathFreeObject(xPathObject);
-
-			xPathObject = xmlXPathEvalExpression("/rss/channel/item", xPathContext);
-			xmlNodeSet* nodes = xPathObject->nodesetval;
-			int unreadMessagesPointer = 0;
-			char* newLastRead = NULL;
-			for(; unreadMessagesPointer < nodes->nodeNr; unreadMessagesPointer++) {
-				char* unformattedDate = rssGetDateFromNode(nodes->nodeTab[unreadMessagesPointer]);
-				char* formattedDate = rssFormatDate(unformattedDate);
-				bool isUnread = rssCompareDates(config->sources[sourceIndex].lastRead, formattedDate) < 0;
-
-				free(unformattedDate);
-				if(isUnread && unreadMessagesPointer == 0) { // we are assuming chronological order
-					newLastRead = formattedDate;
-				} else {
-					free(formattedDate);
-				}
-				if(!isUnread) {
-					break;
-				}
-			}
-
-			unreadMessagesPointer--;
-			if(newLastRead != NULL) { // unread messages exist
-				char* sectionName = rssGenerateLastReadKeyName(config->sources[sourceIndex].url);
-				stashSetString("rss", sectionName, newLastRead);
-				free(sectionName);
-				free(newLastRead);
-			}
-
-			for(int j = unreadMessagesPointer - 1; j >= 0; j--) {
-				RssNotificationData notificationData = {0};
-				rssFillNotificationData(&notificationData, nodes->nodeTab[j]);
-				notificationData.sourceName = title;
-				rssDisplayNotification(fetchingModule, &notificationData);
-			}
-
-			free(title);
-			xmlXPathFreeContext(xPathContext);
 		} else {
-			moduleLog(fetchingModule, 0, "Could not get title of feed %s", config->sources[sourceIndex].url);
+			moduleLog(fetchingModule, 0, "Unrecognized format of feed %s", config->sources[sourceIndex].url);
 		}
-
-		xmlXPathFreeObject(xPathObject);
 		xmlFreeDoc(doc);
 	} else {
 		moduleLog(fetchingModule, 0, "Error parsing feed %s", config->sources[sourceIndex].url);
