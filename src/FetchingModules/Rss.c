@@ -7,7 +7,7 @@
 #include "Extras/FetchingModuleUtilities.h"
 #include "Rss.h"
 
-#define RSS_FORMATTED_DATE_TEMPLATE "RRRR-MM-DD HH:MM:SS"
+#define RSS_FORMATTED_DATE_TEMPLATE "YYYY-MM-DD HH:MM:SS"
 
 typedef struct {
 	char* title;
@@ -255,29 +255,26 @@ void rssParseResponse(FetchingModule* fetchingModule, char* response, int respon
 					bool isUnread = rssCompareDates(config->sources[sourceIndex].lastRead, formattedDate) < 0;
 
 					free(unformattedDate);
-					if(isUnread && unreadMessagesPointer == 0) { // we are assuming chronological order
-						newLastRead = formattedDate;
-					} else {
-						free(formattedDate);
-					}
-					if(!isUnread) {
-						break;
+
+					if(isUnread) {
+						RssNotificationData notificationData = {0};
+						rssFillNotificationData(&notificationData, nodes->nodeTab[unreadMessagesPointer], &standardData);
+						notificationData.sourceName = title;
+						rssDisplayNotification(fetchingModule, &notificationData);
+
+						if(newLastRead == NULL || rssCompareDates(newLastRead, formattedDate) < 0) {
+							newLastRead = formattedDate;
+						} else {
+							free(formattedDate);
+						}
 					}
 				}
 
-				unreadMessagesPointer--;
 				if(newLastRead != NULL) { // unread messages exist
 					char* sectionName = rssGenerateLastReadKeyName(config->sources[sourceIndex].url);
 					stashSetString("rss", sectionName, newLastRead);
 					free(sectionName);
 					free(newLastRead);
-				}
-
-				for(int j = unreadMessagesPointer - 1; j >= 0; j--) {
-					RssNotificationData notificationData = {0};
-					rssFillNotificationData(&notificationData, nodes->nodeTab[j], &standardData);
-					notificationData.sourceName = title;
-					rssDisplayNotification(fetchingModule, &notificationData);
 				}
 
 				free(title);
