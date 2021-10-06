@@ -112,6 +112,11 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 		return false;
 	}
 
+	char* enabled = getFromMap(config, "enabled", strlen("enabled"));
+	if(enabled != NULL && !strcmp(enabled, "false")) {
+		return true;
+	}
+
 	char* moduleTypeLowerCase = toLowerCase(moduleType);
 
 	FetchingModule* moduleTemplate = getFromMap(&moduleManager->availableModules, moduleTypeLowerCase, strlen(moduleTypeLowerCase));
