@@ -8,6 +8,11 @@ bool moduleLoadIntFromConfig(FetchingModule* fetchingModule, Map* config, char* 
 	if(rawValueFromMap == NULL) {
 		return false;
 	}
+	for(int i = 0; rawValueFromMap[i] != '\0'; i++) {
+		if(!(isdigit(rawValueFromMap[i]) || (i == 0 && rawValueFromMap[i] == '-'))) {
+			return false;
+		}
+	}
 	*output = atoi(rawValueFromMap);
 	return true;
 }

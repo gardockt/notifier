@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "../../Structures/Map.h"
 #include "../FetchingModule.h"
