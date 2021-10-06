@@ -167,12 +167,9 @@ void isodDisable(FetchingModule* fetchingModule) {
 }
 
 bool isodTemplate(FetchingModule* fetchingModule) {
-	memset(fetchingModule, 0, sizeof *fetchingModule);
-
 	fetchingModule->enable = isodEnable;
 	fetchingModule->fetch = isodFetch;
 	fetchingModule->disable = isodDisable;
-
 	return true;
 }
 

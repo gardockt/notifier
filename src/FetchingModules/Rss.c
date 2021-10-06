@@ -328,12 +328,9 @@ void rssDisable(FetchingModule* fetchingModule) {
 }
 
 bool rssTemplate(FetchingModule* fetchingModule) {
-	memset(fetchingModule, 0, sizeof *fetchingModule);
-
 	fetchingModule->enable = rssEnable;
 	fetchingModule->fetch = rssFetch;
 	fetchingModule->disable = rssDisable;
-
 	return true;
 }
 

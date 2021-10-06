@@ -12,7 +12,7 @@
 #include "FetchingModules/Rss.h"
 #include "FetchingModules/Twitch.h"
 
-#define ADDMODULE(templateFunc,name) ((template=malloc(sizeof *template)) != NULL && templateFunc(template) && putIntoMap(&moduleManager->availableModules, name, strlen(name), template))
+#define ADDMODULE(templateFunc,name) ((template = malloc(sizeof *template)) != NULL && memset(template, 0, sizeof *template) && templateFunc(template) && putIntoMap(&moduleManager->availableModules, name, strlen(name), template))
 
 bool initModuleManager(ModuleManager* moduleManager) {
 	FetchingModule* template;

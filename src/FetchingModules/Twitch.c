@@ -341,12 +341,9 @@ void twitchDisable(FetchingModule* fetchingModule) {
 }
 
 bool twitchTemplate(FetchingModule* fetchingModule) {
-	memset(fetchingModule, 0, sizeof *fetchingModule);
-
 	fetchingModule->enable = twitchEnable;
 	fetchingModule->fetch = twitchFetch;
 	fetchingModule->disable = twitchDisable;
-
 	return true;
 }
 

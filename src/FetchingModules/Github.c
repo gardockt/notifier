@@ -199,12 +199,9 @@ void githubDisable(FetchingModule* fetchingModule) {
 }
 
 bool githubTemplate(FetchingModule* fetchingModule) {
-	memset(fetchingModule, 0, sizeof *fetchingModule);
-
 	fetchingModule->enable = githubEnable;
 	fetchingModule->fetch = githubFetch;
 	fetchingModule->disable = githubDisable;
-
 	return true;
 }
 
