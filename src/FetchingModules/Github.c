@@ -198,11 +198,10 @@ void githubDisable(FetchingModule* fetchingModule) {
 	free(config);
 }
 
-bool githubTemplate(FetchingModule* fetchingModule) {
+void githubTemplate(FetchingModule* fetchingModule) {
 	fetchingModule->enable = githubEnable;
 	fetchingModule->fetch = githubFetch;
 	fetchingModule->disable = githubDisable;
-	return true;
 }
 
 #endif // ifdef ENABLE_MODULE_GITHUB

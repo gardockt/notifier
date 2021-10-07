@@ -26,7 +26,7 @@ typedef struct {
 	CURL* curl;
 } RssConfig;
 
-bool rssTemplate(FetchingModule*);
+void rssTemplate(FetchingModule*);
 
 #endif // ifdef ENABLE_MODULE_RSS
 #endif // ifndef RSS_H

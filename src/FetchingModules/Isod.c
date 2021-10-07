@@ -166,11 +166,10 @@ void isodDisable(FetchingModule* fetchingModule) {
 	free(config);
 }
 
-bool isodTemplate(FetchingModule* fetchingModule) {
+void isodTemplate(FetchingModule* fetchingModule) {
 	fetchingModule->enable = isodEnable;
 	fetchingModule->fetch = isodFetch;
 	fetchingModule->disable = isodDisable;
-	return true;
 }
 
 #endif // ifdef ENABLE_MODULE_ISOD

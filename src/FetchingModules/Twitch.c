@@ -340,11 +340,10 @@ void twitchDisable(FetchingModule* fetchingModule) {
 	free(config);
 }
 
-bool twitchTemplate(FetchingModule* fetchingModule) {
+void twitchTemplate(FetchingModule* fetchingModule) {
 	fetchingModule->enable = twitchEnable;
 	fetchingModule->fetch = twitchFetch;
 	fetchingModule->disable = twitchDisable;
-	return true;
 }
 
 #endif // ifdef ENABLE_MODULE_TWITCH

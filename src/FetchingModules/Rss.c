@@ -327,11 +327,10 @@ void rssDisable(FetchingModule* fetchingModule) {
 	free(config);
 }
 
-bool rssTemplate(FetchingModule* fetchingModule) {
+void rssTemplate(FetchingModule* fetchingModule) {
 	fetchingModule->enable = rssEnable;
 	fetchingModule->fetch = rssFetch;
 	fetchingModule->disable = rssDisable;
-	return true;
 }
 
 #endif // ifdef ENABLE_MODULE_RSS

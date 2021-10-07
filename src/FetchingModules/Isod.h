@@ -20,7 +20,7 @@ typedef struct {
 	char* maxMessages;
 } IsodConfig;
 
-bool isodTemplate(FetchingModule*);
+void isodTemplate(FetchingModule*);
 
 #endif // ifdef ENABLE_MODULE_ISOD
 

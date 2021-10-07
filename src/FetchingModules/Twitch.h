@@ -23,7 +23,7 @@ typedef struct {
 	struct curl_slist* list;
 } TwitchConfig;
 
-bool twitchTemplate(FetchingModule*);
+void twitchTemplate(FetchingModule*);
 
 #endif // ifdef ENABLE_MODULE_TWITCH
 

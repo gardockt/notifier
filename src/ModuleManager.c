@@ -12,11 +12,17 @@
 #include "FetchingModules/Rss.h"
 #include "FetchingModules/Twitch.h"
 
-#define ADDMODULE(templateFunc,name) ((template = malloc(sizeof *template)) != NULL && memset(template, 0, sizeof *template) && templateFunc(template) && putIntoMap(&moduleManager->availableModules, name, strlen(name), template))
+bool addModule(ModuleManager* moduleManager, void (*templateFunc)(FetchingModule*), char* name) {
+	FetchingModule* template = malloc(sizeof *template);
+	if(template == NULL) {
+		return false;
+	}
+	memset(template, 0, sizeof *template);
+	templateFunc(template);
+	return putIntoMap(&moduleManager->availableModules, name, strlen(name), template);
+}
 
 bool initModuleManager(ModuleManager* moduleManager) {
-	FetchingModule* template;
-
 	if(!(initMap(&moduleManager->availableModules) &&
 	     initMap(&moduleManager->activeModules))) {
 		return false;
@@ -25,16 +31,16 @@ bool initModuleManager(ModuleManager* moduleManager) {
 	// adding modules to template map; enter names lower-case
 	if(
 #ifdef ENABLE_MODULE_GITHUB
-	   !ADDMODULE(githubTemplate,    "github") ||
+	   !addModule(moduleManager, githubTemplate,    "github") ||
 #endif
 #ifdef ENABLE_MODULE_ISOD
-	   !ADDMODULE(isodTemplate,      "isod") ||
+	   !addModule(moduleManager, isodTemplate,      "isod") ||
 #endif
 #ifdef ENABLE_MODULE_RSS
-	   !ADDMODULE(rssTemplate,       "rss") ||
+	   !addModule(moduleManager, rssTemplate,       "rss") ||
 #endif
 #ifdef ENABLE_MODULE_TWITCH
-	   !ADDMODULE(twitchTemplate,    "twitch") ||
+	   !addModule(moduleManager, twitchTemplate,    "twitch") ||
 #endif
 	   false) {
 		return false;

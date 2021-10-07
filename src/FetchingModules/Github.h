@@ -20,7 +20,7 @@ typedef struct {
 	char* lastRead;
 } GithubConfig;
 
-bool githubTemplate(FetchingModule*);
+void githubTemplate(FetchingModule*);
 
 #endif // ifdef ENABLE_MODULE_GITHUB
 
