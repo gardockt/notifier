@@ -49,3 +49,5 @@ check_dependencies(MODULE_TWITCH       "curl;json-c")
 target_include_directories(notifier PUBLIC ${LIBNOTIFY_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${JSON-C_INCLUDE_DIRS} ${LIBXML2_INCLUDE_DIRS}})
 target_compile_options(notifier PUBLIC -ggdb ${LIBNOTIFY_CFLAGS_OTHER} ${CURL_CFLAGS_OTHER} ${JSON-C_CFLAGS_OTHER} ${LIBXML2_CFLAGS_OTHER})
 target_link_libraries(notifier -lpthread -liniparser -lm ${LIBNOTIFY_LIBRARIES} ${CURL_LIBRARIES} ${JSON-C_LIBRARIES} ${LIBXML2_LIBRARIES})
+
+install(TARGETS notifier)
