@@ -267,6 +267,8 @@ void rssParseResponse(FetchingModule* fetchingModule, char* response, int respon
 						} else {
 							free(formattedDate);
 						}
+					} else {
+						free(formattedDate);
 					}
 				}
 

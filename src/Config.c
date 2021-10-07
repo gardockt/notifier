@@ -110,9 +110,8 @@ bool configLoad() {
 	initMap(specialSections);
 
 	for(int i = 0; i < configSectionCount; i++) {
-		char* sectionName;
+		char* sectionName = configSectionNames[i];
 
-		sectionName = configSectionNames[i];
 		if(sectionName[0] == '_') { // special section
 			Map* specialSection = configLoadSection(config, sectionName);
 			putIntoMap(specialSections, sectionName, strlen(sectionName), specialSection);
@@ -135,8 +134,12 @@ bool configLoad() {
 			configToMerge = getFromMap(specialSections, CONFIG_GLOBAL_SECTION_NAME, strlen(CONFIG_GLOBAL_SECTION_NAME));
 			configFillEmptyFields(configMap, configToMerge);
 
-			if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
+			char* enabled = getFromMap(configMap, "enabled", strlen("enabled"));
+			if(enabled != NULL && !strcmp(enabled, "false")) {
+				free(sectionName);
+			} else if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
 				fprintf(stderr, "Error while enabling module %s\n", sectionName);
+				free(sectionName);
 			}
 
 			configDestroySection(configMap);
