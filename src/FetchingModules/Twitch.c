@@ -194,19 +194,11 @@ bool twitchEnable(FetchingModule* fetchingModule, Map* configToParse) {
 
 char* twitchReplaceVariables(char* text, void* notificationDataPtr) {
 	TwitchNotificationData* notificationData = notificationDataPtr;
-	char* temp;
-	char* ret;
-
-	temp = replace(text, "<streamer-name>", notificationData->streamerName);
-	ret = replace(temp, "<title>", notificationData->title);
-	free(temp);
-	temp = ret;
-	ret = replace(temp, "<category>", notificationData->category);
-	free(temp);
-	temp = ret;
-	ret = replace(temp, "<url>", notificationData->url);
-	free(temp);
-	return ret;
+	return replace(text, 4,
+		"<streamer-name>", notificationData->streamerName,
+		"<title>", notificationData->title,
+		"<category>", notificationData->category,
+		"<url>", notificationData->url);
 }
 
 void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificationData* notificationData) {

@@ -94,19 +94,11 @@ bool githubEnable(FetchingModule* fetchingModule, Map* configToParse) {
 
 char* githubReplaceVariables(char* text, void* notificationDataPtr) {
 	GithubNotificationData* notificationData = notificationDataPtr;
-	char* temp;
-	char* ret;
-
-	temp = replace(text, "<title>", notificationData->title);
-	ret = replace(temp, "<repo-name>", notificationData->repoName);
-	free(temp);
-	temp = ret;
-	ret = replace(temp, "<repo-full-name>", notificationData->repoFullName);
-	free(temp);
-	temp = ret;
-	ret = replace(temp, "<url>", notificationData->url);
-	free(temp);
-	return ret;
+	return replace(text, 4,
+		"<title>", notificationData->title,
+		"<repo-name>", notificationData->repoName,
+		"<repo-full-name>", notificationData->repoFullName,
+		"<url>", notificationData->url);
 }
 
 void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificationData* notificationData) {

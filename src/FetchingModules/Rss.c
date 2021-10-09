@@ -167,13 +167,10 @@ bool rssEnable(FetchingModule* fetchingModule, Map* configToParse) {
 
 char* rssReplaceVariables(char* text, void* notificationDataPtr) {
 	RssNotificationData* notificationData = notificationDataPtr;
-	char* temp = replace(text, "<title>", notificationData->title);
-	char* ret = replace(temp, "<source-name>", notificationData->sourceName);
-	free(temp);
-	temp = ret;
-	ret = replace(temp, "<url>", notificationData->url);
-	free(temp);
-	return ret;
+	return replace(text, 3,
+		"<title>", notificationData->title,
+		"<source-name>", notificationData->sourceName,
+		"<url>", notificationData->url);
 }
 
 void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData* notificationData) {

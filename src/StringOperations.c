@@ -1,4 +1,12 @@
 #include "StringOperations.h"
+#include "Structures/BinaryTree.h"
+
+typedef struct {
+	char* before;
+	char* after;
+	int lengthDiff;
+	int nextOccurrence;
+} Replacement;
 
 int split(char* text, char* separators, char*** output) {
 	int textLength = strlen(text);
@@ -56,36 +64,74 @@ int find(char* text, const char* substring) {
 	return -1;
 }
 
-char* replace(char* text, const char* before, const char* after) {
-	if(text == NULL || before == NULL || after == NULL) {
+int compareReplacements(void* aPtr, void* bPtr) {
+	Replacement* a = aPtr;
+	Replacement* b = bPtr;
+	return a->nextOccurrence - b->nextOccurrence;
+}
+
+char* replace(char* input, int pairCount, ...) {
+	if(input == NULL) {
 		return NULL;
 	}
 
-	int outputLength = strlen(text);
-	int beforeLength = strlen(before);
-	int afterLength = strlen(after);
-	int diffLength = afterLength - beforeLength;
+	va_list args;
+	BinaryTree replacements;
+	binaryTreeInit(&replacements, compareReplacements);
 
-	char* output = malloc(outputLength + 1);
-	int textPointer = 0;
-	int pointerDiff = 0;
-	int nextOccurrence;
-
-	while((nextOccurrence = find(&text[textPointer], before)) != -1) {
-		outputLength += diffLength;
-		if(diffLength > 0) {
-			output = realloc(output, outputLength + 1);
+	va_start(args, pairCount);
+	while(pairCount--) {
+		char* before = va_arg(args, char*);
+		char* after = va_arg(args, char*);
+		int nextOccurrence = find(input, before);
+		if(nextOccurrence != -1) {
+			Replacement* replacement = malloc(sizeof *replacement);
+			replacement->before = before;
+			replacement->after = after;
+			replacement->lengthDiff = strlen(after) - strlen(before);
+			replacement->nextOccurrence = nextOccurrence;
+			binaryTreePut(&replacements, replacement);
 		}
-		strncpy(&output[textPointer + pointerDiff], &text[textPointer], nextOccurrence - textPointer);
-		strcpy(&output[nextOccurrence + pointerDiff], after);
-		textPointer = nextOccurrence + beforeLength;
-		pointerDiff += diffLength;
 	}
-	strcpy(&output[textPointer + pointerDiff], &text[textPointer]);
-	if(diffLength < 0) {
+	va_end(args);
+
+	int inputLength = strlen(input);
+	int outputLength = inputLength;
+	int inputPointer = 0;
+	int pointerDiff = 0;
+	char* output = malloc(outputLength);
+	bool reallocAfterAllReplacements = false;
+	Replacement* nextReplacement;
+
+	while((nextReplacement = binaryTreePopLowest(&replacements)) != NULL) {
+		outputLength += nextReplacement->lengthDiff;
+		if(nextReplacement->lengthDiff > 0) {
+			output = realloc(output, outputLength + 1);
+		} else if(nextReplacement->lengthDiff < 0) {
+			reallocAfterAllReplacements = true;
+		}
+
+		if(nextReplacement->nextOccurrence >= inputPointer) { // ignore replacement if it contains part of "before" text of previous replacement
+			strncpy(&output[inputPointer + pointerDiff], &input[inputPointer], nextReplacement->nextOccurrence - inputPointer);
+			strcpy(&output[nextReplacement->nextOccurrence + pointerDiff], nextReplacement->after);
+			inputPointer = nextReplacement->nextOccurrence + strlen(nextReplacement->before);
+			pointerDiff += nextReplacement->lengthDiff;
+		}
+
+		nextReplacement->nextOccurrence = find(&input[inputPointer], nextReplacement->before);
+		if(nextReplacement->nextOccurrence != -1) {
+			nextReplacement->nextOccurrence += inputPointer;
+			binaryTreePut(&replacements, nextReplacement);
+		} else {
+			free(nextReplacement);
+		}
+	}
+
+	strcpy(&output[inputPointer + pointerDiff], &input[inputPointer]);
+	binaryTreeDestroy(&replacements);
+	if(reallocAfterAllReplacements) {
 		output = realloc(output, outputLength + 1);
 	}
-
 	return output;
 }
 
