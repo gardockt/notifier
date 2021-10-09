@@ -1,15 +1,5 @@
 #include "StringOperations.h"
 
-bool isCharacterSeparator(char character, char* separators) {
-	int separatorCount = strlen(separators);
-	for(int i = 0; i < separatorCount; i++) {
-		if(character == separators[i]) {
-			return true;
-		}
-	}
-	return false;
-}
-
 int split(char* text, char* separators, char*** output) {
 	int textLength = strlen(text);
 	int textSections = 0;
@@ -18,7 +8,7 @@ int split(char* text, char* separators, char*** output) {
 
 	// count text sections and alloc memory
 	for(int i = 0; i < textLength; i++) {
-		isSeparator = isCharacterSeparator(text[i], separators);
+		isSeparator = (strchr(separators, text[i]) != NULL);
 		if(lastCharacterWasSeparator && !isSeparator) {
 			lastCharacterWasSeparator = false;
 			textSections++;
@@ -34,7 +24,7 @@ int split(char* text, char* separators, char*** output) {
 	for(int i = 0; i < textSections; i++) {
 		for(int j = textStart; j <= textLength; j++) {
 			if(j < textLength) {
-				isSeparator = isCharacterSeparator(text[j], separators);
+				isSeparator = (strchr(separators, text[i]) != NULL);
 				if(isSeparator) {
 					(*output)[i] = malloc(j - textStart + 1);
 					strncpy((*output)[i], &text[textStart], j - textStart);
@@ -46,7 +36,7 @@ int split(char* text, char* separators, char*** output) {
 				(*output)[i] = strdup(&text[textStart]);
 			}
 		}
-		while(textStart < textLength && isCharacterSeparator(text[textStart], separators)) {
+		while(textStart < textLength && strchr(separators, text[i]) != NULL) {
 			textStart++;
 		}
 	}
