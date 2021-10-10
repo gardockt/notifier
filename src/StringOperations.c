@@ -32,7 +32,7 @@ int split(char* text, char* separators, char*** output) {
 	for(int i = 0; i < textSections; i++) {
 		for(int j = textStart; j <= textLength; j++) {
 			if(j < textLength) {
-				isSeparator = (strchr(separators, text[i]) != NULL);
+				isSeparator = (strchr(separators, text[j]) != NULL);
 				if(isSeparator) {
 					(*output)[i] = malloc(j - textStart + 1);
 					strncpy((*output)[i], &text[textStart], j - textStart);
@@ -44,7 +44,7 @@ int split(char* text, char* separators, char*** output) {
 				(*output)[i] = strdup(&text[textStart]);
 			}
 		}
-		while(textStart < textLength && strchr(separators, text[i]) != NULL) {
+		while(textStart < textLength && strchr(separators, text[textStart]) != NULL) {
 			textStart++;
 		}
 	}
