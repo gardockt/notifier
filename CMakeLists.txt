@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(notifier VERSION 0.1)
+project(notifier VERSION 0.1 LANGUAGES C)
 
 option(ENABLE_DISPLAY_LIBNOTIFY "Compile libnotify display" ON)
 
@@ -12,6 +12,7 @@ option(ENABLE_MODULE_TWITCH "Compile Twitch module" ON)
 file(GLOB_RECURSE source_files "src/*.h" "src/*.c")
 add_executable(notifier ${source_files})
 
+find_package(Threads REQUIRED)
 find_package(CURL REQUIRED) # can be eventually set as optional
 find_package(LibXml2)
 
@@ -21,8 +22,7 @@ pkg_check_modules(JSON-C json-c)
 
 macro(check_dependency module_name dependency_name)
 	string(TOUPPER ${dependency_name} dependency_name_uppercase)
-	if(${${dependency_name_uppercase}_FOUND})
-	else() # unfortunately NOT does not work as intended
+	if(NOT DEFINED ${dependency_name_uppercase}_FOUND)
 		message(WARNING "${dependency_name} not found, disabling ${module_name}")
 		set(ENABLE_${module_name} OFF)
 		break()
@@ -46,8 +46,31 @@ check_dependencies(MODULE_ISOD         "curl;json-c")
 check_dependencies(MODULE_RSS          "curl;libxml2")
 check_dependencies(MODULE_TWITCH       "curl;json-c")
 
-target_include_directories(notifier PUBLIC ${LIBNOTIFY_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${JSON-C_INCLUDE_DIRS} ${LIBXML2_INCLUDE_DIRS}})
-target_compile_options(notifier PUBLIC -ggdb ${LIBNOTIFY_CFLAGS_OTHER} ${CURL_CFLAGS_OTHER} ${JSON-C_CFLAGS_OTHER} ${LIBXML2_CFLAGS_OTHER})
-target_link_libraries(notifier -lpthread -liniparser -lm ${LIBNOTIFY_LIBRARIES} ${CURL_LIBRARIES} ${JSON-C_LIBRARIES} ${LIBXML2_LIBRARIES})
+target_compile_options(notifier PUBLIC -ggdb)
+target_link_libraries(notifier PUBLIC -liniparser -lm ${CMAKE_THREAD_LIBS_INIT})
 
-install(TARGETS notifier)
+if(CURL_FOUND)
+	target_include_directories(notifier PUBLIC ${CURL_INCLUDE_DIRS})
+	target_compile_options(notifier PUBLIC ${CURL_CFLAGS_OTHER})
+	target_link_libraries(notifier PUBLIC ${CURL_LIBRARIES})
+endif()
+
+if(LIBNOTIFY_FOUND)
+	target_include_directories(notifier PUBLIC ${LIBNOTIFY_INCLUDE_DIRS})
+	target_compile_options(notifier PUBLIC ${LIBNOTIFY_CFLAGS_OTHER})
+	target_link_libraries(notifier PUBLIC ${LIBNOTIFY_LIBRARIES})
+endif()
+
+if(JSON-C_FOUND)
+	target_include_directories(notifier PUBLIC ${JSON-C_INCLUDE_DIRS})
+	target_compile_options(notifier PUBLIC ${JSON-C_CFLAGS_OTHER})
+	target_link_libraries(notifier PUBLIC ${JSON-C_LIBRARIES})
+endif()
+
+if(LibXml2_FOUND)
+	target_include_directories(notifier PUBLIC ${LIBXML2_INCLUDE_DIRS})
+	target_compile_options(notifier PUBLIC ${LIBXML2_CFLAGS_OTHER})
+	target_link_libraries(notifier PUBLIC ${LIBXML2_LIBRARIES})
+endif()
+
+install(TARGETS notifier RUNTIME DESTINATION bin)
