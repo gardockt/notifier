@@ -87,54 +87,55 @@ void isodParseResponse(FetchingModule* fetchingModule, char* response) {
 	json_object* root = json_tokener_parse(response);
 	json_object* items = json_object_object_get(root, "items");
 
-	if(json_object_get_type(items) == json_type_array) {
-		int notificationCount = json_object_array_length(items);
-		char* newLastRead = NULL;
-
-		for(int i = notificationCount - 1; i >= 0; i--) {
-			json_object* notification = json_object_array_get_idx(items, i);
-			if(json_object_get_type(notification) != json_type_object) {
-				moduleLog(fetchingModule, 0, "Invalid notification object");
-				continue;
-			}
-
-			const char* modifiedDate = JSON_STRING(notification, "modifiedDate");
-			char* modifiedDateWithFixedFormat;
-
-			if(modifiedDate == NULL) {
-				moduleLog(fetchingModule, 0, "Invalid modification date in notification %d", i);
-				continue;
-			}
-
-			if(modifiedDate[1] == '.') { // day is one digit long
-				modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);
-				sprintf(modifiedDateWithFixedFormat, "0%s", modifiedDate);
-			} else {
-				modifiedDateWithFixedFormat = strdup(modifiedDate);
-			}
-
-			if(isodCompareDates(modifiedDateWithFixedFormat, config->lastRead) > 0) {
-				if(newLastRead == NULL || isodCompareDates(modifiedDateWithFixedFormat, newLastRead) > 0) {
-					free(newLastRead);
-					newLastRead = strdup(modifiedDateWithFixedFormat);
-				}
-
-				IsodNotificationData notificationData = {0};
-				notificationData.title = JSON_STRING(notification, "subject");
-				isodDisplayNotification(fetchingModule, &notificationData);
-			}
-
-			free(modifiedDateWithFixedFormat);
-		}
-		json_object_put(root);
-		if(newLastRead != NULL) {
-			config->lastRead = newLastRead;
-			char* sectionName = isodGenerateLastReadKeyName(fetchingModule);
-			stashSetString("isod", sectionName, config->lastRead);
-			free(sectionName);
-		}
-	} else {
+	if(json_object_get_type(items) != json_type_array) {
 		moduleLog(fetchingModule, 0, "Invalid response");
+		return; // TODO: memory leak?
+	}
+
+	int notificationCount = json_object_array_length(items);
+	char* newLastRead = NULL;
+
+	for(int i = notificationCount - 1; i >= 0; i--) {
+		json_object* notification = json_object_array_get_idx(items, i);
+		if(json_object_get_type(notification) != json_type_object) {
+			moduleLog(fetchingModule, 0, "Invalid notification object");
+			continue;
+		}
+
+		const char* modifiedDate = JSON_STRING(notification, "modifiedDate");
+		char* modifiedDateWithFixedFormat;
+
+		if(modifiedDate == NULL) {
+			moduleLog(fetchingModule, 0, "Invalid modification date in notification %d", i);
+			continue;
+		}
+
+		if(modifiedDate[1] == '.') { // day is one digit long
+			modifiedDateWithFixedFormat = malloc(strlen("01.01.1970 00:00") + 1);
+			sprintf(modifiedDateWithFixedFormat, "0%s", modifiedDate);
+		} else {
+			modifiedDateWithFixedFormat = strdup(modifiedDate);
+		}
+
+		if(isodCompareDates(modifiedDateWithFixedFormat, config->lastRead) > 0) {
+			if(newLastRead == NULL || isodCompareDates(modifiedDateWithFixedFormat, newLastRead) > 0) {
+				free(newLastRead);
+				newLastRead = strdup(modifiedDateWithFixedFormat);
+			}
+
+			IsodNotificationData notificationData = {0};
+			notificationData.title = JSON_STRING(notification, "subject");
+			isodDisplayNotification(fetchingModule, &notificationData);
+		}
+
+		free(modifiedDateWithFixedFormat);
+	}
+	json_object_put(root);
+	if(newLastRead != NULL) {
+		config->lastRead = newLastRead;
+		char* sectionName = isodGenerateLastReadKeyName(fetchingModule);
+		stashSetString("isod", sectionName, config->lastRead);
+		free(sectionName);
 	}
 }
 

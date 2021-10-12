@@ -113,52 +113,53 @@ void githubParseResponse(FetchingModule* fetchingModule, char* response) {
 	GithubNotificationData notificationData;
 	json_object* root = json_tokener_parse(response);
 
-	if(json_object_get_type(root) == json_type_array) {
-		int unreadNotifications = json_object_array_length(root);
-		char* newLastRead = NULL;
+	if(json_object_get_type(root) != json_type_array) {
+		moduleLog(fetchingModule, 0, "Invalid response");
+		return;
+	}
 
-		for(int i = 0; i < unreadNotifications; i++) {
-			json_object* notification = json_object_array_get_idx(root, i);
-			const char* lastUpdated = JSON_STRING(notification, "updated_at");
+	int unreadNotifications = json_object_array_length(root);
+	char* newLastRead = NULL;
 
-			if(lastUpdated == NULL) {
-				moduleLog(fetchingModule, 0, "Invalid last update time in notification %d", i);
+	for(int i = 0; i < unreadNotifications; i++) {
+		json_object* notification = json_object_array_get_idx(root, i);
+		const char* lastUpdated = JSON_STRING(notification, "updated_at");
+
+		if(lastUpdated == NULL) {
+			moduleLog(fetchingModule, 0, "Invalid last update time in notification %d", i);
+			continue;
+		}
+
+		if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
+			if(newLastRead == NULL || githubCompareDates(lastUpdated, newLastRead) > 0) {
+				free(newLastRead);
+				newLastRead = strdup(lastUpdated);
+			}
+
+			json_object* subject  = json_object_object_get(notification, "subject");
+			if(json_object_get_type(subject) != json_type_object) {
+				moduleLog(fetchingModule, 0, "Invalid subject object in notification %d", i);
 				continue;
 			}
 
-			if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
-				if(newLastRead == NULL || githubCompareDates(lastUpdated, newLastRead) > 0) {
-					free(newLastRead);
-					newLastRead = strdup(lastUpdated);
-				}
-
-				json_object* subject  = json_object_object_get(notification, "subject");
-				if(json_object_get_type(subject) != json_type_object) {
-					moduleLog(fetchingModule, 0, "Invalid subject object in notification %d", i);
-					continue;
-				}
-
-				json_object* repository  = json_object_object_get(notification, "repository");
-				if(json_object_get_type(repository) != json_type_object) {
-					moduleLog(fetchingModule, 0, "Invalid repository object in notification %d", i);
-					continue;
-				}
-
-				notificationData.title               = JSON_STRING(subject, "title");
-				notificationData.repoName            = JSON_STRING(repository, "name");
-				notificationData.repoFullName        = JSON_STRING(repository, "full_name");
-				notificationData.url                 = githubGenerateNotificationUrl(fetchingModule, notification);
-				githubDisplayNotification(fetchingModule, &notificationData);
-				free(notificationData.url);
+			json_object* repository  = json_object_object_get(notification, "repository");
+			if(json_object_get_type(repository) != json_type_object) {
+				moduleLog(fetchingModule, 0, "Invalid repository object in notification %d", i);
+				continue;
 			}
-		}
 
-		json_object_put(root);
-		if(newLastRead != NULL) {
-			config->lastRead = newLastRead;
+			notificationData.title               = JSON_STRING(subject, "title");
+			notificationData.repoName            = JSON_STRING(repository, "name");
+			notificationData.repoFullName        = JSON_STRING(repository, "full_name");
+			notificationData.url                 = githubGenerateNotificationUrl(fetchingModule, notification);
+			githubDisplayNotification(fetchingModule, &notificationData);
+			free(notificationData.url);
 		}
-	} else {
-		moduleLog(fetchingModule, 0, "Invalid response");
+	}
+
+	json_object_put(root);
+	if(newLastRead != NULL) {
+		config->lastRead = newLastRead;
 	}
 }
 

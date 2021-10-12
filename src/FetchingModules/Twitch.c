@@ -81,26 +81,30 @@ bool twitchRefreshToken(FetchingModule* fetchingModule) {
 
 	CURLcode code = curl_easy_perform(config->curl);
 	curl_easy_setopt(config->curl, CURLOPT_POST, false);
-	if(code == CURLE_OK) {
-		moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
-		json_object* root = json_tokener_parse(response.data);
-		json_object* newTokenObject = json_object_object_get(root, "access_token");
-		if(json_object_get_type(newTokenObject) == json_type_string) {
-			const char* newToken = json_object_get_string(newTokenObject);
-			moduleLog(fetchingModule, 2, "New token: %s", newToken);
-
-			if(config->token == NULL) {
-				config->token = malloc(strlen(newToken) + 1);
-			}
-			strcpy(config->token, newToken);
-			refreshSuccessful = true;
-		} else {
-			moduleLog(fetchingModule, 0, "Token refreshing failed - invalid response");
-		}
-		json_object_put(root);
-	} else {
+	if(code != CURLE_OK) {
 		moduleLog(fetchingModule, 0, "Token refreshing failed with CURL code %d", code);
+		return false;
 	}
+
+	moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
+	json_object* root = json_tokener_parse(response.data);
+	json_object* newTokenObject = json_object_object_get(root, "access_token");
+	if(json_object_get_type(newTokenObject) != json_type_string) {
+		moduleLog(fetchingModule, 0, "Token refreshing failed - invalid response");
+		goto twitchRefreshTokenPutRoot;
+	}
+
+	const char* newToken = json_object_get_string(newTokenObject);
+	moduleLog(fetchingModule, 2, "New token: %s", newToken);
+
+	if(config->token == NULL) {
+		config->token = malloc(strlen(newToken) + 1);
+	}
+	strcpy(config->token, newToken);
+	refreshSuccessful = true;
+
+twitchRefreshTokenPutRoot:
+	json_object_put(root);
 
 	if(refreshSuccessful) {
 		twitchSetHeader(fetchingModule);
@@ -213,33 +217,8 @@ int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** c
 	json_object* root = json_tokener_parse(response);
 	json_object* data = json_object_object_get(root, "data");
 
-	if(json_object_get_type(data) == json_type_array) {
-		int activeStreamersCount = json_object_array_length(data);
-
-		for(int i = 0; i < activeStreamersCount; i++) {
-			json_object* stream = json_object_array_get_idx(data, i);
-			const char* activeStreamerName  = JSON_STRING(stream, "user_name");
-			const char* newTitle            = JSON_STRING(stream, "title");
-			const char* newCategory         = JSON_STRING(stream, "game_name");
-
-			if(activeStreamerName == NULL || newTitle == NULL || newCategory == NULL) {
-				moduleLog(fetchingModule, 0, "Invalid data for stream %d", i);
-				continue;
-			}
-
-			for(int j = 0; j < config->streamCount; j++) {
-				if(!strcasecmp(activeStreamerName, checkedStreamNames[j])) {
-					newData[j].streamerName  = strdup(activeStreamerName);
-					newData[j].title         = strdup(newTitle);
-					newData[j].category      = strdup(newCategory);
-					newData[j].url           = malloc(strlen("https://twitch.tv/") + strlen(activeStreamerName) + 1);
-					sprintf(newData[j].url, "https://twitch.tv/%s", activeStreamerName);
-
-					break;
-				}
-			}
-		}
-	} else {
+	// TODO: memory leak?
+	if(json_object_get_type(data) != json_type_array) {
 		if(json_object_get_type(root) == json_type_object) {
 			int errorCode = JSON_INT(root, "status");
 			moduleLog(fetchingModule, 0, "Error %d - %s (%s)", errorCode, JSON_STRING(root, "error"), JSON_STRING(root, "message"));
@@ -247,6 +226,32 @@ int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** c
 		} else {
 			moduleLog(fetchingModule, 0, "Invalid response");
 			return -1;
+		}
+	}
+
+	int activeStreamersCount = json_object_array_length(data);
+
+	for(int i = 0; i < activeStreamersCount; i++) {
+		json_object* stream = json_object_array_get_idx(data, i);
+		const char* activeStreamerName  = JSON_STRING(stream, "user_name");
+		const char* newTitle            = JSON_STRING(stream, "title");
+		const char* newCategory         = JSON_STRING(stream, "game_name");
+
+		if(activeStreamerName == NULL || newTitle == NULL || newCategory == NULL) {
+			moduleLog(fetchingModule, 0, "Invalid data for stream %d", i);
+			continue;
+		}
+
+		for(int j = 0; j < config->streamCount; j++) {
+			if(!strcasecmp(activeStreamerName, checkedStreamNames[j])) {
+				newData[j].streamerName  = strdup(activeStreamerName);
+				newData[j].title         = strdup(newTitle);
+				newData[j].category      = strdup(newCategory);
+				newData[j].url           = malloc(strlen("https://twitch.tv/") + strlen(activeStreamerName) + 1);
+				sprintf(newData[j].url, "https://twitch.tv/%s", activeStreamerName);
+
+				break;
+			}
 		}
 	}
 	json_object_put(root);
@@ -269,20 +274,23 @@ void twitchFetch(FetchingModule* fetchingModule) {
 		free(url);
 
 		CURLcode code = curl_easy_perform(config->curl);
-		if(code == CURLE_OK) {
-			moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
-			int errorCode = twitchParseResponse(fetchingModule, response.data, checkedStreamNames, newData);
-			if(errorCode == 401) {
-				if(twitchRefreshToken(fetchingModule)) {
-					i -= 100; // retry
-				} else {
-					moduleLog(fetchingModule, 0, "Unable to refresh token, skipping fetch");
-					i = config->streamCount; // end the loop
-				}
-			}
-		} else {
+		if(code != CURLE_OK) {
 			moduleLog(fetchingModule, 0, "Request failed with code %d", code);
+			goto twitchFetchFreeResponse;
 		}
+
+		moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
+		int errorCode = twitchParseResponse(fetchingModule, response.data, checkedStreamNames, newData);
+		if(errorCode == 401) {
+			if(twitchRefreshToken(fetchingModule)) {
+				i -= 100; // retry
+			} else {
+				moduleLog(fetchingModule, 0, "Unable to refresh token, skipping fetch");
+				i = config->streamCount; // end the loop
+			}
+		}
+
+twitchFetchFreeResponse:
 		free(response.data);
 	}
 
