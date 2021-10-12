@@ -16,7 +16,7 @@ void destroyMap(Map* map) {
 }
 
 bool doubleMapSize(Map* map) {
-	MapElement* elementsNew = reallocarray(map->elements, map->availableSize * 2, sizeof *map->elements);
+	MapElement* elementsNew = realloc(map->elements, map->availableSize * 2 * sizeof *map->elements);
 	if(elementsNew != NULL) {
 		map->elements = elementsNew;
 		return true;
