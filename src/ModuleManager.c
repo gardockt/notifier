@@ -1,11 +1,12 @@
 #include "StringOperations.h"
-#include "ModuleManager.h"
 #include "Globals.h"
 #include "Config.h"
+#include "Log.h"
 #include "Structures/Map.h"
 #include "FetchingModules/FetchingModule.h"
 #include "FetchingModules/Extras/FetchingModuleUtilities.h"
 #include "Displays/Display.h"
+#include "ModuleManager.h"
 
 // fetching modules
 #include "FetchingModules/Github.h"
@@ -163,7 +164,7 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	free(keyToFree);
 	free(module);
 
-	moduleLogCustom(moduleCustomNameCopy, moduleVerbosity, 1, "Module disabled");
+	logWrite(moduleCustomNameCopy, moduleVerbosity, 1, "Module disabled");
 	free(moduleCustomNameCopy);
 	return true;
 }
