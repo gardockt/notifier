@@ -22,7 +22,7 @@ pkg_check_modules(JSON-C json-c)
 
 macro(check_dependency module_name dependency_name)
 	string(TOUPPER ${dependency_name} dependency_name_uppercase)
-	if(NOT DEFINED ${dependency_name_uppercase}_FOUND)
+	if(NOT DEFINED ${dependency_name_uppercase}_FOUND OR NOT ${${dependency_name_uppercase}_FOUND})
 		message(WARNING "${dependency_name} not found, disabling ${module_name}")
 		set(ENABLE_${module_name} OFF)
 		break()
