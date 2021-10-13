@@ -14,6 +14,8 @@
 
 int coreVerbosity = 0;
 
+static dictionary* config = NULL;
+
 bool configLoadInt(Map* config, char* key, int* output) {
 	char* rawValueFromMap = getFromMap(config, key, strlen(key));
 	if(rawValueFromMap == NULL) {
@@ -37,12 +39,16 @@ bool configLoadString(Map* config, char* key, char** output) {
 	return true;
 }
 
-void configParseCoreSection(Map* coreSection) {
-	if(coreSection == NULL) {
-		return;
-	}
+bool configOpen() {
+	char* configDirectory = getConfigDirectory();
+	config = iniparser_load(configDirectory);
+	free(configDirectory);
+	return config != NULL;
+}
 
-	configLoadInt(coreSection, "verbosity", &coreVerbosity);
+void configClose() {
+	iniparser_freedict(config);
+	config = NULL;
 }
 
 void configFillEmptyFields(Map* targetConfig, Map* sourceConfig) {
@@ -120,6 +126,27 @@ void configDestroySection(Map* section) {
 	destroyMap(section);
 }
 
+void configLoadCore() {
+	if(!configOpen()) {
+		return;
+	}
+
+	Map* coreSection = configLoadSection(config, CONFIG_CORE_SECTION_NAME);
+	Map* globalSection = configLoadSection(config, CONFIG_GLOBAL_SECTION_NAME);
+	if(coreSection != NULL) {
+		configFillEmptyFields(coreSection, globalSection);
+	} else {
+		coreSection = globalSection;
+	}
+	if(coreSection == NULL) {
+		return;
+	}
+
+	configLoadInt(coreSection, "verbosity", &coreVerbosity);
+
+	// do not close the config, configLoad will close it later
+}
+
 int configCompareSectionNames(const void* a, const void* b) {
 	// sort so that special sections will be first
 	const char** aString = (const char**)a;
@@ -128,11 +155,7 @@ int configCompareSectionNames(const void* a, const void* b) {
 }
 
 bool configLoad() {
-	char* configDirectory = getConfigDirectory();
-	dictionary* config = iniparser_load(configDirectory);
-	free(configDirectory);
-
-	if(config == NULL) {
+	if(config == NULL && !configOpen()) {
 		return false;
 	}
 
@@ -210,15 +233,6 @@ loadConfigGlobalSection:
 		}
 	}
 
-	// core section loading
-	Map* coreSection = getFromMap(specialSections, CONFIG_CORE_SECTION_NAME, strlen(CONFIG_CORE_SECTION_NAME));
-	if(coreSection != NULL) {
-		configFillEmptyFields(coreSection, globalSection);
-	} else if(globalSection != NULL) {
-		coreSection = globalSection;
-	}
-	configParseCoreSection(coreSection);
-
 	int specialSectionCount = getMapSize(specialSections);
 	char** specialSectionNames = malloc(specialSectionCount * sizeof *specialSectionNames);
 	getMapKeys(specialSections, (void**)specialSectionNames);
@@ -234,6 +248,6 @@ loadConfigGlobalSection:
 	destroyMap(specialSections);
 	free(specialSections);
 	free(configSectionNames);
-	iniparser_freedict(config);
+	configClose();
 	return true;
 }

@@ -7,6 +7,7 @@ bool stashInit() {
 	char* stashDirectory = getStashDirectory();
 	stash = iniparser_load(stashDirectory);
 	if(stash == NULL) {
+		// TODO: make sure config is loaded beforehand
 		fprintf(stderr, "Warning: Stash file was not found, creating new stash\n");
 		stash = dictionary_new(0);
 	}

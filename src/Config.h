@@ -13,6 +13,7 @@
 bool configLoadInt(Map* config, char* key, int* output);
 bool configLoadString(Map* config, char* key, char** output);
 
+void configLoadCore();
 bool configLoad();
 
 #endif // ifndef CONFIG_H

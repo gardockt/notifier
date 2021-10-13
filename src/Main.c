@@ -9,6 +9,8 @@ ModuleManager moduleManager;
 DisplayManager displayManager;
 
 bool initFunctionality() {
+	configLoadCore();
+
 	if(!initModuleManager(&moduleManager)) {
 		fprintf(stderr, "Error initializing module manager!\n");
 		return false;
