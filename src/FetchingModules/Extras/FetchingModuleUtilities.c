@@ -1,33 +1,11 @@
-#include "FetchingModuleUtilities.h"
 #include "../../Displays/Display.h"
+#include "../../Config.h"
+#include "FetchingModuleUtilities.h"
 
 #define STRDUP_IF_NOT_NULL(x) ((x) != NULL ? strdup(x) : NULL)
 
-bool moduleLoadIntFromConfig(FetchingModule* fetchingModule, Map* config, char* key, int* output) {
-	char* rawValueFromMap = getFromMap(config, key, strlen(key));
-	if(rawValueFromMap == NULL) {
-		return false;
-	}
-	for(int i = 0; rawValueFromMap[i] != '\0'; i++) {
-		if(!(isdigit(rawValueFromMap[i]) || (i == 0 && rawValueFromMap[i] == '-'))) {
-			return false;
-		}
-	}
-	*output = atoi(rawValueFromMap);
-	return true;
-}
-
-bool moduleLoadStringFromConfig(FetchingModule* fetchingModule, Map* config, char* key, char** output) {
-	char* rawValueFromMap = getFromMap(config, key, strlen(key));
-	if(rawValueFromMap == NULL) {
-		return false;
-	}
-	*output = strdup(rawValueFromMap);
-	return true;
-}
-
 bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, int* output) {
-	bool success = moduleLoadIntFromConfig(fetchingModule, config, key, output);
+	bool success = configLoadInt(config, key, output);
 	if(!success) {
 		moduleLog(fetchingModule, 0, "Invalid %s", key);
 	}
@@ -35,7 +13,7 @@ bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map
 }
 
 bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, char** output) {
-	bool success = moduleLoadStringFromConfig(fetchingModule, config, key, output);
+	bool success = configLoadString(config, key, output);
 	if(!success) {
 		moduleLog(fetchingModule, 0, "Invalid %s", key);
 	}

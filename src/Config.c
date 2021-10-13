@@ -8,6 +8,29 @@
 #define CONFIG_TYPE_FIELD_NAME      "module"
 #define CONFIG_NAME_SEPARATOR       "."
 
+bool configLoadInt(Map* config, char* key, int* output) {
+	char* rawValueFromMap = getFromMap(config, key, strlen(key));
+	if(rawValueFromMap == NULL) {
+		return false;
+	}
+	for(int i = 0; rawValueFromMap[i] != '\0'; i++) {
+		if(!(isdigit(rawValueFromMap[i]) || (i == 0 && rawValueFromMap[i] == '-'))) {
+			return false;
+		}
+	}
+	*output = atoi(rawValueFromMap);
+	return true;
+}
+
+bool configLoadString(Map* config, char* key, char** output) {
+	char* rawValueFromMap = getFromMap(config, key, strlen(key));
+	if(rawValueFromMap == NULL) {
+		return false;
+	}
+	*output = strdup(rawValueFromMap);
+	return true;
+}
+
 void configFillEmptyFields(Map* targetConfig, Map* sourceConfig) {
 	if(targetConfig == NULL || sourceConfig == NULL) {
 		return;

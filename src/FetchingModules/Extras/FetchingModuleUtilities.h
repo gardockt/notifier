@@ -6,13 +6,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include "../../Structures/Map.h"
 #include "../FetchingModule.h"
-
-bool moduleLoadIntFromConfig(FetchingModule* fetchingModule, Map* config, char* key, int* output);
-bool moduleLoadStringFromConfig(FetchingModule* fetchingModule, Map* config, char* key, char** output);
 
 bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, int* output);
 bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, char** output);

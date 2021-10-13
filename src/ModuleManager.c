@@ -1,6 +1,7 @@
 #include "StringOperations.h"
 #include "ModuleManager.h"
 #include "Globals.h"
+#include "Config.h"
 #include "Structures/Map.h"
 #include "FetchingModules/FetchingModule.h"
 #include "FetchingModules/Extras/FetchingModuleUtilities.h"
@@ -77,15 +78,15 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 }
 
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
-	if(!moduleLoadStringFromConfig(fetchingModule, config, "_name", &fetchingModule->name) ||
+	if(!configLoadString(config, "_name", &fetchingModule->name) ||
 	   !moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
 	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
 	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "body", &fetchingModule->notificationBody)) {
 		return false;
 	}
 
-	moduleLoadStringFromConfig(fetchingModule, config, "icon", &fetchingModule->iconPath);
-	moduleLoadIntFromConfig(fetchingModule, config, "verbosity", &fetchingModule->verbosity);
+	configLoadString(config, "icon", &fetchingModule->iconPath);
+	configLoadInt(config, "verbosity", &fetchingModule->verbosity);
 
 	char* displayName = getFromMap(config, "display", strlen("display"));
 	if(displayName == NULL) {
