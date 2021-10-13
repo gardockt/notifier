@@ -3,6 +3,7 @@
 #include "DisplayManager.h"
 #include "Stash.h"
 #include "Config.h"
+#include "Log.h"
 #include "Main.h"
 
 ModuleManager moduleManager;
@@ -12,23 +13,23 @@ bool initFunctionality() {
 	configLoadCore();
 
 	if(!initModuleManager(&moduleManager)) {
-		fprintf(stderr, "Error initializing module manager!\n");
+		logWrite("core", coreVerbosity, 0, "Error initializing module manager");
 		return false;
 	}
 
 	if(!initDisplayManager(&displayManager)) {
-		fprintf(stderr, "Error initializing display manager!\n");
+		logWrite("core", coreVerbosity, 0, "Error initializing display manager");
 		return false;
 	}
 
 	if(!stashInit()) {
-		fprintf(stderr, "Error loading stash file!\n");
+		logWrite("core", coreVerbosity, 0, "Error loading stash file");
 		return false;
 	}
 
 #ifdef REQUIRED_CURL
 	if(!curl_global_init(CURL_GLOBAL_DEFAULT)) {
-		fprintf(stderr, "Error initializing CURL library!\n");
+		logWrite("core", coreVerbosity, 0, "Error initializing CURL library");
 		return false;
 	}
 #endif
@@ -38,7 +39,7 @@ bool initFunctionality() {
 #endif
 
 	if(!configLoad()) {
-		fprintf(stderr, "Error loading config file!\n");
+		logWrite("core", coreVerbosity, 0, "Error loading config file");
 		return false;
 	}
 

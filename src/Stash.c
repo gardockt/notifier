@@ -1,4 +1,6 @@
 #include "Dirs.h"
+#include "Log.h"
+#include "Globals.h"
 #include "Stash.h"
 
 dictionary* stash = NULL;
@@ -7,8 +9,7 @@ bool stashInit() {
 	char* stashDirectory = getStashDirectory();
 	stash = iniparser_load(stashDirectory);
 	if(stash == NULL) {
-		// TODO: make sure config is loaded beforehand
-		fprintf(stderr, "Warning: Stash file was not found, creating new stash\n");
+		logWrite("core", coreVerbosity, 2, "Stash file was not found, creating new stash");
 		stash = dictionary_new(0);
 	}
 	free(stashDirectory);

@@ -97,7 +97,6 @@ Map* configLoadSection(dictionary* config, char* sectionName) {
 
 	for(int i = 0; i < keyCount; i++) {
 		if(keys[i][strlen(sectionName) + 1] == '_') {
-			fprintf(stderr, "Option %s contains illegal prefix, ignoring\n", keys[i]);
 			continue;
 		}
 
@@ -201,7 +200,9 @@ bool configLoad() {
 				configToMerge = getFromMap(specialSections, includeSectionName, strlen(includeSectionName));
 				if(configToMerge != NULL) {
 					configFillEmptyFields(configMap, configToMerge);
-				} // TODO: else print warning
+				} else {
+					logWrite("core", coreVerbosity, 1, "Include section %s not found for module %s", includeNames[includeIndex], sectionName);
+				}
 
 				free(includeSectionName);
 				free(includeNames[includeIndex]);
@@ -224,7 +225,7 @@ loadConfigGlobalSection:
 			if(enabled != NULL && !strcmp(enabled, "false")) {
 				free(sectionName);
 			} else if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
-				fprintf(stderr, "Error while enabling module %s\n", sectionName);
+				logWrite("core", coreVerbosity, 0, "Error while enabling module %s", sectionName);
 				free(sectionName);
 			}
 

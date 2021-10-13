@@ -2,7 +2,6 @@
 #define MAIN_H
 
 #include <signal.h>
-#include <stdio.h>
 
 #ifdef REQUIRED_CURL
 #include <curl/curl.h>
