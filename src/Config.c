@@ -1,6 +1,6 @@
 #include "Structures/Map.h"
 #include "Dirs.h"
-#include "GlobalManagers.h"
+#include "Globals.h"
 #include "Config.h"
 
 #define CONFIG_GLOBAL_SECTION_NAME  "_global"

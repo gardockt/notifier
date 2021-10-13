@@ -1,6 +1,6 @@
 #include "StringOperations.h"
 #include "ModuleManager.h"
-#include "GlobalManagers.h"
+#include "Globals.h"
 #include "Structures/Map.h"
 #include "FetchingModules/FetchingModule.h"
 #include "FetchingModules/Extras/FetchingModuleUtilities.h"

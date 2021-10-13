@@ -1,4 +1,4 @@
-#include "GlobalManagers.h"
+#include "Globals.h"
 #include "ModuleManager.h"
 #include "DisplayManager.h"
 #include "Stash.h"
