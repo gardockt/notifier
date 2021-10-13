@@ -144,6 +144,12 @@ void configLoadCore() {
 	configLoadInt(coreSection, "verbosity", &coreVerbosity);
 
 	// do not close the config, configLoad will close it later
+	if(globalSection != coreSection) {
+		configDestroySection(globalSection);
+		free(globalSection);
+	}
+	configDestroySection(coreSection);
+	free(coreSection);
 }
 
 int configCompareSectionNames(const void* a, const void* b) {
