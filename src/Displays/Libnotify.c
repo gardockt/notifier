@@ -27,9 +27,10 @@ void libnotifyUninit() {
 
 void libnotifyStartAction(NotifyNotification* notification, char* action, gpointer messagePointer) {
 	Message* message = messagePointer;
+	char* command;
 	switch(message->actionType) {
 		case URL:
-			char* command = malloc(strlen("xdg-open ") + strlen(message->actionData) + strlen(" &") + 1);
+			command = malloc(strlen("xdg-open ") + strlen(message->actionData) + strlen(" &") + 1);
 			sprintf(command, "xdg-open %s &", message->actionData);
 			system(command);
 			free(command);

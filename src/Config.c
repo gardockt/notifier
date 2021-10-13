@@ -175,6 +175,7 @@ bool configLoad() {
 	initMap(specialSections);
 
 	Map* globalSection = NULL;
+	char* globalSectionConfigSectionName;
 	for(int i = 0; i < configSectionCount; i++) {
 		char* sectionName = configSectionNames[i];
 
@@ -218,7 +219,7 @@ bool configLoad() {
 
 			// global section config
 loadConfigGlobalSection:
-			char* globalSectionConfigSectionName = malloc(strlen(CONFIG_GLOBAL_SECTION_NAME) + strlen(CONFIG_NAME_SEPARATOR) + strlen(moduleType) + 1);
+			globalSectionConfigSectionName = malloc(strlen(CONFIG_GLOBAL_SECTION_NAME) + strlen(CONFIG_NAME_SEPARATOR) + strlen(moduleType) + 1);
 			sprintf(globalSectionConfigSectionName, "%s%s%s", CONFIG_GLOBAL_SECTION_NAME, CONFIG_NAME_SEPARATOR, moduleType);
 			configToMerge = getFromMap(specialSections, globalSectionConfigSectionName, strlen(globalSectionConfigSectionName));
 			free(globalSectionConfigSectionName);
