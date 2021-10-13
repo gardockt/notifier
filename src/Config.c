@@ -1,12 +1,14 @@
 #include "Structures/Map.h"
 #include "Dirs.h"
 #include "Globals.h"
+#include "StringOperations.h"
 #include "Config.h"
 
-#define CONFIG_GLOBAL_SECTION_NAME  "_global"
-#define CONFIG_NAME_FIELD_NAME      "_name"
-#define CONFIG_TYPE_FIELD_NAME      "module"
-#define CONFIG_NAME_SEPARATOR       "."
+#define CONFIG_GLOBAL_SECTION_NAME   "_global"
+#define CONFIG_INCLUDE_SECTION_NAME  "_include"
+#define CONFIG_NAME_FIELD_NAME       "_name"
+#define CONFIG_TYPE_FIELD_NAME       "module"
+#define CONFIG_NAME_SEPARATOR        "."
 
 bool configLoadInt(Map* config, char* key, int* output) {
 	char* rawValueFromMap = getFromMap(config, key, strlen(key));
@@ -143,10 +145,33 @@ bool configLoad() {
 			char* moduleType = getFromMap(configMap, CONFIG_TYPE_FIELD_NAME, strlen(CONFIG_TYPE_FIELD_NAME));
 
 			// add global settings for undefined values
-			// priority: globalSection > global
+			// priority: includes > globalSection > global
 			Map* configToMerge;
 
+			// includes
+			char* includesRaw;
+			if(!configLoadString(configMap, "include", &includesRaw)) {
+				goto loadConfigGlobalSection;
+			}
+			char** includeNames;
+			int includeCount = split(includesRaw, LIST_ENTRY_SEPARATORS, &includeNames);
+			for(int includeIndex = 0; includeIndex < includeCount; includeIndex++) {
+				int includeNameLength = strlen(includeNames[includeIndex]);
+				char* includeSectionName = malloc(strlen(CONFIG_INCLUDE_SECTION_NAME) + strlen(CONFIG_NAME_SEPARATOR) + includeNameLength + 1);
+				sprintf(includeSectionName, "%s%s%s", CONFIG_INCLUDE_SECTION_NAME, CONFIG_NAME_SEPARATOR, includeNames[includeIndex]);
+				configToMerge = getFromMap(specialSections, includeSectionName, strlen(includeSectionName));
+				if(configToMerge != NULL) {
+					configFillEmptyFields(configMap, configToMerge);
+				} // TODO: else print warning
+
+				free(includeSectionName);
+				free(includeNames[includeIndex]);
+			}
+			free(includeNames);
+			free(includesRaw);
+
 			// global section config
+loadConfigGlobalSection:
 			char* globalSectionConfigSectionName = malloc(strlen(CONFIG_GLOBAL_SECTION_NAME) + strlen(CONFIG_NAME_SEPARATOR) + strlen(moduleType) + 1);
 			sprintf(globalSectionConfigSectionName, "%s%s%s", CONFIG_GLOBAL_SECTION_NAME, CONFIG_NAME_SEPARATOR, moduleType);
 			configToMerge = getFromMap(specialSections, globalSectionConfigSectionName, strlen(globalSectionConfigSectionName));

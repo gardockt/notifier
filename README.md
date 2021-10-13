@@ -39,6 +39,7 @@ Configuration file is an INI file that should be placed in `$HOME/.config/notifi
 - `icon` - path to icon displayed in notifications (optional)
 - `verbosity` - logging verbosity; number from 0 to 3, bigger value means more verbose messages will be printed (optional, default is 0)
 - `enabled` - should the module be loaded? (optional, default is `true`)
+- `include` - whitespace-separated names of include sections to be loaded, starting with most significant
 
 Text in `title` and `body` may contain variables, depending on module.
 
@@ -85,7 +86,10 @@ Module configuration details:
 		- `<streamer-name>` - streamer's nickname
 		- `<url>` - stream's URL
 
-Configuration file can also contain a section `_global`, consisting of default values for each field. Alternatively, there can also be a section named `_global.[module_type]`, which values will be applied only to modules of given type.
+Some section names are reserved for special purposes (written in order of loading):
+- `_include.[name]` - values to load for modules with [name] included in `include` field
+- `_global.[module_type]` - default values for modules of given type
+- `_global` - default values for each module
 
 Example configuration file:
 ```
@@ -96,6 +100,10 @@ verbosity = 1
 
 [_global.github]
 title = <repo-name>
+
+[_include.example]
+username = enter_your_username_here
+token = ENTER_YOUR_TOKEN_HERE
 
 [module]
 module = twitch
@@ -114,8 +122,7 @@ icon = /usr/share/local/icons/github.png
 [and_another_one]
 module = isod
 title = ISOD
-username = enter_your_username_here
-token = ENTER_YOUR_TOKEN_HERE
+include = example
 max_messages = 4
 icon = /usr/share/local/icons/isod.png
 
