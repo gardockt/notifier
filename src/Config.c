@@ -2,13 +2,17 @@
 #include "Dirs.h"
 #include "Globals.h"
 #include "StringOperations.h"
+#include "Log.h"
 #include "Config.h"
 
 #define CONFIG_GLOBAL_SECTION_NAME   "_global"
 #define CONFIG_INCLUDE_SECTION_NAME  "_include"
+#define CONFIG_CORE_SECTION_NAME     "_core"
 #define CONFIG_NAME_FIELD_NAME       "_name"
 #define CONFIG_TYPE_FIELD_NAME       "module"
 #define CONFIG_NAME_SEPARATOR        "."
+
+int coreVerbosity = 0;
 
 bool configLoadInt(Map* config, char* key, int* output) {
 	char* rawValueFromMap = getFromMap(config, key, strlen(key));
@@ -31,6 +35,14 @@ bool configLoadString(Map* config, char* key, char** output) {
 	}
 	*output = strdup(rawValueFromMap);
 	return true;
+}
+
+void configParseCoreSection(Map* coreSection) {
+	if(coreSection == NULL) {
+		return;
+	}
+
+	configLoadInt(coreSection, "verbosity", &coreVerbosity);
 }
 
 void configFillEmptyFields(Map* targetConfig, Map* sourceConfig) {
@@ -134,12 +146,16 @@ bool configLoad() {
 	Map* specialSections = malloc(sizeof *specialSections); // map of section maps
 	initMap(specialSections);
 
+	Map* globalSection = NULL;
 	for(int i = 0; i < configSectionCount; i++) {
 		char* sectionName = configSectionNames[i];
 
 		if(sectionName[0] == '_') { // special section
 			Map* specialSection = configLoadSection(config, sectionName);
 			putIntoMap(specialSections, sectionName, strlen(sectionName), specialSection);
+			if(!strcmp(sectionName, "_global")) {
+				globalSection = specialSection;
+			}
 		} else { // module section
 			Map* configMap = configLoadSection(config, sectionName);
 			char* moduleType = getFromMap(configMap, CONFIG_TYPE_FIELD_NAME, strlen(CONFIG_TYPE_FIELD_NAME));
@@ -179,8 +195,7 @@ loadConfigGlobalSection:
 			configFillEmptyFields(configMap, configToMerge);
 
 			// global config
-			configToMerge = getFromMap(specialSections, CONFIG_GLOBAL_SECTION_NAME, strlen(CONFIG_GLOBAL_SECTION_NAME));
-			configFillEmptyFields(configMap, configToMerge);
+			configFillEmptyFields(configMap, globalSection);
 
 			char* enabled = getFromMap(configMap, "enabled", strlen("enabled"));
 			if(enabled != NULL && !strcmp(enabled, "false")) {
@@ -194,6 +209,15 @@ loadConfigGlobalSection:
 			free(configMap);
 		}
 	}
+
+	// core section loading
+	Map* coreSection = getFromMap(specialSections, CONFIG_CORE_SECTION_NAME, strlen(CONFIG_CORE_SECTION_NAME));
+	if(coreSection != NULL) {
+		configFillEmptyFields(coreSection, globalSection);
+	} else if(globalSection != NULL) {
+		coreSection = globalSection;
+	}
+	configParseCoreSection(coreSection);
 
 	int specialSectionCount = getMapSize(specialSections);
 	char** specialSectionNames = malloc(specialSectionCount * sizeof *specialSectionNames);

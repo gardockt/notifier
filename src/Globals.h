@@ -6,6 +6,8 @@
 
 #define LIST_ENTRY_SEPARATORS " \t\r\n"
 
+extern int coreVerbosity;
+
 extern ModuleManager moduleManager;
 extern DisplayManager displayManager;
 

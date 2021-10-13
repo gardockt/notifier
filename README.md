@@ -86,10 +86,20 @@ Module configuration details:
 		- `<streamer-name>` - streamer's nickname
 		- `<url>` - stream's URL
 
-Some section names are reserved for special purposes (written in order of loading):
-- `_include.[name]` - values to load for modules with [name] included in `include` field
+Some section names are reserved for special purposes:
+- `_core` - contains configuration unrelated to modules
+- `_global` - default values for each module, including `_core`
 - `_global.[module_type]` - default values for modules of given type
-- `_global` - default values for each module
+- `_include.[name]` - values to load for modules with [name] included in `include` field
+
+Available fields for `_core`:
+- `verbosity` - logging verbosity; number from 0 to 3, bigger value means more verbose messages will be printed (default is 0)
+
+Order of getting values:
+1. Module section
+2. Include sections
+3. Global module section
+4. Global section
 
 Example configuration file:
 ```
