@@ -4,6 +4,8 @@
 #include "DisplayManager.h"
 #include "ModuleManager.h"
 
+#define LIST_ENTRY_SEPARATORS " \t\r\n"
+
 extern ModuleManager moduleManager;
 extern DisplayManager displayManager;
 

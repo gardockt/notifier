@@ -11,8 +11,6 @@
 #include "../../Structures/Map.h"
 #include "../FetchingModule.h"
 
-#define FETCHING_MODULE_LIST_ENTRY_SEPARATORS " \t\r\n"
-
 bool moduleLoadIntFromConfig(FetchingModule* fetchingModule, Map* config, char* key, int* output);
 bool moduleLoadStringFromConfig(FetchingModule* fetchingModule, Map* config, char* key, char** output);
 

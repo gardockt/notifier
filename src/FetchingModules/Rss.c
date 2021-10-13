@@ -4,6 +4,7 @@
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
+#include "../Globals.h"
 #include "Extras/FetchingModuleUtilities.h"
 #include "Rss.h"
 
@@ -136,7 +137,7 @@ bool rssParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	}
 
 	char** sources;
-	config->sourceCount = split(sourcesRaw, FETCHING_MODULE_LIST_ENTRY_SEPARATORS, &sources);
+	config->sourceCount = split(sourcesRaw, LIST_ENTRY_SEPARATORS, &sources);
 	config->sources = malloc(config->sourceCount * sizeof *config->sources);
 	for(int i = 0; i < config->sourceCount; i++) {
 		config->sources[i].url = sources[i];

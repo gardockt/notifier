@@ -4,6 +4,7 @@
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
+#include "../Globals.h"
 #include "Extras/FetchingModuleUtilities.h"
 #include "Twitch.h"
 
@@ -11,7 +12,7 @@
 #define JSON_INT(obj, str) json_object_get_int(json_object_object_get((obj),(str)))
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #define IS_VALID_URL_CHARACTER(c) ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')
-#define IS_VALID_STREAMS_CHARACTER(c) (IS_VALID_URL_CHARACTER(c) || strchr(FETCHING_MODULE_LIST_ENTRY_SEPARATORS, c) != NULL)
+#define IS_VALID_STREAMS_CHARACTER(c) (IS_VALID_URL_CHARACTER(c) || strchr(LIST_ENTRY_SEPARATORS, c) != NULL)
 
 typedef struct {
 	char* streamerName;
@@ -154,7 +155,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 		}
 	}
 
-	config->streamCount   = split(streams, FETCHING_MODULE_LIST_ENTRY_SEPARATORS, &config->streams);
+	config->streamCount   = split(streams, LIST_ENTRY_SEPARATORS, &config->streams);
 	config->streamTitles  = malloc(sizeof *config->streamTitles);
 
 	config->list = NULL;
