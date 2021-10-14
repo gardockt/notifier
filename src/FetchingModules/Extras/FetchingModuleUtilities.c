@@ -1,5 +1,6 @@
 #include "../../Displays/Display.h"
 #include "../../Config.h"
+#include "../../Log.h"
 #include "FetchingModuleUtilities.h"
 
 #define STRDUP_IF_NOT_NULL(x) ((x) != NULL ? strdup(x) : NULL)
@@ -34,19 +35,9 @@ void moduleDestroyBasicMessage(Message* message) {
 	free(message->actionData);
 }
 
-// TODO: make it a wrapper for logWrite
 void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...) {
-	if(fetchingModule->verbosity < verbosity) {
-		return;
-	}
-
-	char* customFormat = malloc(strlen(fetchingModule->name) + strlen("[] \n") + strlen(format) + 1);
-	sprintf(customFormat, "[%s] %s\n", fetchingModule->name, format);
-
 	va_list args;
 	va_start(args, format);
-	vfprintf(stderr, customFormat, args);
+	logWriteVararg(fetchingModule->name, fetchingModule->verbosity, verbosity, format, args);
 	va_end(args);
-
-	free(customFormat);
 }
