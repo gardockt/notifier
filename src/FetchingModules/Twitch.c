@@ -129,8 +129,6 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	}
 
 	char* streams = getFromMap(configToParse, "streams",  strlen("streams"));
-	int streamCount;
-
 	if(streams == NULL) {
 		moduleLog(fetchingModule, 0, "Invalid streams");
 		return false;
