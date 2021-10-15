@@ -22,7 +22,7 @@ pkg_check_modules(JSON-C json-c)
 
 macro(check_dependency module_name dependency_name)
 	string(TOUPPER ${dependency_name} dependency_name_uppercase)
-	if(NOT DEFINED ${dependency_name_uppercase}_FOUND OR NOT ${${dependency_name_uppercase}_FOUND})
+	if(NOT DEFINED ${dependency_name_uppercase}_FOUND OR NOT "${${dependency_name_uppercase}_FOUND}")
 		message(WARNING "${dependency_name} not found, disabling ${module_name}")
 		set(ENABLE_${module_name} OFF)
 		break()
@@ -49,6 +49,11 @@ check_dependencies(MODULE_GITHUB       "curl;json-c")
 check_dependencies(MODULE_ISOD         "curl;json-c")
 check_dependencies(MODULE_RSS          "curl;libxml2")
 check_dependencies(MODULE_TWITCH       "curl;json-c")
+
+# for some reason that's where Ubuntu stores iniparser's header files
+if(UNIX)
+	target_include_directories(notifier PUBLIC "/usr/include/iniparser")
+endif()
 
 target_compile_options(notifier PUBLIC -ggdb)
 target_link_libraries(notifier PUBLIC -liniparser -lm ${CMAKE_THREAD_LIBS_INIT})
