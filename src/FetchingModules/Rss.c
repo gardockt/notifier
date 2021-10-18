@@ -285,7 +285,9 @@ void rssParseResponse(FetchingModule* fetchingModule, char* response, int respon
 		char* sectionName = rssGenerateLastReadKeyName(config->sources[sourceIndex].url);
 		stashSetString("rss", sectionName, newLastRead);
 		free(sectionName);
-		free(newLastRead);
+
+		free(config->sources[sourceIndex].lastRead);
+		config->sources[sourceIndex].lastRead = newLastRead;
 	}
 
 	free(title);
