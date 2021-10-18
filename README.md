@@ -1,5 +1,8 @@
 notifier
 ========
+
+![Notification](res/img/screenshot.png)
+
 A program that fetches notifications from given sources and displays them on desktop.  
 **Note: The program is currently in early stages of development, and breaking changes may occur frequently.**
 
