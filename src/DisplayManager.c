@@ -1,4 +1,3 @@
-#include "StringOperations.h"
 #include "DisplayManager.h"
 
 // displays
@@ -36,8 +35,5 @@ void destroyDisplayManager(DisplayManager* displayManager) {
 }
 
 Display* getDisplay(DisplayManager* displayManager, char* displayName) {
-	char* displayNameLowerCase = toLowerCase(displayName);
-	Display* display = sortedMapGet(&displayManager->displays, displayNameLowerCase);
-	free(displayNameLowerCase);
-	return display;
+	return sortedMapGet(&displayManager->displays, displayName);
 }

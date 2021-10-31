@@ -1,4 +1,3 @@
-#include "StringOperations.h"
 #include "Globals.h"
 #include "Config.h"
 #include "Log.h"
@@ -119,12 +118,8 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 		return false;
 	}
 
-	char* moduleTypeLowerCase = toLowerCase(moduleType);
-
-	FetchingModule* moduleTemplate = sortedMapGet(&moduleManager->availableModules, moduleTypeLowerCase);
+	FetchingModule* moduleTemplate = sortedMapGet(&moduleManager->availableModules, moduleType);
 	FetchingModule* module;
-
-	free(moduleTypeLowerCase);
 
 	if(moduleTemplate == NULL) {
 		return false;

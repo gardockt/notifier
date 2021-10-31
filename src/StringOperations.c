@@ -134,15 +134,3 @@ char* replace(char* input, int pairCount, ...) {
 	}
 	return output;
 }
-
-char* toLowerCase(char* text) {
-	int textLength = strlen(text);
-	char* output = malloc(textLength + 1);
-
-	for(int i = 0; i < textLength; i++) {
-		output[i] = (isupper(text[i]) ? tolower(text[i]) : text[i]);
-	}
-	output[textLength] = '\0';
-
-	return output;
-}
