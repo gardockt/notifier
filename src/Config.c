@@ -91,7 +91,7 @@ Map* configLoadSection(dictionary* config, char* sectionName) {
 	iniparser_getseckeys(config, sectionName, keys);
 
 	Map* ret = malloc(sizeof *ret);
-	initMap(ret);
+	initMap(ret, mapCompareFunctionStrcmp);
 
 	putIntoMap(ret, strdup(CONFIG_NAME_FIELD_NAME), strlen(CONFIG_NAME_FIELD_NAME), strdup(sectionName));
 
@@ -172,7 +172,7 @@ bool configLoad() {
 	qsort(configSectionNames, configSectionCount, sizeof *configSectionNames, configCompareSectionNames);
 
 	Map* specialSections = malloc(sizeof *specialSections); // map of section maps
-	initMap(specialSections);
+	initMap(specialSections, mapCompareFunctionStrcmp);
 
 	Map* globalSection = NULL;
 	char* globalSectionConfigSectionName;

@@ -2,8 +2,9 @@
 
 #define MIN(x,y) ((x)<(y)?(x):(y))
 
-bool initMap(Map* map) {
+bool initMap(Map* map, int (*compareFunction)(const void*, const void*)) {
 	map->elements = malloc(MAP_DEFAULT_SIZE * sizeof *map->elements);
+	map->compareFunction = compareFunction;
 	map->size = 0;
 	map->availableSize = map->elements != NULL ? MAP_DEFAULT_SIZE : 0;
 	return map->elements != 0;
@@ -38,7 +39,7 @@ bool putIntoMap(Map* map, void* key, int keySize, void* value) {
 		checkedIndex = (insertionIndexMin + insertionIndexMax) / 2;
 		checkedElement = &map->elements[checkedIndex];
 		cmpSize = MIN(keySize, checkedElement->keySize);
-		if(!(cmpResult = memcmp(key, checkedElement->key, cmpSize))) {
+		if(!(cmpResult = map->compareFunction(key, checkedElement->key))) {
 			cmpResult = keySize - checkedElement->keySize;
 		}
 
@@ -78,7 +79,7 @@ int getKeyIndex(Map* map, const void* key, int keySize) {
 		checkedIndex = (min + max) / 2;
 		checkedElement = &map->elements[checkedIndex];
 		cmpSize = MIN(keySize, checkedElement->keySize);
-		if(!(cmpResult = memcmp(key, checkedElement->key, cmpSize))) {
+		if(!(cmpResult = map->compareFunction(key, checkedElement->key))) {
 			cmpResult = keySize - checkedElement->keySize;
 		}
 
@@ -131,4 +132,8 @@ void getMapKeys(Map* map, void** keyArray) {
 	for(int i = 0; i < size; i++) {
 		keyArray[i] = map->elements[i].key;
 	}
+}
+
+int mapCompareFunctionStrcmp(const void* a, const void* b) {
+	return strcmp((const char*)a, (const char*)b);
 }

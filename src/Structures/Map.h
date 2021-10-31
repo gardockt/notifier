@@ -15,11 +15,12 @@ typedef struct {
 
 typedef struct {
 	MapElement* elements;
+	int (*compareFunction)(const void*, const void*);
 	int size;
 	int availableSize;
 } Map;
 
-bool initMap(Map* map);
+bool initMap(Map* map, int (*compareFunction)(const void*, const void*));
 void destroyMap(Map* map);
 
 bool putIntoMap(Map* map, void* key, int keySize, void* value);
@@ -28,5 +29,7 @@ bool removeFromMap(Map* map, void* key, int keySize, void** keyAddress, void** v
 bool existsInMap(Map* map, const void* key, int keySize);
 int getMapSize(Map* map);
 void getMapKeys(Map* map, void** keyArray);
+
+int mapCompareFunctionStrcmp(const void* a, const void* b);
 
 #endif // ifndef MAP_H

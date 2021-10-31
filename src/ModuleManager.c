@@ -25,8 +25,8 @@ bool addModule(ModuleManager* moduleManager, void (*templateFunc)(FetchingModule
 }
 
 bool initModuleManager(ModuleManager* moduleManager) {
-	if(!(initMap(&moduleManager->availableModules) &&
-	     initMap(&moduleManager->activeModules))) {
+	if(!(initMap(&moduleManager->availableModules, mapCompareFunctionStrcmp) &&
+	     initMap(&moduleManager->activeModules, mapCompareFunctionStrcmp))) {
 		return false;
 	}
 

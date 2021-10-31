@@ -10,7 +10,7 @@ bool initDisplayManager(DisplayManager* displayManager) {
 	Display* display = malloc(sizeof *display);
 
 	if(!(display != NULL &&
-	   initMap(&displayManager->displays))) {
+	   initMap(&displayManager->displays, mapCompareFunctionStrcmp))) {
 		return false;
 	}
 

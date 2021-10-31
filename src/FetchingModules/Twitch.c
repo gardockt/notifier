@@ -177,7 +177,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	}
 	free(tokenKeyName);
 
-	initMap(config->streamTitles);
+	initMap(config->streamTitles, mapCompareFunctionStrcmp);
 	for(int i = 0; i < config->streamCount; i++) {
 		putIntoMap(config->streamTitles, config->streams[i], strlen(config->streams[i]), NULL);
 	}
