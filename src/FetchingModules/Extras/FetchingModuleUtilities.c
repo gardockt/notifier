@@ -5,7 +5,7 @@
 
 #define STRDUP_IF_NOT_NULL(x) ((x) != NULL ? strdup(x) : NULL)
 
-bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, int* output) {
+bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, SortedMap* config, char* key, int* output) {
 	bool success = configLoadInt(config, key, output);
 	if(!success) {
 		moduleLog(fetchingModule, 0, "Invalid %s", key);
@@ -13,7 +13,7 @@ bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map
 	return success;
 }
 
-bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, char** output) {
+bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, SortedMap* config, char* key, char** output) {
 	bool success = configLoadString(config, key, output);
 	if(!success) {
 		moduleLog(fetchingModule, 0, "Invalid %s", key);

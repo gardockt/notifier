@@ -8,10 +8,10 @@
 
 #include <iniparser.h>
 
-#include "Structures/Map.h"
+#include "Structures/SortedMap.h"
 
-bool configLoadInt(Map* config, char* key, int* output);
-bool configLoadString(Map* config, char* key, char** output);
+bool configLoadInt(SortedMap* config, char* key, int* output);
+bool configLoadString(SortedMap* config, char* key, char** output);
 
 void configLoadCore();
 bool configLoad();

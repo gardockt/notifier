@@ -6,13 +6,13 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "../../Structures/Map.h"
+#include "../../Structures/SortedMap.h"
 #include "../FetchingModule.h"
 
-bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, int* output);
-bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, Map* config, char* key, char** output);
+bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, SortedMap* config, char* key, int* output);
+bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, SortedMap* config, char* key, char** output);
 
-bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config);
+bool moduleLoadBasicSettings(FetchingModule* fetchingModule, SortedMap* config);
 void moduleFreeBasicSettings(FetchingModule* fetchingModule);
 
 void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg, NotificationActionType defaultActionType, char* defaultNotificationData);

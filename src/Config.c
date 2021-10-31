@@ -1,4 +1,4 @@
-#include "Structures/Map.h"
+#include "Structures/SortedMap.h"
 #include "Dirs.h"
 #include "Globals.h"
 #include "StringOperations.h"
@@ -16,8 +16,8 @@ int coreVerbosity = 0;
 
 static dictionary* config = NULL;
 
-bool configLoadInt(Map* config, char* key, int* output) {
-	char* rawValueFromMap = getFromMap(config, key);
+bool configLoadInt(SortedMap* config, char* key, int* output) {
+	char* rawValueFromMap = sortedMapGet(config, key);
 	if(rawValueFromMap == NULL) {
 		return false;
 	}
@@ -30,8 +30,8 @@ bool configLoadInt(Map* config, char* key, int* output) {
 	return true;
 }
 
-bool configLoadString(Map* config, char* key, char** output) {
-	char* rawValueFromMap = getFromMap(config, key);
+bool configLoadString(SortedMap* config, char* key, char** output) {
+	char* rawValueFromMap = sortedMapGet(config, key);
 	if(rawValueFromMap == NULL) {
 		return false;
 	}
@@ -51,18 +51,18 @@ void configClose() {
 	config = NULL;
 }
 
-void configFillEmptyFields(Map* targetConfig, Map* sourceConfig) {
+void configFillEmptyFields(SortedMap* targetConfig, SortedMap* sourceConfig) {
 	if(targetConfig == NULL || sourceConfig == NULL) {
 		return;
 	}
 
-	int targetKeyCount = getMapSize(targetConfig);
-	int sourceKeyCount = getMapSize(sourceConfig);
+	int targetKeyCount = sortedMapSize(targetConfig);
+	int sourceKeyCount = sortedMapSize(sourceConfig);
 	char** targetKeys = malloc(targetKeyCount * sizeof *targetKeys);
 	char** sourceKeys = malloc(sourceKeyCount * sizeof *sourceKeys);
 
-	getMapKeys(targetConfig, (void**)targetKeys);
-	getMapKeys(sourceConfig, (void**)sourceKeys);
+	sortedMapKeys(targetConfig, (void**)targetKeys);
+	sortedMapKeys(sourceConfig, (void**)sourceKeys);
 
 	for(int i = 0; i < sourceKeyCount; i++) {
 		for(int j = 0; j <= targetKeyCount; j++) {
@@ -71,8 +71,8 @@ void configFillEmptyFields(Map* targetConfig, Map* sourceConfig) {
 					break;
 				}
 			} else {
-				char* value = getFromMap(sourceConfig, sourceKeys[i]);
-				putIntoMap(targetConfig, strdup(sourceKeys[i]), strdup(value));
+				char* value = sortedMapGet(sourceConfig, sourceKeys[i]);
+				sortedMapPut(targetConfig, strdup(sourceKeys[i]), strdup(value));
 			}
 		}
 	}
@@ -81,7 +81,7 @@ void configFillEmptyFields(Map* targetConfig, Map* sourceConfig) {
 	free(sourceKeys);
 }
 
-Map* configLoadSection(dictionary* config, char* sectionName) {
+SortedMap* configLoadSection(dictionary* config, char* sectionName) {
 	int keyCount = iniparser_getsecnkeys(config, sectionName);
 	if(keyCount == 0) {
 		return NULL;
@@ -90,10 +90,10 @@ Map* configLoadSection(dictionary* config, char* sectionName) {
 	const char** keys = malloc(keyCount * sizeof *keys);
 	iniparser_getseckeys(config, sectionName, keys);
 
-	Map* ret = malloc(sizeof *ret);
-	initMap(ret, mapCompareFunctionStrcmp);
+	SortedMap* ret = malloc(sizeof *ret);
+	sortedMapInit(ret, sortedMapCompareFunctionStrcmp);
 
-	putIntoMap(ret, strdup(CONFIG_NAME_FIELD_NAME), strdup(sectionName));
+	sortedMapPut(ret, strdup(CONFIG_NAME_FIELD_NAME), strdup(sectionName));
 
 	for(int i = 0; i < keyCount; i++) {
 		if(keys[i][strlen(sectionName) + 1] == '_') {
@@ -102,27 +102,27 @@ Map* configLoadSection(dictionary* config, char* sectionName) {
 
 		char* keyTrimmed = strdup(keys[i] + strlen(sectionName) + 1);
 		const char* value = iniparser_getstring(config, keys[i], NULL);
-		putIntoMap(ret, keyTrimmed, strdup(value));
+		sortedMapPut(ret, keyTrimmed, strdup(value));
 	}
 
 	free(keys);
 	return ret;
 }
 
-void configDestroySection(Map* section) {
-	int keyCount = getMapSize(section);
+void configDestroySection(SortedMap* section) {
+	int keyCount = sortedMapSize(section);
 	char** keys = malloc(keyCount * sizeof *keys);
-	getMapKeys(section, (void**)keys);
+	sortedMapKeys(section, (void**)keys);
 
 	for(int i = 0; i < keyCount; i++) {
 		char* valueToFree;
-		removeFromMap(section, keys[i], NULL, (void**)&valueToFree);
+		sortedMapRemove(section, keys[i], NULL, (void**)&valueToFree);
 		free(valueToFree);
 		free(keys[i]);
 	}
 
 	free(keys);
-	destroyMap(section);
+	sortedMapDestroy(section);
 }
 
 void configLoadCore() {
@@ -130,8 +130,8 @@ void configLoadCore() {
 		return;
 	}
 
-	Map* coreSection = configLoadSection(config, CONFIG_CORE_SECTION_NAME);
-	Map* globalSection = configLoadSection(config, CONFIG_GLOBAL_SECTION_NAME);
+	SortedMap* coreSection = configLoadSection(config, CONFIG_CORE_SECTION_NAME);
+	SortedMap* globalSection = configLoadSection(config, CONFIG_GLOBAL_SECTION_NAME);
 	if(coreSection != NULL) {
 		configFillEmptyFields(coreSection, globalSection);
 	} else {
@@ -171,27 +171,27 @@ bool configLoad() {
 	}
 	qsort(configSectionNames, configSectionCount, sizeof *configSectionNames, configCompareSectionNames);
 
-	Map* specialSections = malloc(sizeof *specialSections); // map of section maps
-	initMap(specialSections, mapCompareFunctionStrcmp);
+	SortedMap* specialSections = malloc(sizeof *specialSections); // map of section maps
+	sortedMapInit(specialSections, sortedMapCompareFunctionStrcmp);
 
-	Map* globalSection = NULL;
+	SortedMap* globalSection = NULL;
 	char* globalSectionConfigSectionName;
 	for(int i = 0; i < configSectionCount; i++) {
 		char* sectionName = configSectionNames[i];
 
 		if(sectionName[0] == '_') { // special section
-			Map* specialSection = configLoadSection(config, sectionName);
-			putIntoMap(specialSections, sectionName, specialSection);
+			SortedMap* specialSection = configLoadSection(config, sectionName);
+			sortedMapPut(specialSections, sectionName, specialSection);
 			if(!strcmp(sectionName, "_global")) {
 				globalSection = specialSection;
 			}
 		} else { // module section
-			Map* configMap = configLoadSection(config, sectionName);
-			char* moduleType = getFromMap(configMap, CONFIG_TYPE_FIELD_NAME);
+			SortedMap* configMap = configLoadSection(config, sectionName);
+			char* moduleType = sortedMapGet(configMap, CONFIG_TYPE_FIELD_NAME);
 
 			// add global settings for undefined values
 			// priority: includes > globalSection > global
-			Map* configToMerge;
+			SortedMap* configToMerge;
 
 			// includes
 			char* includesRaw;
@@ -204,7 +204,7 @@ bool configLoad() {
 				int includeNameLength = strlen(includeNames[includeIndex]);
 				char* includeSectionName = malloc(strlen(CONFIG_INCLUDE_SECTION_NAME) + strlen(CONFIG_NAME_SEPARATOR) + includeNameLength + 1);
 				sprintf(includeSectionName, "%s%s%s", CONFIG_INCLUDE_SECTION_NAME, CONFIG_NAME_SEPARATOR, includeNames[includeIndex]);
-				configToMerge = getFromMap(specialSections, includeSectionName);
+				configToMerge = sortedMapGet(specialSections, includeSectionName);
 				if(configToMerge != NULL) {
 					configFillEmptyFields(configMap, configToMerge);
 				} else {
@@ -221,14 +221,14 @@ bool configLoad() {
 loadConfigGlobalSection:
 			globalSectionConfigSectionName = malloc(strlen(CONFIG_GLOBAL_SECTION_NAME) + strlen(CONFIG_NAME_SEPARATOR) + strlen(moduleType) + 1);
 			sprintf(globalSectionConfigSectionName, "%s%s%s", CONFIG_GLOBAL_SECTION_NAME, CONFIG_NAME_SEPARATOR, moduleType);
-			configToMerge = getFromMap(specialSections, globalSectionConfigSectionName);
+			configToMerge = sortedMapGet(specialSections, globalSectionConfigSectionName);
 			free(globalSectionConfigSectionName);
 			configFillEmptyFields(configMap, configToMerge);
 
 			// global config
 			configFillEmptyFields(configMap, globalSection);
 
-			char* enabled = getFromMap(configMap, "enabled");
+			char* enabled = sortedMapGet(configMap, "enabled");
 			if(enabled != NULL && !strcmp(enabled, "false")) {
 				free(sectionName);
 			} else if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
@@ -241,19 +241,19 @@ loadConfigGlobalSection:
 		}
 	}
 
-	int specialSectionCount = getMapSize(specialSections);
+	int specialSectionCount = sortedMapSize(specialSections);
 	char** specialSectionNames = malloc(specialSectionCount * sizeof *specialSectionNames);
-	getMapKeys(specialSections, (void**)specialSectionNames);
+	sortedMapKeys(specialSections, (void**)specialSectionNames);
 	for(int i = 0; i < specialSectionCount; i++) {
-		Map* sectionToFree;
-		removeFromMap(specialSections, specialSectionNames[i], NULL, (void**)&sectionToFree);
+		SortedMap* sectionToFree;
+		sortedMapRemove(specialSections, specialSectionNames[i], NULL, (void**)&sectionToFree);
 		configDestroySection(sectionToFree);
 		free(sectionToFree);
 		free(specialSectionNames[i]);
 	}
 
 	free(specialSectionNames);
-	destroyMap(specialSections);
+	sortedMapDestroy(specialSections);
 	free(specialSections);
 	free(configSectionNames);
 	configClose();

@@ -2,7 +2,7 @@
 #include "Globals.h"
 #include "Config.h"
 #include "Log.h"
-#include "Structures/Map.h"
+#include "Structures/SortedMap.h"
 #include "FetchingModules/FetchingModule.h"
 #include "FetchingModules/Extras/FetchingModuleUtilities.h"
 #include "Displays/Display.h"
@@ -21,12 +21,12 @@ bool addModule(ModuleManager* moduleManager, void (*templateFunc)(FetchingModule
 	}
 	memset(template, 0, sizeof *template);
 	templateFunc(template);
-	return putIntoMap(&moduleManager->availableModules, name, template);
+	return sortedMapPut(&moduleManager->availableModules, name, template);
 }
 
 bool initModuleManager(ModuleManager* moduleManager) {
-	if(!(initMap(&moduleManager->availableModules, mapCompareFunctionStrcasecmp) &&
-	     initMap(&moduleManager->activeModules, mapCompareFunctionStrcmp))) {
+	if(!(sortedMapInit(&moduleManager->availableModules, sortedMapCompareFunctionStrcasecmp) &&
+	     sortedMapInit(&moduleManager->activeModules, sortedMapCompareFunctionStrcmp))) {
 		return false;
 	}
 
@@ -51,33 +51,33 @@ bool initModuleManager(ModuleManager* moduleManager) {
 }
 
 void destroyModuleManager(ModuleManager* moduleManager) {
-	Map mapToFree;
+	SortedMap mapToFree;
 	int mapToFreeSize;
 	char** keysToFree;
 
 	mapToFree = moduleManager->availableModules;
-	mapToFreeSize = getMapSize(&mapToFree);
+	mapToFreeSize = sortedMapSize(&mapToFree);
 	keysToFree = malloc(mapToFreeSize * sizeof *keysToFree);
-	getMapKeys(&mapToFree, (void**)keysToFree);
+	sortedMapKeys(&mapToFree, (void**)keysToFree);
 	for(int i = 0; i < mapToFreeSize; i++) {
-		free(getFromMap(&mapToFree, keysToFree[i]));
+		free(sortedMapGet(&mapToFree, keysToFree[i]));
 	}
 	free(keysToFree);
 
 	mapToFree = moduleManager->activeModules;
-	mapToFreeSize = getMapSize(&mapToFree);
+	mapToFreeSize = sortedMapSize(&mapToFree);
 	keysToFree = malloc(mapToFreeSize * sizeof *keysToFree);
-	getMapKeys(&mapToFree, (void**)keysToFree);
+	sortedMapKeys(&mapToFree, (void**)keysToFree);
 	for(int i = 0; i < mapToFreeSize; i++) {
 		disableModule(moduleManager, keysToFree[i]);
 	}
 	free(keysToFree);
 
-	destroyMap(&moduleManager->availableModules);
-	destroyMap(&moduleManager->activeModules);
+	sortedMapDestroy(&moduleManager->availableModules);
+	sortedMapDestroy(&moduleManager->activeModules);
 }
 
-bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
+bool moduleLoadBasicSettings(FetchingModule* fetchingModule, SortedMap* config) {
 	if(!configLoadString(config, "_name", &fetchingModule->name) ||
 	   !moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
 	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
@@ -88,7 +88,7 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 	configLoadString(config, "icon", &fetchingModule->iconPath);
 	configLoadInt(config, "verbosity", &fetchingModule->verbosity);
 
-	char* displayName = getFromMap(config, "display");
+	char* displayName = sortedMapGet(config, "display");
 	if(displayName == NULL) {
 		moduleLog(fetchingModule, 0, "Invalid display");
 		return false;
@@ -114,14 +114,14 @@ void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
 	free(fetchingModule->iconPath);
 }
 
-bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, Map* config) {
+bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, SortedMap* config) {
 	if(moduleManager == NULL || moduleType == NULL || moduleCustomName == NULL || config == NULL) {
 		return false;
 	}
 
 	char* moduleTypeLowerCase = toLowerCase(moduleType);
 
-	FetchingModule* moduleTemplate = getFromMap(&moduleManager->availableModules, moduleTypeLowerCase);
+	FetchingModule* moduleTemplate = sortedMapGet(&moduleManager->availableModules, moduleTypeLowerCase);
 	FetchingModule* module;
 
 	free(moduleTypeLowerCase);
@@ -140,13 +140,13 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 
 	if(enableModuleSuccess) {
 		moduleLog(module, 1, "Module enabled");
-		putIntoMap(&moduleManager->activeModules, moduleCustomName, module);
+		sortedMapPut(&moduleManager->activeModules, moduleCustomName, module);
 	}
 	return enableModuleSuccess;
 }
 
 bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
-	FetchingModule* module = getFromMap(&moduleManager->activeModules, moduleCustomName);
+	FetchingModule* module = sortedMapGet(&moduleManager->activeModules, moduleCustomName);
 	char* moduleCustomNameCopy = strdup(moduleCustomName);
 	int moduleVerbosity = module->verbosity;
 
@@ -159,7 +159,7 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	fetchingModuleDestroyThread(module);
 	module->disable(module);
 	moduleFreeBasicSettings(module);
-	removeFromMap(&moduleManager->activeModules, moduleCustomName, (void**)&keyToFree, NULL); // value is already stored in "module"
+	sortedMapRemove(&moduleManager->activeModules, moduleCustomName, (void**)&keyToFree, NULL); // value is already stored in "module"
 	free(keyToFree);
 	free(module);
 

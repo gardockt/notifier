@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include <unistd.h> // sleep
 
-#include "../Structures/Map.h"
+#include "../Structures/SortedMap.h"
 #include "../Displays/Display.h"
 
 typedef struct FetMod {
@@ -21,7 +21,7 @@ typedef struct FetMod {
 	char* iconPath;
 	int verbosity;
 
-	bool (*enable)(struct FetMod*, Map*);
+	bool (*enable)(struct FetMod*, SortedMap*);
 	void (*fetch)(struct FetMod*);
 	void (*disable)(struct FetMod*);
 } FetchingModule;

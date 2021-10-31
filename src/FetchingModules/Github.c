@@ -1,6 +1,6 @@
 #ifdef ENABLE_MODULE_GITHUB
 
-#include "../Structures/Map.h"
+#include "../Structures/SortedMap.h"
 #include "../StringOperations.h"
 #include "../Network.h"
 #include "Extras/FetchingModuleUtilities.h"
@@ -57,7 +57,7 @@ githubGenerateNotificationUrlFreeAndReturn:
 	return ret;
 }
 
-bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
+bool githubParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	GithubConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
@@ -71,7 +71,7 @@ bool githubParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	return true;
 }
 
-bool githubEnable(FetchingModule* fetchingModule, Map* configToParse) {
+bool githubEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	if(!githubParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}

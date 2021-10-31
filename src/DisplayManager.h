@@ -5,11 +5,11 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "Structures/Map.h"
+#include "Structures/SortedMap.h"
 #include "Displays/Display.h"
 
 typedef struct {
-	Map displays;
+	SortedMap displays;
 } DisplayManager;
 
 bool initDisplayManager(DisplayManager* displayManager);

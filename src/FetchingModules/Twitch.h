@@ -17,7 +17,7 @@ typedef struct {
 	int streamCount;
 	char* id;
 	char* secret;
-	Map* streamTitles;
+	SortedMap* streamTitles;
 	char* token;
 	CURL* curl;
 	struct curl_slist* list;

@@ -1,6 +1,6 @@
 #ifdef ENABLE_MODULE_TWITCH
 
-#include "../Structures/Map.h"
+#include "../Structures/SortedMap.h"
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
@@ -119,7 +119,7 @@ twitchRefreshTokenPutRoot:
 	return refreshSuccessful;
 }
 
-bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
+bool twitchParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	TwitchConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
@@ -128,7 +128,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 		return false;
 	}
 
-	char* streams = getFromMap(configToParse, "streams");
+	char* streams = sortedMapGet(configToParse, "streams");
 	if(streams == NULL) {
 		moduleLog(fetchingModule, 0, "Invalid streams");
 		return false;
@@ -177,15 +177,15 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	}
 	free(tokenKeyName);
 
-	initMap(config->streamTitles, mapCompareFunctionStrcmp);
+	sortedMapInit(config->streamTitles, sortedMapCompareFunctionStrcmp);
 	for(int i = 0; i < config->streamCount; i++) {
-		putIntoMap(config->streamTitles, config->streams[i], NULL);
+		sortedMapPut(config->streamTitles, config->streams[i], NULL);
 	}
 
 	return true;
 }
 
-bool twitchEnable(FetchingModule* fetchingModule, Map* configToParse) {
+bool twitchEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	if(!twitchParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}
@@ -262,7 +262,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 	char** checkedStreamNames = malloc(config->streamCount * sizeof *checkedStreamNames);
 	TwitchNotificationData* newData = malloc(config->streamCount * sizeof *newData);
 
-	getMapKeys(config->streamTitles, (void**)checkedStreamNames);
+	sortedMapKeys(config->streamTitles, (void**)checkedStreamNames);
 	newData = memset(newData, 0, config->streamCount * sizeof *newData);
 
 	for(int i = 0; i < config->streamCount; i += 100) {
@@ -294,7 +294,7 @@ twitchFetchFreeResponse:
 	}
 
 	for(int i = 0; i < config->streamCount; i++) {
-		if(getFromMap(config->streamTitles, checkedStreamNames[i]) == NULL && newData[i].title != NULL) {
+		if(sortedMapGet(config->streamTitles, checkedStreamNames[i]) == NULL && newData[i].title != NULL) {
 			TwitchNotificationData notificationData = {0};
 			notificationData.streamerName  = newData[i].streamerName;
 			notificationData.title         = newData[i].title;
@@ -303,9 +303,9 @@ twitchFetchFreeResponse:
 			twitchDisplayNotification(fetchingModule, &notificationData);
 		}
 		char* lastStreamTitle;
-		removeFromMap(config->streamTitles, checkedStreamNames[i], NULL, (void**)&lastStreamTitle);
+		sortedMapRemove(config->streamTitles, checkedStreamNames[i], NULL, (void**)&lastStreamTitle);
 		free(lastStreamTitle);
-		putIntoMap(config->streamTitles, checkedStreamNames[i], newData[i].title);
+		sortedMapPut(config->streamTitles, checkedStreamNames[i], newData[i].title);
 
 		free(newData[i].streamerName);
 		free(newData[i].category);
@@ -324,10 +324,10 @@ void twitchDisable(FetchingModule* fetchingModule) {
 
 	char* streamTitle;
 	for(int i = 0; i < config->streamCount; i++) {
-		removeFromMap(config->streamTitles, config->streams[i], NULL, (void**)&streamTitle);
+		sortedMapRemove(config->streamTitles, config->streams[i], NULL, (void**)&streamTitle);
 		free(streamTitle);
 	}
-	destroyMap(config->streamTitles);
+	sortedMapDestroy(config->streamTitles);
 	free(config->streamTitles);
 	free(config->token);
 	for(int i = 0; i < config->streamCount; i++) {

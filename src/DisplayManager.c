@@ -4,13 +4,13 @@
 // displays
 #include "Displays/Libnotify.h"
 
-#define ADDDISPLAY(structure,name) (structure(display) && putIntoMap(&displayManager->displays, name, display))
+#define ADDDISPLAY(structure,name) (structure(display) && sortedMapPut(&displayManager->displays, name, display))
 
 bool initDisplayManager(DisplayManager* displayManager) {
 	Display* display = malloc(sizeof *display);
 
 	if(!(display != NULL &&
-	   initMap(&displayManager->displays, mapCompareFunctionStrcasecmp))) {
+	   sortedMapInit(&displayManager->displays, sortedMapCompareFunctionStrcasecmp))) {
 		return false;
 	}
 
@@ -26,18 +26,18 @@ bool initDisplayManager(DisplayManager* displayManager) {
 }
 
 void destroyDisplayManager(DisplayManager* displayManager) {
-	Map displays = displayManager->displays;
+	SortedMap displays = displayManager->displays;
 
 	for(int i = 0; i < displays.size; i++) {
 		free(displays.elements[i].value);
 	}
 
-	destroyMap(&displays);
+	sortedMapDestroy(&displays);
 }
 
 Display* getDisplay(DisplayManager* displayManager, char* displayName) {
 	char* displayNameLowerCase = toLowerCase(displayName);
-	Display* display = getFromMap(&displayManager->displays, displayNameLowerCase);
+	Display* display = sortedMapGet(&displayManager->displays, displayNameLowerCase);
 	free(displayNameLowerCase);
 	return display;
 }

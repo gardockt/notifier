@@ -1,6 +1,6 @@
 #ifdef ENABLE_MODULE_RSS
 
-#include "../Structures/Map.h"
+#include "../Structures/SortedMap.h"
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
@@ -126,7 +126,7 @@ char* rssGenerateLastReadKeyName(char* url) {
 	return sectionName;
 }
 
-bool rssParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
+bool rssParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	RssConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
@@ -151,7 +151,7 @@ bool rssParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	return true;
 }
 
-bool rssEnable(FetchingModule* fetchingModule, Map* configToParse) {
+bool rssEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	if(!rssParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}

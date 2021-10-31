@@ -1,6 +1,6 @@
 #ifdef ENABLE_MODULE_ISOD
 
-#include "../Structures/Map.h"
+#include "../Structures/SortedMap.h"
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
@@ -35,7 +35,7 @@ char* isodGenerateLastReadKeyName(FetchingModule* fetchingModule) {
 	return sectionName;
 }
 
-bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
+bool isodParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	IsodConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
@@ -52,7 +52,7 @@ bool isodParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 	return true;
 }
 
-bool isodEnable(FetchingModule* fetchingModule, Map* configToParse) {
+bool isodEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	if(!isodParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}
