@@ -30,5 +30,6 @@ int getMapSize(Map* map);
 void getMapKeys(Map* map, void** keyArray);
 
 int mapCompareFunctionStrcmp(const void* a, const void* b);
+int mapCompareFunctionStrcasecmp(const void* a, const void* b);
 
 #endif // ifndef MAP_H

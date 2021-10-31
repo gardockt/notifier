@@ -25,12 +25,11 @@ bool addModule(ModuleManager* moduleManager, void (*templateFunc)(FetchingModule
 }
 
 bool initModuleManager(ModuleManager* moduleManager) {
-	if(!(initMap(&moduleManager->availableModules, mapCompareFunctionStrcmp) &&
+	if(!(initMap(&moduleManager->availableModules, mapCompareFunctionStrcasecmp) &&
 	     initMap(&moduleManager->activeModules, mapCompareFunctionStrcmp))) {
 		return false;
 	}
 
-	// adding modules to template map; enter names lower-case
 	if(
 #ifdef ENABLE_MODULE_GITHUB
 	   !addModule(moduleManager, githubTemplate,    "github") ||

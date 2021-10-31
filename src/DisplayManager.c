@@ -10,11 +10,10 @@ bool initDisplayManager(DisplayManager* displayManager) {
 	Display* display = malloc(sizeof *display);
 
 	if(!(display != NULL &&
-	   initMap(&displayManager->displays, mapCompareFunctionStrcmp))) {
+	   initMap(&displayManager->displays, mapCompareFunctionStrcasecmp))) {
 		return false;
 	}
 
-	// adding displays to map; enter names lower-case
 	if(
 #ifdef ENABLE_DISPLAY_LIBNOTIFY
 	   !ADDDISPLAY(libnotifyStructure, "libnotify") ||

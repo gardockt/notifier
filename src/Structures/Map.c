@@ -128,3 +128,7 @@ void getMapKeys(Map* map, void** keyArray) {
 int mapCompareFunctionStrcmp(const void* a, const void* b) {
 	return strcmp((const char*)a, (const char*)b);
 }
+
+int mapCompareFunctionStrcasecmp(const void* a, const void* b) {
+	return strcasecmp((const char*)a, (const char*)b);
+}
