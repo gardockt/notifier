@@ -128,7 +128,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 		return false;
 	}
 
-	char* streams = getFromMap(configToParse, "streams",  strlen("streams"));
+	char* streams = getFromMap(configToParse, "streams");
 	if(streams == NULL) {
 		moduleLog(fetchingModule, 0, "Invalid streams");
 		return false;
@@ -179,7 +179,7 @@ bool twitchParseConfig(FetchingModule* fetchingModule, Map* configToParse) {
 
 	initMap(config->streamTitles, mapCompareFunctionStrcmp);
 	for(int i = 0; i < config->streamCount; i++) {
-		putIntoMap(config->streamTitles, config->streams[i], strlen(config->streams[i]), NULL);
+		putIntoMap(config->streamTitles, config->streams[i], NULL);
 	}
 
 	return true;
@@ -294,7 +294,7 @@ twitchFetchFreeResponse:
 	}
 
 	for(int i = 0; i < config->streamCount; i++) {
-		if(getFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i])) == NULL && newData[i].title != NULL) {
+		if(getFromMap(config->streamTitles, checkedStreamNames[i]) == NULL && newData[i].title != NULL) {
 			TwitchNotificationData notificationData = {0};
 			notificationData.streamerName  = newData[i].streamerName;
 			notificationData.title         = newData[i].title;
@@ -303,9 +303,9 @@ twitchFetchFreeResponse:
 			twitchDisplayNotification(fetchingModule, &notificationData);
 		}
 		char* lastStreamTitle;
-		removeFromMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), NULL, (void**)&lastStreamTitle);
+		removeFromMap(config->streamTitles, checkedStreamNames[i], NULL, (void**)&lastStreamTitle);
 		free(lastStreamTitle);
-		putIntoMap(config->streamTitles, checkedStreamNames[i], strlen(checkedStreamNames[i]), newData[i].title);
+		putIntoMap(config->streamTitles, checkedStreamNames[i], newData[i].title);
 
 		free(newData[i].streamerName);
 		free(newData[i].category);
@@ -324,7 +324,7 @@ void twitchDisable(FetchingModule* fetchingModule) {
 
 	char* streamTitle;
 	for(int i = 0; i < config->streamCount; i++) {
-		removeFromMap(config->streamTitles, config->streams[i], strlen(config->streams[i]), NULL, (void**)&streamTitle);
+		removeFromMap(config->streamTitles, config->streams[i], NULL, (void**)&streamTitle);
 		free(streamTitle);
 	}
 	destroyMap(config->streamTitles);

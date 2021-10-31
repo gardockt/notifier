@@ -25,23 +25,19 @@ bool doubleMapSize(Map* map) {
 	return false;
 }
 
-bool putIntoMap(Map* map, void* key, int keySize, void* value) {
+bool putIntoMap(Map* map, void* key, void* value) {
 	// possible indices of inserted element
 	int insertionIndexMin = 0;
 	int insertionIndexMax = map->size;
 
 	int checkedIndex;
 	MapElement* checkedElement;
-	int cmpSize;
 	int cmpResult;
 
 	while(insertionIndexMin != insertionIndexMax) {
 		checkedIndex = (insertionIndexMin + insertionIndexMax) / 2;
 		checkedElement = &map->elements[checkedIndex];
-		cmpSize = MIN(keySize, checkedElement->keySize);
-		if(!(cmpResult = map->compareFunction(key, checkedElement->key))) {
-			cmpResult = keySize - checkedElement->keySize;
-		}
+		cmpResult = map->compareFunction(key, checkedElement->key);
 
 		if(cmpResult == 0) {
 			checkedElement->value = value;
@@ -62,26 +58,21 @@ bool putIntoMap(Map* map, void* key, int keySize, void* value) {
 
 	MapElement* element = &map->elements[insertionIndex];
 	element->key = key;
-	element->keySize = keySize;
 	element->value = value;
 	return true;
 }
 
-int getKeyIndex(Map* map, const void* key, int keySize) {
+int getKeyIndex(Map* map, const void* key) {
 	int min = 0;
 	int max = map->size - 1;
 	int checkedIndex;
 	MapElement* checkedElement;
-	int cmpSize;
 	int cmpResult;
 
 	while(min <= max) {
 		checkedIndex = (min + max) / 2;
 		checkedElement = &map->elements[checkedIndex];
-		cmpSize = MIN(keySize, checkedElement->keySize);
-		if(!(cmpResult = map->compareFunction(key, checkedElement->key))) {
-			cmpResult = keySize - checkedElement->keySize;
-		}
+		cmpResult = map->compareFunction(key, checkedElement->key);
 
 		if(cmpResult == 0) {
 			return checkedIndex;
@@ -95,13 +86,13 @@ int getKeyIndex(Map* map, const void* key, int keySize) {
 	return -1;
 }
 
-void* getFromMap(Map* map, void* key, int keySize) {
-	int index = getKeyIndex(map, key, keySize);
+void* getFromMap(Map* map, void* key) {
+	int index = getKeyIndex(map, key);
 	return index >= 0 ? map->elements[index].value : NULL;
 }
 
-bool removeFromMap(Map* map, void* key, int keySize, void** keyAddress, void** valueAddress) {
-	int index = getKeyIndex(map, key, keySize);
+bool removeFromMap(Map* map, void* key, void** keyAddress, void** valueAddress) {
+	int index = getKeyIndex(map, key);
 	if(index < 0) {
 		return false;
 	}
@@ -118,8 +109,8 @@ bool removeFromMap(Map* map, void* key, int keySize, void** keyAddress, void** v
 	return true;
 }
 
-bool existsInMap(Map* map, const void* key, int keySize) {
-	int index = getKeyIndex(map, key, keySize);
+bool existsInMap(Map* map, const void* key) {
+	int index = getKeyIndex(map, key);
 	return index >= 0;
 }
 

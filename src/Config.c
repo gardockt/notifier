@@ -17,7 +17,7 @@ int coreVerbosity = 0;
 static dictionary* config = NULL;
 
 bool configLoadInt(Map* config, char* key, int* output) {
-	char* rawValueFromMap = getFromMap(config, key, strlen(key));
+	char* rawValueFromMap = getFromMap(config, key);
 	if(rawValueFromMap == NULL) {
 		return false;
 	}
@@ -31,7 +31,7 @@ bool configLoadInt(Map* config, char* key, int* output) {
 }
 
 bool configLoadString(Map* config, char* key, char** output) {
-	char* rawValueFromMap = getFromMap(config, key, strlen(key));
+	char* rawValueFromMap = getFromMap(config, key);
 	if(rawValueFromMap == NULL) {
 		return false;
 	}
@@ -71,8 +71,8 @@ void configFillEmptyFields(Map* targetConfig, Map* sourceConfig) {
 					break;
 				}
 			} else {
-				char* value = getFromMap(sourceConfig, sourceKeys[i], strlen(sourceKeys[i]));
-				putIntoMap(targetConfig, strdup(sourceKeys[i]), strlen(sourceKeys[i]), strdup(value));
+				char* value = getFromMap(sourceConfig, sourceKeys[i]);
+				putIntoMap(targetConfig, strdup(sourceKeys[i]), strdup(value));
 			}
 		}
 	}
@@ -93,7 +93,7 @@ Map* configLoadSection(dictionary* config, char* sectionName) {
 	Map* ret = malloc(sizeof *ret);
 	initMap(ret, mapCompareFunctionStrcmp);
 
-	putIntoMap(ret, strdup(CONFIG_NAME_FIELD_NAME), strlen(CONFIG_NAME_FIELD_NAME), strdup(sectionName));
+	putIntoMap(ret, strdup(CONFIG_NAME_FIELD_NAME), strdup(sectionName));
 
 	for(int i = 0; i < keyCount; i++) {
 		if(keys[i][strlen(sectionName) + 1] == '_') {
@@ -102,7 +102,7 @@ Map* configLoadSection(dictionary* config, char* sectionName) {
 
 		char* keyTrimmed = strdup(keys[i] + strlen(sectionName) + 1);
 		const char* value = iniparser_getstring(config, keys[i], NULL);
-		putIntoMap(ret, keyTrimmed, strlen(keyTrimmed), strdup(value));
+		putIntoMap(ret, keyTrimmed, strdup(value));
 	}
 
 	free(keys);
@@ -116,7 +116,7 @@ void configDestroySection(Map* section) {
 
 	for(int i = 0; i < keyCount; i++) {
 		char* valueToFree;
-		removeFromMap(section, keys[i], strlen(keys[i]), NULL, (void**)&valueToFree);
+		removeFromMap(section, keys[i], NULL, (void**)&valueToFree);
 		free(valueToFree);
 		free(keys[i]);
 	}
@@ -181,13 +181,13 @@ bool configLoad() {
 
 		if(sectionName[0] == '_') { // special section
 			Map* specialSection = configLoadSection(config, sectionName);
-			putIntoMap(specialSections, sectionName, strlen(sectionName), specialSection);
+			putIntoMap(specialSections, sectionName, specialSection);
 			if(!strcmp(sectionName, "_global")) {
 				globalSection = specialSection;
 			}
 		} else { // module section
 			Map* configMap = configLoadSection(config, sectionName);
-			char* moduleType = getFromMap(configMap, CONFIG_TYPE_FIELD_NAME, strlen(CONFIG_TYPE_FIELD_NAME));
+			char* moduleType = getFromMap(configMap, CONFIG_TYPE_FIELD_NAME);
 
 			// add global settings for undefined values
 			// priority: includes > globalSection > global
@@ -204,7 +204,7 @@ bool configLoad() {
 				int includeNameLength = strlen(includeNames[includeIndex]);
 				char* includeSectionName = malloc(strlen(CONFIG_INCLUDE_SECTION_NAME) + strlen(CONFIG_NAME_SEPARATOR) + includeNameLength + 1);
 				sprintf(includeSectionName, "%s%s%s", CONFIG_INCLUDE_SECTION_NAME, CONFIG_NAME_SEPARATOR, includeNames[includeIndex]);
-				configToMerge = getFromMap(specialSections, includeSectionName, strlen(includeSectionName));
+				configToMerge = getFromMap(specialSections, includeSectionName);
 				if(configToMerge != NULL) {
 					configFillEmptyFields(configMap, configToMerge);
 				} else {
@@ -221,14 +221,14 @@ bool configLoad() {
 loadConfigGlobalSection:
 			globalSectionConfigSectionName = malloc(strlen(CONFIG_GLOBAL_SECTION_NAME) + strlen(CONFIG_NAME_SEPARATOR) + strlen(moduleType) + 1);
 			sprintf(globalSectionConfigSectionName, "%s%s%s", CONFIG_GLOBAL_SECTION_NAME, CONFIG_NAME_SEPARATOR, moduleType);
-			configToMerge = getFromMap(specialSections, globalSectionConfigSectionName, strlen(globalSectionConfigSectionName));
+			configToMerge = getFromMap(specialSections, globalSectionConfigSectionName);
 			free(globalSectionConfigSectionName);
 			configFillEmptyFields(configMap, configToMerge);
 
 			// global config
 			configFillEmptyFields(configMap, globalSection);
 
-			char* enabled = getFromMap(configMap, "enabled", strlen("enabled"));
+			char* enabled = getFromMap(configMap, "enabled");
 			if(enabled != NULL && !strcmp(enabled, "false")) {
 				free(sectionName);
 			} else if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
@@ -246,7 +246,7 @@ loadConfigGlobalSection:
 	getMapKeys(specialSections, (void**)specialSectionNames);
 	for(int i = 0; i < specialSectionCount; i++) {
 		Map* sectionToFree;
-		removeFromMap(specialSections, specialSectionNames[i], strlen(specialSectionNames[i]), NULL, (void**)&sectionToFree);
+		removeFromMap(specialSections, specialSectionNames[i], NULL, (void**)&sectionToFree);
 		configDestroySection(sectionToFree);
 		free(sectionToFree);
 		free(specialSectionNames[i]);

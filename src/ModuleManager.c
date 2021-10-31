@@ -21,7 +21,7 @@ bool addModule(ModuleManager* moduleManager, void (*templateFunc)(FetchingModule
 	}
 	memset(template, 0, sizeof *template);
 	templateFunc(template);
-	return putIntoMap(&moduleManager->availableModules, name, strlen(name), template);
+	return putIntoMap(&moduleManager->availableModules, name, template);
 }
 
 bool initModuleManager(ModuleManager* moduleManager) {
@@ -61,7 +61,7 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 	keysToFree = malloc(mapToFreeSize * sizeof *keysToFree);
 	getMapKeys(&mapToFree, (void**)keysToFree);
 	for(int i = 0; i < mapToFreeSize; i++) {
-		free(getFromMap(&mapToFree, keysToFree[i], strlen(keysToFree[i])));
+		free(getFromMap(&mapToFree, keysToFree[i]));
 	}
 	free(keysToFree);
 
@@ -89,7 +89,7 @@ bool moduleLoadBasicSettings(FetchingModule* fetchingModule, Map* config) {
 	configLoadString(config, "icon", &fetchingModule->iconPath);
 	configLoadInt(config, "verbosity", &fetchingModule->verbosity);
 
-	char* displayName = getFromMap(config, "display", strlen("display"));
+	char* displayName = getFromMap(config, "display");
 	if(displayName == NULL) {
 		moduleLog(fetchingModule, 0, "Invalid display");
 		return false;
@@ -122,7 +122,7 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 
 	char* moduleTypeLowerCase = toLowerCase(moduleType);
 
-	FetchingModule* moduleTemplate = getFromMap(&moduleManager->availableModules, moduleTypeLowerCase, strlen(moduleTypeLowerCase));
+	FetchingModule* moduleTemplate = getFromMap(&moduleManager->availableModules, moduleTypeLowerCase);
 	FetchingModule* module;
 
 	free(moduleTypeLowerCase);
@@ -141,13 +141,13 @@ bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCu
 
 	if(enableModuleSuccess) {
 		moduleLog(module, 1, "Module enabled");
-		putIntoMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), module);
+		putIntoMap(&moduleManager->activeModules, moduleCustomName, module);
 	}
 	return enableModuleSuccess;
 }
 
 bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
-	FetchingModule* module = getFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName));
+	FetchingModule* module = getFromMap(&moduleManager->activeModules, moduleCustomName);
 	char* moduleCustomNameCopy = strdup(moduleCustomName);
 	int moduleVerbosity = module->verbosity;
 
@@ -160,7 +160,7 @@ bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
 	fetchingModuleDestroyThread(module);
 	module->disable(module);
 	moduleFreeBasicSettings(module);
-	removeFromMap(&moduleManager->activeModules, moduleCustomName, strlen(moduleCustomName), (void**)&keyToFree, NULL); // value is already stored in "module"
+	removeFromMap(&moduleManager->activeModules, moduleCustomName, (void**)&keyToFree, NULL); // value is already stored in "module"
 	free(keyToFree);
 	free(module);
 

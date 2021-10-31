@@ -4,7 +4,7 @@
 // displays
 #include "Displays/Libnotify.h"
 
-#define ADDDISPLAY(structure,name) (structure(display) && putIntoMap(&displayManager->displays, name, strlen(name), display))
+#define ADDDISPLAY(structure,name) (structure(display) && putIntoMap(&displayManager->displays, name, display))
 
 bool initDisplayManager(DisplayManager* displayManager) {
 	Display* display = malloc(sizeof *display);
@@ -38,7 +38,7 @@ void destroyDisplayManager(DisplayManager* displayManager) {
 
 Display* getDisplay(DisplayManager* displayManager, char* displayName) {
 	char* displayNameLowerCase = toLowerCase(displayName);
-	Display* display = getFromMap(&displayManager->displays, displayNameLowerCase, strlen(displayNameLowerCase));
+	Display* display = getFromMap(&displayManager->displays, displayNameLowerCase);
 	free(displayNameLowerCase);
 	return display;
 }

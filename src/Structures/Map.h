@@ -9,7 +9,6 @@
 
 typedef struct {
 	void* key;
-	int keySize;
 	void* value;
 } MapElement;
 
@@ -23,10 +22,10 @@ typedef struct {
 bool initMap(Map* map, int (*compareFunction)(const void*, const void*));
 void destroyMap(Map* map);
 
-bool putIntoMap(Map* map, void* key, int keySize, void* value);
-void* getFromMap(Map* map, void* key, int keySize); 
-bool removeFromMap(Map* map, void* key, int keySize, void** keyAddress, void** valueAddress);
-bool existsInMap(Map* map, const void* key, int keySize);
+bool putIntoMap(Map* map, void* key, void* value);
+void* getFromMap(Map* map, void* key);
+bool removeFromMap(Map* map, void* key, void** keyAddress, void** valueAddress);
+bool existsInMap(Map* map, const void* key);
 int getMapSize(Map* map);
 void getMapKeys(Map* map, void** keyArray);
 
