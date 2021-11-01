@@ -144,7 +144,7 @@ void configLoadCore() {
 	configLoadInt(coreSection, "verbosity", &coreVerbosity);
 
 	// do not close the config, configLoad will close it later
-	if(globalSection != coreSection) {
+	if(globalSection != coreSection && globalSection != NULL) {
 		configDestroySection(globalSection);
 		free(globalSection);
 	}
