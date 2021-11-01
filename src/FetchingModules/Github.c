@@ -6,8 +6,6 @@
 #include "Extras/FetchingModuleUtilities.h"
 #include "Github.h"
 
-#define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
-
 #define GITHUB_API_URL "https://api.github.com/notifications"
 #define GITHUB_LAST_UPDATED_DESIRED_LENGTH strlen("1970-01-01T00:00:00Z")
 
