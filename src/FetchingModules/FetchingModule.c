@@ -35,3 +35,18 @@ bool fetchingModuleDestroyThread(FetchingModule* fetchingModule) {
 	return pthread_cancel(fetchingModule->thread) == 0 &&
 	       pthread_join(fetchingModule->thread, NULL) == 0;
 }
+
+bool fetchingModuleInit(FetchingModule* fetchingModule, SortedMap* config, FetchingModuleInitFlags initFlags) {
+	if(!(initFlags & FM_DISABLE_CHECK_TITLE)) {
+		if(!moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "title", &fetchingModule->notificationTitle)) {
+			return false;
+		}
+	}
+	if(!(initFlags & FM_DISABLE_CHECK_BODY)) {
+		if(!moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "body", &fetchingModule->notificationBody)) {
+			return false;
+		}
+	}
+
+	return true;
+}

@@ -53,7 +53,8 @@ bool isodParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 }
 
 bool isodEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	if(!isodParseConfig(fetchingModule, configToParse)) {
+	if(!fetchingModuleInit(fetchingModule, configToParse, FM_DEFAULTS) ||
+	   !isodParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}
 

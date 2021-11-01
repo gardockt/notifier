@@ -26,7 +26,15 @@ typedef struct FetMod {
 	void (*disable)(struct FetMod*);
 } FetchingModule;
 
+typedef enum {
+	FM_DEFAULTS            = 0,
+	FM_DISABLE_CHECK_TITLE = 1 << 0,
+	FM_DISABLE_CHECK_BODY  = 1 << 1
+} FetchingModuleInitFlags;
+
 bool fetchingModuleCreateThread(FetchingModule* fetchingModule);
 bool fetchingModuleDestroyThread(FetchingModule* fetchingModule);
+
+bool fetchingModuleInit(FetchingModule* fetchingModule, SortedMap* config, FetchingModuleInitFlags initFlags);
 
 #endif // ifndef FETCHINGMODULE_H

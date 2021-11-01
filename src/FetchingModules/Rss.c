@@ -152,7 +152,8 @@ bool rssParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 }
 
 bool rssEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	if(!rssParseConfig(fetchingModule, configToParse)) {
+	if(!fetchingModuleInit(fetchingModule, configToParse, FM_DEFAULTS) ||
+	   !rssParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}
 

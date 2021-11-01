@@ -70,7 +70,8 @@ bool githubParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse)
 }
 
 bool githubEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	if(!githubParseConfig(fetchingModule, configToParse)) {
+	if(!fetchingModuleInit(fetchingModule, configToParse, FM_DEFAULTS) ||
+	   !githubParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}
 

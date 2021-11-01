@@ -186,7 +186,8 @@ bool twitchParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse)
 }
 
 bool twitchEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	if(!twitchParseConfig(fetchingModule, configToParse)) {
+	if(!fetchingModuleInit(fetchingModule, configToParse, FM_DEFAULTS) ||
+	   !twitchParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}
 
