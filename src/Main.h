@@ -3,6 +3,8 @@
 
 #include <signal.h>
 
+#include <iniparser.h>
+
 #ifdef REQUIRED_CURL
 #include <curl/curl.h>
 #endif

@@ -9,8 +9,15 @@
 ModuleManager moduleManager;
 DisplayManager displayManager;
 
+int silentErrorCallback(const char* format, ...) {
+	return 0;
+}
+
 bool initFunctionality() {
 	configLoadCore();
+
+	// silence iniparser errors on core verbosity <= 0
+	iniparser_set_error_callback(coreVerbosity <= 0 ? silentErrorCallback : NULL);
 
 	if(!initModuleManager(&moduleManager)) {
 		logWrite("core", coreVerbosity, 0, "Error initializing module manager");
