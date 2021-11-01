@@ -130,7 +130,7 @@ bool rssParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	RssConfig* config = malloc(sizeof *config);
 	fetchingModule->config = config;
 
-	char* sourcesRaw = getFromMap(configToParse, "sources",  strlen("sources"));
+	char* sourcesRaw = sortedMapGet(configToParse, "sources");
 	if(sourcesRaw == NULL) {
 		moduleLog(fetchingModule, 0, "Invalid sources");
 		return false;
