@@ -16,9 +16,8 @@
 #define IS_VALID_URL_CHARACTER(c) ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')
 #define IS_VALID_STREAMS_CHARACTER(c) (IS_VALID_URL_CHARACTER(c) || strchr(LIST_ENTRY_SEPARATORS, c) != NULL)
 
-// TODO: mutexes
-
 static BinaryTree* twitchOAuthKeys;
+static pthread_mutex_t twitchOAuthGlobalMutex;
 
 int twitchOAuthCompare(const void* a, const void* b) {
 	return strcmp(((const TwitchOAuth*)a)->id, ((const TwitchOAuth*)b)->id);
@@ -27,22 +26,33 @@ int twitchOAuthCompare(const void* a, const void* b) {
 void twitchOAuthInit() {
 	twitchOAuthKeys = malloc(sizeof *twitchOAuthKeys);
 	binaryTreeInit(twitchOAuthKeys, twitchOAuthCompare);
+	pthread_mutex_init(&twitchOAuthGlobalMutex, NULL);
 }
 
 void twitchOAuthDestroy() {
 	binaryTreeDestroy(twitchOAuthKeys);
 	free(twitchOAuthKeys);
+	pthread_mutex_destroy(&twitchOAuthGlobalMutex);
 }
 
 bool twitchOAuthRefreshToken(TwitchOAuth* oauth) {
+	bool refreshSuccessful = false;
+	int refreshCounterBeforeLock = oauth->refreshCounter;
+
+	pthread_mutex_lock(&oauth->mutex);
+	logWrite("core", coreVerbosity, 3, "Refresh counter before lock: %d, current: %d", refreshCounterBeforeLock, oauth->refreshCounter);
+	if(refreshCounterBeforeLock != oauth->refreshCounter) {
+		refreshSuccessful = oauth->lastRefreshResult;
+		goto oauthRefreshTokenUnlockMutex;
+	}
+
 	CURL* curl = curl_easy_init();
 	NetworkResponse response = {NULL, 0};
-	bool refreshSuccessful = false;
 
 	logWrite("core", coreVerbosity, 1, "Refreshing token for ID %s...", oauth->id);
 	if(curl == NULL) {
 		logWrite("core", coreVerbosity, 0, "Token refreshing failed - failed to initialize CURL object");
-		return false;
+		goto oauthRefreshTokenSetLastRefreshResult;
 	}
 
 	curl_easy_setopt(curl, CURLOPT_URL, oauth->refreshUrl);
@@ -55,7 +65,7 @@ bool twitchOAuthRefreshToken(TwitchOAuth* oauth) {
 	curl_easy_cleanup(curl);
 	if(code != CURLE_OK) {
 		logWrite("core", coreVerbosity, 0, "Token refreshing failed with CURL code %d", code);
-		return false;
+		goto oauthRefreshTokenSetLastRefreshResult;
 	}
 
 	logWrite("core", coreVerbosity, 3, "Received response:\n%s", response.data);
@@ -63,7 +73,7 @@ bool twitchOAuthRefreshToken(TwitchOAuth* oauth) {
 	json_object* newTokenObject = json_object_object_get(root, "access_token");
 	if(json_object_get_type(newTokenObject) != json_type_string) {
 		logWrite("core", coreVerbosity, 0, "Token refreshing failed - invalid response");
-		goto twitchRefreshTokenPutRoot;
+		goto oauthRefreshTokenPutRoot;
 	}
 
 	const char* newToken = json_object_get_string(newTokenObject);
@@ -75,26 +85,37 @@ bool twitchOAuthRefreshToken(TwitchOAuth* oauth) {
 	strcpy(oauth->token, newToken);
 	refreshSuccessful = true;
 
-twitchRefreshTokenPutRoot:
+oauthRefreshTokenPutRoot:
 	json_object_put(root);
+oauthRefreshTokenSetLastRefreshResult:
+	oauth->lastRefreshResult = refreshSuccessful;
+	oauth->refreshCounter++;
+oauthRefreshTokenUnlockMutex:
+	pthread_mutex_unlock(&oauth->mutex);
 	return refreshSuccessful;
 }
 
 TwitchOAuth* twitchOAuthAdd(TwitchOAuth* oauth) {
+	pthread_mutex_lock(&twitchOAuthGlobalMutex);
 	TwitchOAuth* oauthFromMap = binaryTreeGet(twitchOAuthKeys, oauth);
 	if(oauthFromMap != NULL) {
 		oauthFromMap->useCount++;
-		return oauthFromMap;
+		goto oauthAddUnlockMutex;
 	}
 
 	oauthFromMap = malloc(sizeof *oauthFromMap);
-	oauthFromMap->id         = strdup(oauth->id);
-	oauthFromMap->secret     = strdup(oauth->secret);
-	oauthFromMap->token      = strdup(oauth->token);
-	oauthFromMap->useCount   = 1;
-	oauthFromMap->refreshUrl = strdup(oauth->refreshUrl);
+	oauthFromMap->id              = strdup(oauth->id);
+	oauthFromMap->secret          = strdup(oauth->secret);
+	oauthFromMap->token           = strdup(oauth->token);
+	oauthFromMap->useCount        = 1;
+	oauthFromMap->refreshUrl      = strdup(oauth->refreshUrl);
+	oauthFromMap->refreshCounter  = 0;
+	pthread_mutex_init(&oauthFromMap->mutex, NULL);
 
 	binaryTreePut(twitchOAuthKeys, oauthFromMap);
+
+oauthAddUnlockMutex:
+	pthread_mutex_unlock(&twitchOAuthGlobalMutex);
 	return oauthFromMap;
 }
 
@@ -109,6 +130,7 @@ void twitchOAuthRemove(TwitchOAuth* oauth) {
 	oauthFromMap->useCount--;
 	if(oauthFromMap->useCount == 0) {
 		binaryTreePop(twitchOAuthKeys, oauthFromMap);
+		pthread_mutex_destroy(&oauthFromMap->mutex);
 		free(oauthFromMap->id);
 		free(oauthFromMap->secret);
 		free(oauthFromMap->token);
@@ -181,15 +203,6 @@ bool twitchRefreshTokenForOAuth(TwitchOAuth* oauth) {
 		sprintf(tokenKeyName, "token_%s", oauth->id);
 		stashSetString("twitch", tokenKeyName, oauth->token);
 		free(tokenKeyName);
-	}
-	return success;
-}
-
-bool twitchRefreshToken(FetchingModule* fetchingModule) {
-	TwitchConfig* config = fetchingModule->config;
-	bool success = twitchRefreshTokenForOAuth(config->oauth);
-	if(success) {
-		twitchSetHeader(fetchingModule);
 	}
 	return success;
 }
@@ -353,6 +366,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 
 	for(int i = 0; i < config->streamCount; i += 100) {
 		NetworkResponse response = {NULL, 0};
+		char* tokenUsed = strdup(config->oauth->token);
 		char* url = twitchGenerateUrl(config->streams, i, MIN(config->streamCount - 1, i + 99));
 		curl_easy_setopt(config->curl, CURLOPT_URL, url);
 		curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, &response);
@@ -367,7 +381,9 @@ void twitchFetch(FetchingModule* fetchingModule) {
 		moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
 		int errorCode = twitchParseResponse(fetchingModule, response.data, checkedStreamNames, newData);
 		if(errorCode == 401) {
-			if(twitchRefreshToken(fetchingModule)) {
+			moduleLog(fetchingModule, 3, "Used token: %s, current: %s", tokenUsed, config->oauth->token);
+			if(strcmp(tokenUsed, config->oauth->token) != 0 || twitchRefreshTokenForOAuth(config->oauth)) {
+				twitchSetHeader(fetchingModule);
 				i -= 100; // retry
 			} else {
 				moduleLog(fetchingModule, 0, "Unable to refresh token, skipping fetch");
@@ -377,6 +393,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 
 twitchFetchFreeResponse:
 		free(response.data);
+		free(tokenUsed);
 	}
 
 	for(int i = 0; i < config->streamCount; i++) {

@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <pthread.h> // for oauth mutex
 
 #define REQUIRED_CURL
 #include <curl/curl.h>
@@ -18,6 +19,9 @@ typedef struct {
 	char* token;
 	int useCount;
 	char* refreshUrl;
+	pthread_mutex_t mutex;
+	int refreshCounter;
+	bool lastRefreshResult;
 } TwitchOAuth;
 
 typedef struct {
