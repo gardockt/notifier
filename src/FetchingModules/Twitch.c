@@ -76,14 +76,6 @@ bool twitchOAuthRefreshToken(TwitchOAuth* oauth) {
 
 twitchRefreshTokenPutRoot:
 	json_object_put(root);
-
-	if(refreshSuccessful) {
-		char* tokenKeyName = malloc(strlen("token_") + strlen(oauth->id) + 1);
-		sprintf(tokenKeyName, "token_%s", oauth->id);
-		stashSetString("twitch", tokenKeyName, oauth->token);
-		free(tokenKeyName);
-	}
-
 	return refreshSuccessful;
 }
 
@@ -97,19 +89,8 @@ TwitchOAuth* twitchOAuthAdd(TwitchOAuth* oauth) {
 	oauthFromMap = malloc(sizeof *oauthFromMap);
 	oauthFromMap->id        = strdup(oauth->id);
 	oauthFromMap->secret    = strdup(oauth->secret);
+	oauthFromMap->token     = strdup(oauth->token);
 	oauthFromMap->useCount  = 1;
-
-	// TODO: move outside this function for better separation
-	char* tokenKeyName = malloc(strlen("token_") + strlen(oauthFromMap->id) + 1);
-	sprintf(tokenKeyName, "token_%s", oauthFromMap->id);
-	const char* token = stashGetString("twitch", tokenKeyName, NULL);
-	if(token == NULL) {
-		oauthFromMap->token = NULL;
-		twitchOAuthRefreshToken(oauthFromMap);
-	} else {
-		oauthFromMap->token = strdup(token);
-	}
-	free(tokenKeyName);
 
 	binaryTreePut(twitchOAuthKeys, oauthFromMap);
 	return oauthFromMap;
@@ -184,6 +165,26 @@ void twitchSetHeader(FetchingModule* fetchingModule) {
 	free(headerClientToken);
 }
 
+bool twitchRefreshTokenForOAuth(TwitchOAuth* oauth) {
+	bool success = twitchOAuthRefreshToken(oauth);
+	if(success) {
+		char* tokenKeyName = malloc(strlen("token_") + strlen(oauth->id) + 1);
+		sprintf(tokenKeyName, "token_%s", oauth->id);
+		stashSetString("twitch", tokenKeyName, oauth->token);
+		free(tokenKeyName);
+	}
+	return success;
+}
+
+bool twitchRefreshToken(FetchingModule* fetchingModule) {
+	TwitchConfig* config = fetchingModule->config;
+	bool success = twitchRefreshTokenForOAuth(config->oauth);
+	if(success) {
+		twitchSetHeader(fetchingModule);
+	}
+	return success;
+}
+
 bool twitchParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 	TwitchOAuth oauth = {0};
 	TwitchConfig* config = malloc(sizeof *config);
@@ -193,6 +194,14 @@ bool twitchParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse)
 	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "secret", &oauth.secret)) {
 		return false;
 	}
+
+	char* tokenKeyName = malloc(strlen("token_") + strlen(oauth.id) + 1);
+	sprintf(tokenKeyName, "token_%s", oauth.id);
+	const char* token = stashGetString("twitch", tokenKeyName, NULL);
+	if(token == NULL && !twitchRefreshTokenForOAuth(&oauth)) {
+		return false;
+	}
+	free(tokenKeyName);
 
 	char* streams = sortedMapGet(configToParse, "streams");
 	if(streams == NULL) {
@@ -339,7 +348,7 @@ void twitchFetch(FetchingModule* fetchingModule) {
 		moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
 		int errorCode = twitchParseResponse(fetchingModule, response.data, checkedStreamNames, newData);
 		if(errorCode == 401) {
-			if(twitchOAuthRefreshToken(config->oauth)) {
+			if(twitchRefreshToken(fetchingModule)) {
 				i -= 100; // retry
 			} else {
 				moduleLog(fetchingModule, 0, "Unable to refresh token, skipping fetch");
@@ -376,6 +385,8 @@ twitchFetchFreeResponse:
 
 void twitchDisable(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
+
+	// TODO: destroy oauth tree if no tokens are present
 
 	curl_slist_free_all(config->list);
 	curl_easy_cleanup(config->curl);
