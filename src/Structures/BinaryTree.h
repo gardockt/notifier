@@ -12,14 +12,16 @@ typedef struct BTNode {
 
 typedef struct {
 	BinaryTreeNode root;
-	int (*compareFunction)(void*, void*);
-	void (*valueFreeFunction)(void*);
+	int (*compareFunction)(const void*, const void*);
 } BinaryTree;
 
-void binaryTreeInit(BinaryTree* tree, int (*compareFunction)(void*, void*));
+void binaryTreeInit(BinaryTree* tree, int (*compareFunction)(const void*, const void*));
 void binaryTreeDestroy(BinaryTree* tree);
 
 void binaryTreePut(BinaryTree* tree, void* value);
+void* binaryTreeGet(BinaryTree* tree, void* value);
+void* binaryTreePop(BinaryTree* tree, void* value);
 void* binaryTreePopLowest(BinaryTree* tree);
+int binaryTreeSize(BinaryTree* tree);
 
 #endif // ifndef BINARY_TREE_H

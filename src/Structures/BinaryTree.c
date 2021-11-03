@@ -8,29 +8,18 @@ static BinaryTreeNode createNode(BinaryTree* tree, void* value) {
 	return node;
 }
 
-static void freeNode(BinaryTree* tree, BinaryTreeNode node) {
-	if(node == NULL) {
-		return;
-	}
-	if(tree->valueFreeFunction != NULL) {
-		tree->valueFreeFunction(node->value);
-	}
-	free(node);
-}
-
 static void freeNodeAndChildren(BinaryTree* tree, BinaryTreeNode node) {
 	if(node == NULL) {
 		return;
 	}
 	freeNodeAndChildren(tree, node->left);
 	freeNodeAndChildren(tree, node->right);
-	freeNode(tree, node);
+	free(node);
 }
 
-void binaryTreeInit(BinaryTree* tree, int (*compareFunction)(void*, void*)) {
+void binaryTreeInit(BinaryTree* tree, int (*compareFunction)(const void*, const void*)) {
 	tree->root = NULL;
 	tree->compareFunction = compareFunction;
-	tree->valueFreeFunction = NULL;
 }
 
 void binaryTreeDestroy(BinaryTree* tree) {
@@ -46,7 +35,7 @@ BinaryTreeNode binaryTreePutInNode(BinaryTree* tree, BinaryTreeNode node, void* 
 	}
 
 	if(compareResult == 0) {
-		freeNode(tree, node);
+		free(node);
 		return createNode(tree, value);
 	} else if(compareResult < 0) {
 		node->left = binaryTreePutInNode(tree, node->left, value);
@@ -64,6 +53,63 @@ void binaryTreePut(BinaryTree* tree, void* value) {
 	} else {
 		tree->root = binaryTreePutInNode(tree, tree->root, value);
 	}
+}
+
+void* binaryTreeGet(BinaryTree* tree, void* value) {
+	BinaryTreeNode node = tree->root;
+	int compareResult;
+	while(node != NULL) {
+		compareResult = tree->compareFunction(value, node->value);
+		if(compareResult == 0) {
+			return node->value;
+		} else if(compareResult > 0) {
+			node = node->right;
+		} else { // compareResult < 0
+			node = node->left;
+		}
+	}
+	return NULL;
+}
+
+void* binaryTreePop(BinaryTree* tree, void* value) {
+	if(tree->root == NULL) {
+		return NULL;
+	}
+
+	BinaryTreeNode nodeParent = NULL;
+	BinaryTreeNode node = tree->root;
+	int compareResult;
+
+	while(node != NULL && (compareResult = tree->compareFunction(value, node->value)) != 0) {
+		nodeParent = node;
+		if(compareResult > 0) {
+			node = node->right;
+		} else { // compareResult < 0
+			node = node->left;
+		}
+	}
+
+	if(node == NULL) {
+		return NULL;
+	}
+
+	if(nodeParent != NULL) {
+		BinaryTreeNode remainingChildOfRemovedNodeParent = nodeParent->left;
+		if(compareResult > 0) {
+			nodeParent->right = node->right;
+		} else {
+			nodeParent->left = node->right;
+		}
+		if(remainingChildOfRemovedNodeParent != NULL) {
+			while(remainingChildOfRemovedNodeParent->left != NULL) {
+				remainingChildOfRemovedNodeParent = remainingChildOfRemovedNodeParent->left;
+			}
+			remainingChildOfRemovedNodeParent->left = node->left;
+		}
+	} else {
+		tree->root = NULL;
+	}
+	return node->value;
 }
 
 void* binaryTreePopLowest(BinaryTree* tree) {
@@ -85,6 +131,16 @@ void* binaryTreePopLowest(BinaryTree* tree) {
 		tree->root = lowestNode->right;
 	}
 
-	freeNode(tree, lowestNode);
+	free(lowestNode);
 	return value;
+}
+
+static int binaryTreeNodeSize(BinaryTreeNode node) {
+	return (node != NULL ?
+	        binaryTreeNodeSize(node->left) + binaryTreeNodeSize(node->right) + 1 :
+	        0);
+}
+
+int binaryTreeSize(BinaryTree* tree) {
+	return binaryTreeNodeSize(tree->root);
 }

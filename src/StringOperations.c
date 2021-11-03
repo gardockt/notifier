@@ -64,9 +64,9 @@ int find(char* text, const char* substring) {
 	return -1;
 }
 
-int compareReplacements(void* aPtr, void* bPtr) {
-	Replacement* a = aPtr;
-	Replacement* b = bPtr;
+int compareReplacements(const void* aPtr, const void* bPtr) {
+	const Replacement* a = aPtr;
+	const Replacement* b = bPtr;
 	return a->nextOccurrence - b->nextOccurrence;
 }
 
