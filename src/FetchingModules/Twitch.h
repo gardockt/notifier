@@ -17,6 +17,7 @@ typedef struct {
 	char* secret;
 	char* token;
 	int useCount;
+	char* refreshUrl;
 } TwitchOAuth;
 
 typedef struct {

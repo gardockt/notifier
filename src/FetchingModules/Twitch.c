@@ -40,15 +40,16 @@ bool twitchOAuthRefreshToken(TwitchOAuth* oauth) {
 	bool refreshSuccessful = false;
 
 	logWrite("core", coreVerbosity, 1, "Refreshing token for ID %s...", oauth->id);
+	if(curl == NULL) {
+		logWrite("core", coreVerbosity, 0, "Token refreshing failed - failed to initialize CURL object");
+		return false;
+	}
 
-	char* url = malloc(strlen("https://id.twitch.tv/oauth2/token?client_id=&client_secret=&grant_type=client_credentials") + strlen(oauth->id) + strlen(oauth->secret) + 1);
-	sprintf(url, "https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials", oauth->id, oauth->secret);
-	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl, CURLOPT_URL, oauth->refreshUrl);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&response);
 	curl_easy_setopt(curl, CURLOPT_POST, true);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "\n");
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, networkCallback);
-	free(url);
 
 	CURLcode code = curl_easy_perform(curl);
 	curl_easy_cleanup(curl);
@@ -87,10 +88,11 @@ TwitchOAuth* twitchOAuthAdd(TwitchOAuth* oauth) {
 	}
 
 	oauthFromMap = malloc(sizeof *oauthFromMap);
-	oauthFromMap->id        = strdup(oauth->id);
-	oauthFromMap->secret    = strdup(oauth->secret);
-	oauthFromMap->token     = strdup(oauth->token);
-	oauthFromMap->useCount  = 1;
+	oauthFromMap->id         = strdup(oauth->id);
+	oauthFromMap->secret     = strdup(oauth->secret);
+	oauthFromMap->token      = strdup(oauth->token);
+	oauthFromMap->useCount   = 1;
+	oauthFromMap->refreshUrl = strdup(oauth->refreshUrl);
 
 	binaryTreePut(twitchOAuthKeys, oauthFromMap);
 	return oauthFromMap;
@@ -110,6 +112,7 @@ void twitchOAuthRemove(TwitchOAuth* oauth) {
 		free(oauthFromMap->id);
 		free(oauthFromMap->secret);
 		free(oauthFromMap->token);
+		free(oauthFromMap->refreshUrl);
 		free(oauthFromMap);
 	}
 }
@@ -140,6 +143,12 @@ char* twitchGenerateUrl(char** streams, int start, int stop) {
 	}
 
 	return output;
+}
+
+char* twitchGenerateTokenRefreshUrl(TwitchOAuth* oauth) {
+	char* url = malloc(strlen("https://id.twitch.tv/oauth2/token?client_id=&client_secret=&grant_type=client_credentials") + strlen(oauth->id) + strlen(oauth->secret) + 1);
+	sprintf(url, "https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials", oauth->id, oauth->secret);
+	return url;
 }
 
 void twitchSetHeader(FetchingModule* fetchingModule) {
@@ -195,11 +204,17 @@ bool twitchParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse)
 		return false;
 	}
 
+	oauth.refreshUrl = twitchGenerateTokenRefreshUrl(&oauth);
+
 	char* tokenKeyName = malloc(strlen("token_") + strlen(oauth.id) + 1);
 	sprintf(tokenKeyName, "token_%s", oauth.id);
 	const char* token = stashGetString("twitch", tokenKeyName, NULL);
-	if(token == NULL && !twitchRefreshTokenForOAuth(&oauth)) {
-		return false;
+	if(token == NULL) {
+		if(!twitchRefreshTokenForOAuth(&oauth)) {
+			return false;
+		}
+	} else {
+		oauth.token = strdup(token);
 	}
 	free(tokenKeyName);
 
@@ -242,8 +257,12 @@ bool twitchParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse)
 
 	if(twitchOAuthKeys == NULL) {
 		twitchOAuthInit();
-		config->oauth = twitchOAuthAdd(&oauth);
 	}
+	config->oauth = twitchOAuthAdd(&oauth);
+	free(oauth.id);
+	free(oauth.secret);
+	free(oauth.token);
+	free(oauth.refreshUrl);
 
 	sortedMapInit(config->streamTitles, sortedMapCompareFunctionStrcmp);
 	for(int i = 0; i < config->streamCount; i++) {
