@@ -13,12 +13,17 @@
 #include "FetchingModule.h"
 
 typedef struct {
-	char** streams;
-	int streamCount;
 	char* id;
 	char* secret;
-	SortedMap* streamTitles;
 	char* token;
+	int useCount;
+} TwitchOAuth;
+
+typedef struct {
+	char** streams;
+	int streamCount;
+	SortedMap* streamTitles;
+	TwitchOAuth* oauth;
 	CURL* curl;
 	struct curl_slist* list;
 } TwitchConfig;
