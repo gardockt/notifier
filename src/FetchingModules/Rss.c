@@ -177,7 +177,9 @@ char* rssReplaceVariables(char* text, void* notificationDataPtr) {
 
 void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData* notificationData) {
 	Message message = {0};
-	moduleFillBasicMessage(fetchingModule, &message, rssReplaceVariables, notificationData, URL, notificationData->url);
+	moduleFillBasicMessage(fetchingModule, &message, rssReplaceVariables, notificationData);
+	message.actionData = notificationData->url;
+	message.actionType = URL;
 	fetchingModule->display->displayMessage(&message);
 	moduleDestroyBasicMessage(&message);
 }

@@ -207,8 +207,11 @@ char* twitchReplaceVariables(char* text, void* notificationDataPtr) {
 
 void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificationData* notificationData) {
 	Message message = {0};
-	moduleFillBasicMessage(fetchingModule, &message, twitchReplaceVariables, notificationData, URL, notificationData->url);
+	moduleFillBasicMessage(fetchingModule, &message, twitchReplaceVariables, notificationData);
+	message.actionData = notificationData->url;
+	message.actionType = URL;
 	fetchingModule->display->displayMessage(&message);
+
 	moduleDestroyBasicMessage(&message);
 }
 

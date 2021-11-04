@@ -108,7 +108,9 @@ char* githubReplaceVariables(char* text, void* notificationDataPtr) {
 
 void githubDisplayNotification(FetchingModule* fetchingModule, GithubNotificationData* notificationData) {
 	Message message = {0};
-	moduleFillBasicMessage(fetchingModule, &message, githubReplaceVariables, notificationData, URL, notificationData->url);
+	moduleFillBasicMessage(fetchingModule, &message, githubReplaceVariables, notificationData);
+	message.actionData = notificationData->url;
+	message.actionType = URL;
 	fetchingModule->display->displayMessage(&message);
 	moduleDestroyBasicMessage(&message);
 }
