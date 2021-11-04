@@ -19,9 +19,11 @@ bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, 
 	return success;
 }
 
-void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg) {
-	message->title = textEditingFunction(fetchingModule->notificationTitle, textEditingFunctionArg);
-	message->body = textEditingFunction(fetchingModule->notificationBody, textEditingFunctionArg);
+void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg, ModuleFillBasicMessageOptArgs* optArgs) {
+	message->title = textEditingFunction(optArgs != NULL && optArgs->title != NULL ?
+			optArgs->title : fetchingModule->notificationTitle, textEditingFunctionArg);
+	message->body = textEditingFunction(optArgs != NULL && optArgs->body != NULL ?
+			optArgs->body : fetchingModule->notificationBody, textEditingFunctionArg);
 	message->iconPath = fetchingModule->iconPath;
 }
 
