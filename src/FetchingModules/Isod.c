@@ -4,7 +4,7 @@
 #include "../StringOperations.h"
 #include "../Stash.h"
 #include "../Network.h"
-#include "Extras/FetchingModuleUtilities.h"
+#include "Utilities/FetchingModuleUtilities.h"
 #include "Isod.h"
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))

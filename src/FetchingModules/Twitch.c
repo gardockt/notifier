@@ -5,7 +5,7 @@
 #include "../Stash.h"
 #include "../Network.h"
 #include "../Globals.h"
-#include "Extras/FetchingModuleUtilities.h"
+#include "Utilities/FetchingModuleUtilities.h"
 #include "Twitch.h"
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))

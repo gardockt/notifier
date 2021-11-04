@@ -5,7 +5,7 @@
 #include "../Stash.h"
 #include "../Network.h"
 #include "../Globals.h"
-#include "Extras/FetchingModuleUtilities.h"
+#include "Utilities/FetchingModuleUtilities.h"
 #include "Rss.h"
 
 #define RSS_FORMATTED_DATE_TEMPLATE "YYYY-MM-DD HH:MM:SS"

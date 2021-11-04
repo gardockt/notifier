@@ -3,7 +3,7 @@
 #include "../Structures/Map.h"
 #include "../StringOperations.h"
 #include "../Network.h"
-#include "Extras/FetchingModuleUtilities.h"
+#include "Utilities/FetchingModuleUtilities.h"
 #include "Github.h"
 
 #define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
