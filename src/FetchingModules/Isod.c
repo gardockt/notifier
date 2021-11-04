@@ -53,7 +53,8 @@ bool isodParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 }
 
 bool isodEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	if(!isodParseConfig(fetchingModule, configToParse)) {
+	if(!fetchingModuleInit(fetchingModule, configToParse, FM_DEFAULTS) ||
+	   !isodParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}
 
@@ -77,7 +78,7 @@ char* isodReplaceVariables(char* text, void* notificationDataPtr) {
 
 void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationData* notificationData) {
 	Message message = {0};
-	moduleFillBasicMessage(fetchingModule, &message, isodReplaceVariables, notificationData, NONE, NULL);
+	moduleFillBasicMessage(fetchingModule, &message, isodReplaceVariables, notificationData, NULL);
 	fetchingModule->display->displayMessage(&message);
 	moduleDestroyBasicMessage(&message);
 }

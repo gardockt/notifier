@@ -9,13 +9,18 @@
 #include "../../Structures/SortedMap.h"
 #include "../FetchingModule.h"
 
+typedef struct {
+	char* title;
+	char* body;
+} ModuleFillBasicMessageOptArgs;
+
 bool moduleLoadIntFromConfigWithErrorMessage(FetchingModule* fetchingModule, SortedMap* config, char* key, int* output);
 bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, SortedMap* config, char* key, char** output);
 
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, SortedMap* config);
 void moduleFreeBasicSettings(FetchingModule* fetchingModule);
 
-void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg, NotificationActionType defaultActionType, char* defaultNotificationData);
+void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg, ModuleFillBasicMessageOptArgs* optArgs);
 void moduleDestroyBasicMessage(Message* message);
 
 void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...);

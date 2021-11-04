@@ -152,7 +152,8 @@ bool rssParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
 }
 
 bool rssEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	if(!rssParseConfig(fetchingModule, configToParse)) {
+	if(!fetchingModuleInit(fetchingModule, configToParse, FM_DEFAULTS) ||
+	   !rssParseConfig(fetchingModule, configToParse)) {
 		return false;
 	}
 
@@ -176,7 +177,9 @@ char* rssReplaceVariables(char* text, void* notificationDataPtr) {
 
 void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData* notificationData) {
 	Message message = {0};
-	moduleFillBasicMessage(fetchingModule, &message, rssReplaceVariables, notificationData, URL, notificationData->url);
+	moduleFillBasicMessage(fetchingModule, &message, rssReplaceVariables, notificationData, NULL);
+	message.actionData = notificationData->url;
+	message.actionType = URL;
 	fetchingModule->display->displayMessage(&message);
 	moduleDestroyBasicMessage(&message);
 }

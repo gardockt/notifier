@@ -78,9 +78,7 @@ void destroyModuleManager(ModuleManager* moduleManager) {
 
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, SortedMap* config) {
 	if(!configLoadString(config, "_name", &fetchingModule->name) ||
-	   !moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "title", &fetchingModule->notificationTitle) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, config, "body", &fetchingModule->notificationBody)) {
+	   !moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs)) {
 		return false;
 	}
 
