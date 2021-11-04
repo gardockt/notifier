@@ -16,7 +16,7 @@
 #define IS_VALID_URL_CHARACTER(c) ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')
 #define IS_VALID_STREAMS_CHARACTER(c) (IS_VALID_URL_CHARACTER(c) || strchr(LIST_ENTRY_SEPARATORS, c) != NULL)
 
-static BinaryTree* twitchOAuthKeys;
+static BinaryTree* twitchOAuthStorage = NULL;
 static pthread_mutex_t twitchOAuthGlobalMutex;
 
 int twitchOAuthCompare(const void* a, const void* b) {
@@ -24,14 +24,12 @@ int twitchOAuthCompare(const void* a, const void* b) {
 }
 
 void twitchOAuthInit() {
-	twitchOAuthKeys = malloc(sizeof *twitchOAuthKeys);
-	binaryTreeInit(twitchOAuthKeys, twitchOAuthCompare);
+	binaryTreeInit(twitchOAuthStorage, twitchOAuthCompare);
 	pthread_mutex_init(&twitchOAuthGlobalMutex, NULL);
 }
 
 void twitchOAuthDestroy() {
-	binaryTreeDestroy(twitchOAuthKeys);
-	free(twitchOAuthKeys);
+	binaryTreeDestroy(twitchOAuthStorage);
 	pthread_mutex_destroy(&twitchOAuthGlobalMutex);
 }
 
@@ -97,7 +95,13 @@ oauthRefreshTokenUnlockMutex:
 
 TwitchOAuth* twitchOAuthAdd(TwitchOAuth* oauth) {
 	pthread_mutex_lock(&twitchOAuthGlobalMutex);
-	TwitchOAuth* oauthFromMap = binaryTreeGet(twitchOAuthKeys, oauth);
+
+	if(twitchOAuthStorage == NULL) {
+		twitchOAuthStorage = malloc(sizeof *twitchOAuthStorage);
+		twitchOAuthInit();
+	}
+
+	TwitchOAuth* oauthFromMap = binaryTreeGet(twitchOAuthStorage, oauth);
 	if(oauthFromMap != NULL) {
 		oauthFromMap->useCount++;
 		goto oauthAddUnlockMutex;
@@ -112,7 +116,7 @@ TwitchOAuth* twitchOAuthAdd(TwitchOAuth* oauth) {
 	oauthFromMap->refreshCounter  = 0;
 	pthread_mutex_init(&oauthFromMap->mutex, NULL);
 
-	binaryTreePut(twitchOAuthKeys, oauthFromMap);
+	binaryTreePut(twitchOAuthStorage, oauthFromMap);
 
 oauthAddUnlockMutex:
 	pthread_mutex_unlock(&twitchOAuthGlobalMutex);
@@ -120,7 +124,7 @@ oauthAddUnlockMutex:
 }
 
 void twitchOAuthRemove(TwitchOAuth* oauth) {
-	TwitchOAuth* oauthFromMap = binaryTreeGet(twitchOAuthKeys, oauth);
+	TwitchOAuth* oauthFromMap = binaryTreeGet(twitchOAuthStorage, oauth);
 
 	// this should never happen
 	if(oauthFromMap == NULL) {
@@ -129,13 +133,19 @@ void twitchOAuthRemove(TwitchOAuth* oauth) {
 
 	oauthFromMap->useCount--;
 	if(oauthFromMap->useCount == 0) {
-		binaryTreePop(twitchOAuthKeys, oauthFromMap);
+		binaryTreeRemove(twitchOAuthStorage, oauthFromMap);
 		pthread_mutex_destroy(&oauthFromMap->mutex);
 		free(oauthFromMap->id);
 		free(oauthFromMap->secret);
 		free(oauthFromMap->token);
 		free(oauthFromMap->refreshUrl);
 		free(oauthFromMap);
+	}
+
+	if(twitchOAuthStorage->root == NULL) {
+		twitchOAuthDestroy();
+		free(twitchOAuthStorage);
+		twitchOAuthStorage = NULL;
 	}
 }
 
@@ -268,9 +278,6 @@ bool twitchParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse)
 	}
 	curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
 
-	if(twitchOAuthKeys == NULL) {
-		twitchOAuthInit();
-	}
 	config->oauth = twitchOAuthAdd(&oauth);
 	free(oauth.id);
 	free(oauth.secret);
@@ -421,8 +428,6 @@ twitchFetchFreeResponse:
 
 void twitchDisable(FetchingModule* fetchingModule) {
 	TwitchConfig* config = fetchingModule->config;
-
-	// TODO: destroy oauth tree if no tokens are present
 
 	curl_slist_free_all(config->list);
 	curl_easy_cleanup(config->curl);

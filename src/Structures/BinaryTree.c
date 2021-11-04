@@ -71,7 +71,7 @@ void* binaryTreeGet(BinaryTree* tree, void* value) {
 	return NULL;
 }
 
-void* binaryTreePop(BinaryTree* tree, void* value) {
+void* binaryTreeRemove(BinaryTree* tree, void* value) {
 	if(tree->root == NULL) {
 		return NULL;
 	}
@@ -109,7 +109,10 @@ void* binaryTreePop(BinaryTree* tree, void* value) {
 	} else {
 		tree->root = NULL;
 	}
-	return node->value;
+
+	void* nodeValue = node->value;
+	free(node);
+	return nodeValue;
 }
 
 void* binaryTreePopLowest(BinaryTree* tree) {
