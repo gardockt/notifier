@@ -3,7 +3,8 @@
 #include "../Structures/SortedMap.h"
 #include "../StringOperations.h"
 #include "../Network.h"
-#include "Extras/FetchingModuleUtilities.h"
+#include "Utilities/FetchingModuleUtilities.h"
+#include "Utilities/Json.h"
 #include "Github.h"
 
 #define GITHUB_API_URL "https://api.github.com/notifications"
@@ -25,13 +26,15 @@ char* githubGenerateNotificationUrl(FetchingModule* fetchingModule, json_object*
 	NetworkResponse response = {NULL, 0};
 	char* ret = NULL;
 
-	json_object* subject = json_object_object_get(notification, "subject"); // type checking is done in ParseResponse
-	json_object* commentApiUrlObject = json_object_object_get(subject, "latest_comment_url"); // can be null on PR commits
-	if(json_object_get_type(commentApiUrlObject) != json_type_string) {
+	json_object* subject;
+	const char* commentApiUrl;
+	const char* commentUrl;
+
+	if(!jsonReadObject(notification, "subject", &subject) ||
+	   !jsonReadString(subject, "latest_comment_url", &commentApiUrl)) {
 		return NULL;
 	}
 
-	const char* commentApiUrl = json_object_get_string(commentApiUrlObject);
 	curl_easy_setopt(config->curl, CURLOPT_URL, commentApiUrl);
 	curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
 	CURLcode code = curl_easy_perform(config->curl);
@@ -43,12 +46,12 @@ char* githubGenerateNotificationUrl(FetchingModule* fetchingModule, json_object*
 	if(json_object_get_type(commentRoot) != json_type_object) {
 		goto githubGenerateNotificationUrlFreeAndReturn;
 	}
-	json_object* commentUrl = json_object_object_get(commentRoot, "html_url");
-	if(json_object_get_type(commentUrl) != json_type_string) {
+
+	if(!jsonReadString(commentRoot, "html_url", &commentUrl)) {
 		goto githubGenerateNotificationUrlFreeAndReturn;
 	}
 
-	ret = strdup(json_object_get_string(commentUrl));
+	ret = strdup(commentUrl);
 githubGenerateNotificationUrlFreeAndReturn:
 	json_object_put(commentRoot);
 	free(response.data);
@@ -130,26 +133,21 @@ void githubParseResponse(FetchingModule* fetchingModule, char* response) {
 
 	for(int i = 0; i < unreadNotifications; i++) {
 		json_object* notification = json_object_array_get_idx(root, i);
-		json_object* lastUpdatedObject = json_object_object_get(notification, "updated_at");
-		if(json_object_get_type(lastUpdatedObject) != json_type_string) {
+		const char* lastUpdated;
+		if(!jsonReadString(notification, "updated_at", &lastUpdated) || strlen(lastUpdated) != GITHUB_LAST_UPDATED_DESIRED_LENGTH) {
 			moduleLog(fetchingModule, 0, "Invalid last update time in notification %d", i);
-			continue;
-		}
-		const char* lastUpdated = json_object_get_string(lastUpdatedObject);
-		if(strlen(lastUpdated) != GITHUB_LAST_UPDATED_DESIRED_LENGTH) {
-			moduleLog(fetchingModule, 0, "Invalid last update time's length in notification %d", i);
 			continue;
 		}
 
 		if(githubCompareDates(lastUpdated, config->lastRead) > 0) {
-			json_object* subject  = json_object_object_get(notification, "subject");
-			if(json_object_get_type(subject) != json_type_object) {
+			json_object* subject;
+			if(!jsonReadObject(notification, "subject", &subject)) {
 				moduleLog(fetchingModule, 0, "Invalid subject object in notification %d", i);
 				continue;
 			}
 
-			json_object* repository  = json_object_object_get(notification, "repository");
-			if(json_object_get_type(repository) != json_type_object) {
+			json_object* repository;
+			if(!jsonReadObject(notification, "repository", &repository)) {
 				moduleLog(fetchingModule, 0, "Invalid repository object in notification %d", i);
 				continue;
 			}
@@ -159,26 +157,26 @@ void githubParseResponse(FetchingModule* fetchingModule, char* response) {
 				newLastRead = strdup(lastUpdated);
 			}
 
-			json_object* titleObject = json_object_object_get(subject, "title");
-			json_object* repoNameObject = json_object_object_get(repository, "name");
-			json_object* repoFullNameObject = json_object_object_get(repository, "full_name");
+			const char* title;
+			const char* repoName;
+			const char* repoFullName;
 
-			if(json_object_get_type(titleObject) != json_type_string) {
+			if(!jsonReadString(subject, "title", &title)) {
 				moduleLog(fetchingModule, 0, "Invalid title in notification %d", i);
 				continue;
 			}
-			if(json_object_get_type(repoNameObject) != json_type_string) {
+			if(!jsonReadString(repository, "name", &repoName)) {
 				moduleLog(fetchingModule, 0, "Invalid repository name in notification %d", i);
 				continue;
 			}
-			if(json_object_get_type(repoFullNameObject) != json_type_string) {
+			if(!jsonReadString(repository, "full_name", &repoFullName)) {
 				moduleLog(fetchingModule, 0, "Invalid full repository name in notification %d", i);
 				continue;
 			}
 
-			notificationData.title         = json_object_get_string(titleObject);
-			notificationData.repoName      = json_object_get_string(repoNameObject);
-			notificationData.repoFullName  = json_object_get_string(repoFullNameObject);
+			notificationData.title         = title;
+			notificationData.repoName      = repoName;
+			notificationData.repoFullName  = repoFullName;
 			notificationData.url           = githubGenerateNotificationUrl(fetchingModule, notification);
 			githubDisplayNotification(fetchingModule, &notificationData);
 			free(notificationData.url);

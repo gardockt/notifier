@@ -3,7 +3,7 @@
 #include "Log.h"
 #include "Structures/SortedMap.h"
 #include "FetchingModules/FetchingModule.h"
-#include "FetchingModules/Extras/FetchingModuleUtilities.h"
+#include "FetchingModules/Utilities/FetchingModuleUtilities.h"
 #include "Displays/Display.h"
 #include "ModuleManager.h"
 

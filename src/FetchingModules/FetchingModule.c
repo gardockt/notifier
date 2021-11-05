@@ -1,5 +1,5 @@
 #include "FetchingModule.h"
-#include "Extras/FetchingModuleUtilities.h"
+#include "Utilities/FetchingModuleUtilities.h"
 
 void* fetchingModuleFetchingThread(void* args) {
 	FetchingModule* fetchingModule = args;
