@@ -5,9 +5,9 @@
 #include "../Stash.h"
 #include "../Network.h"
 #include "Utilities/FetchingModuleUtilities.h"
+#include "Utilities/Json.h"
 #include "Isod.h"
 
-#define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
 #define SORTDATE(date) {date[6], date[7], date[8], date[9], date[3], date[4], date[0], date[1], date[11], date[12], date[14], date[15], '\0'}
 
 typedef struct {
@@ -85,9 +85,9 @@ void isodDisplayNotification(FetchingModule* fetchingModule, IsodNotificationDat
 void isodParseResponse(FetchingModule* fetchingModule, char* response) {
 	IsodConfig* config = fetchingModule->config;
 	json_object* root = json_tokener_parse(response);
-	json_object* items = json_object_object_get(root, "items");
+	json_object* items;
 
-	if(json_object_get_type(items) != json_type_array) {
+	if(!jsonReadArray(root, "items", &items)) {
 		moduleLog(fetchingModule, 0, "Invalid response");
 		return; // TODO: memory leak?
 	}
@@ -102,10 +102,10 @@ void isodParseResponse(FetchingModule* fetchingModule, char* response) {
 			continue;
 		}
 
-		const char* modifiedDate = JSON_STRING(notification, "modifiedDate");
+		const char* modifiedDate;
 		char* modifiedDateWithFixedFormat;
 
-		if(modifiedDate == NULL) {
+		if(!jsonReadString(notification, "modifiedDate", &modifiedDate)) {
 			moduleLog(fetchingModule, 0, "Invalid modification date in notification %d", i);
 			continue;
 		}
@@ -124,8 +124,11 @@ void isodParseResponse(FetchingModule* fetchingModule, char* response) {
 			}
 
 			IsodNotificationData notificationData = {0};
-			notificationData.title = JSON_STRING(notification, "subject");
-			isodDisplayNotification(fetchingModule, &notificationData);
+			if(jsonReadString(notification, "subject", &notificationData.title)) {
+				isodDisplayNotification(fetchingModule, &notificationData);
+			} else {
+				moduleLog(fetchingModule, 0, "Invalid title in notification %d", i);
+			}
 		}
 
 		free(modifiedDateWithFixedFormat);

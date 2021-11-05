@@ -6,10 +6,9 @@
 #include "../Network.h"
 #include "../Globals.h"
 #include "Utilities/FetchingModuleUtilities.h"
+#include "Utilities/Json.h"
 #include "Twitch.h"
 
-#define JSON_STRING(obj, str) json_object_get_string(json_object_object_get((obj),(str)))
-#define JSON_INT(obj, str) json_object_get_int(json_object_object_get((obj),(str)))
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #define IS_VALID_URL_CHARACTER(c) ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')
 #define IS_VALID_STREAMS_CHARACTER(c) (IS_VALID_URL_CHARACTER(c) || strchr(LIST_ENTRY_SEPARATORS, c) != NULL)
@@ -89,13 +88,12 @@ bool twitchRefreshToken(FetchingModule* fetchingModule) {
 
 	moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
 	json_object* root = json_tokener_parse(response.data);
-	json_object* newTokenObject = json_object_object_get(root, "access_token");
-	if(json_object_get_type(newTokenObject) != json_type_string) {
+	const char* newToken;
+	if(!jsonReadString(root, "access_token", &newToken)) {
 		moduleLog(fetchingModule, 0, "Token refreshing failed - invalid response");
 		goto twitchRefreshTokenPutRoot;
 	}
 
-	const char* newToken = json_object_get_string(newTokenObject);
 	moduleLog(fetchingModule, 2, "New token: %s", newToken);
 
 	if(config->token == NULL) {
@@ -214,14 +212,19 @@ void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificatio
 int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** checkedStreamNames, TwitchNotificationData* newData) {
 	TwitchConfig* config = fetchingModule->config;
 	json_object* root = json_tokener_parse(response);
-	json_object* data = json_object_object_get(root, "data");
+	json_object* data;
 
 	// TODO: memory leak?
-	if(json_object_get_type(data) != json_type_array) {
-		if(json_object_get_type(root) == json_type_object) {
-			int errorCode = JSON_INT(root, "status");
-			moduleLog(fetchingModule, 0, "Error %d - %s (%s)", errorCode, JSON_STRING(root, "error"), JSON_STRING(root, "message"));
-			return errorCode;
+	if(!jsonReadArray(root, "data", &data)) {
+		int errorStatus;
+		const char* errorCode;
+		const char* errorMessage;
+		if(json_object_get_type(root) == json_type_object &&
+		   jsonReadInt(root, "status", &errorStatus) &&
+		   jsonReadString(root, "error", &errorCode) &&
+		   jsonReadString(root, "message", &errorMessage)) {
+			moduleLog(fetchingModule, 0, "Error %d - %s (%s)", errorStatus, errorCode, errorMessage);
+			return errorStatus;
 		} else {
 			moduleLog(fetchingModule, 0, "Invalid response");
 			return -1;
@@ -232,11 +235,13 @@ int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** c
 
 	for(int i = 0; i < activeStreamersCount; i++) {
 		json_object* stream = json_object_array_get_idx(data, i);
-		const char* activeStreamerName  = JSON_STRING(stream, "user_name");
-		const char* newTitle            = JSON_STRING(stream, "title");
-		const char* newCategory         = JSON_STRING(stream, "game_name");
+		const char* activeStreamerName;
+		const char* newTitle;
+		const char* newCategory;
 
-		if(activeStreamerName == NULL || newTitle == NULL || newCategory == NULL) {
+		if(!jsonReadString(stream, "user_name", &activeStreamerName) ||
+		   !jsonReadString(stream, "title", &newTitle) ||
+		   !jsonReadString(stream, "game_name", &newCategory)) {
 			moduleLog(fetchingModule, 0, "Invalid data for stream %d", i);
 			continue;
 		}
