@@ -4,6 +4,7 @@
 #include "Stash.h"
 #include "Config.h"
 #include "Log.h"
+#include "Paths.h"
 #include "Main.h"
 
 ModuleManager moduleManager;
@@ -16,10 +17,10 @@ int silentErrorCallback(const char* format, ...) {
 bool initFunctionality() {
 	configLoadCore();
 
-	// silence iniparser errors on core verbosity <= 0
+	/* silence iniparser errors on core verbosity <= 0 */
 	iniparser_set_error_callback(coreVerbosity <= 0 ? silentErrorCallback : NULL);
 
-	if(!initModuleManager(&moduleManager)) {
+	if(!fm_manager_init(&moduleManager)) {
 		logWrite("core", coreVerbosity, 0, "Error initializing module manager");
 		return false;
 	}
@@ -54,7 +55,7 @@ bool initFunctionality() {
 }
 
 void destroyFunctionality(int signal) {
-	destroyModuleManager(&moduleManager);
+	fm_manager_destroy(&moduleManager);
 	destroyDisplayManager(&displayManager);
 	stashDestroy();
 

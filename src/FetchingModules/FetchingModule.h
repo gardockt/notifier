@@ -1,40 +1,44 @@
-#ifndef FETCHINGMODULE_H
-#define FETCHINGMODULE_H
+#ifndef FETCHING_MODULE_H
+#define FETCHING_MODULE_H
 
 #include <stdbool.h>
 #include <pthread.h>
-#include <unistd.h> // sleep
+#include <unistd.h> /* sleep */
+#include <string.h> /* strdup */
 
-#include "../Structures/SortedMap.h"
-#include "../Displays/Display.h"
+/* TODO: avoid having to call functions directly from struct */
 
 typedef struct FetMod {
 	char* name;
-	int intervalSecs;
+	int interval_secs;
 	void* config;
 	pthread_t thread;
-	pthread_t fetchingThread;
+	pthread_t fetching_thread;
 	bool busy;
-	Display* display;
-	char* notificationTitle;
-	char* notificationBody;
-	char* iconPath;
+	void* display;
+	char* notification_title;
+	char* notification_body;
+	char* icon_path;
 	int verbosity;
+	void* library;
 
-	bool (*enable)(struct FetMod*, SortedMap*);
-	void (*fetch)(struct FetMod*);
-	void (*disable)(struct FetMod*);
+	bool (*enable)(struct FetMod* module);
+	void (*fetch)(struct FetMod* module);
+	void (*disable)(struct FetMod* module);
+
+	const char* (*get_config_var)(struct FetMod* module, const char* var_name);
 } FetchingModule;
+
+typedef struct {
+	char* name;
+} FMConfig;
 
 typedef enum {
 	FM_DEFAULTS            = 0,
 	FM_DISABLE_CHECK_TITLE = 1 << 0,
 	FM_DISABLE_CHECK_BODY  = 1 << 1
-} FetchingModuleInitFlags;
+} FMInitFlags;
 
-bool fetchingModuleCreateThread(FetchingModule* fetchingModule);
-bool fetchingModuleDestroyThread(FetchingModule* fetchingModule);
+#define fm_config_set_name(config, fm_name) ((config)->name = strdup(fm_name))
 
-bool fetchingModuleInit(FetchingModule* fetchingModule, SortedMap* config, FetchingModuleInitFlags initFlags);
-
-#endif // ifndef FETCHINGMODULE_H
+#endif /* ifndef FETCHING_MODULE_H */

@@ -1,162 +1,250 @@
 #include "Globals.h"
 #include "Config.h"
 #include "Log.h"
+#include "Paths.h"
 #include "Structures/SortedMap.h"
 #include "FetchingModules/FetchingModule.h"
 #include "FetchingModules/Utilities/FetchingModuleUtilities.h"
 #include "Displays/Display.h"
 #include "ModuleManager.h"
 
-// fetching modules
-#include "FetchingModules/Github.h"
-#include "FetchingModules/Isod.h"
-#include "FetchingModules/Rss.h"
-#include "FetchingModules/Twitch.h"
+/* TODO: rename to FMManager */
 
-bool addModule(ModuleManager* moduleManager, void (*templateFunc)(FetchingModule*), char* name) {
-	FetchingModule* template = malloc(sizeof *template);
-	if(template == NULL) {
-		return false;
-	}
-	memset(template, 0, sizeof *template);
-	templateFunc(template);
-	return sortedMapPut(&moduleManager->availableModules, name, template);
+static void* fm_fetching_thread(void* args) {
+	FetchingModule* module = args;
+	void (*fetch)(FetchingModule*) = (void (*)(FetchingModule*)) dlsym(module->library, "fetch");
+
+	moduleLog(module, 2, "Fetch started");
+	module->busy = true;
+	fetch(module);
+	module->busy = false;
+	moduleLog(module, 2, "Fetch finished");
+
+	pthread_exit(NULL);
 }
 
-bool initModuleManager(ModuleManager* moduleManager) {
-	if(!(sortedMapInit(&moduleManager->availableModules, sortedMapCompareFunctionStrcasecmp) &&
-	     sortedMapInit(&moduleManager->activeModules, sortedMapCompareFunctionStrcmp))) {
-		return false;
-	}
+static void* fm_thread(void* args) {
+	FetchingModule* module = args;
 
-	if(
-#ifdef ENABLE_MODULE_GITHUB
-	   !addModule(moduleManager, githubTemplate,    "github") ||
-#endif
-#ifdef ENABLE_MODULE_ISOD
-	   !addModule(moduleManager, isodTemplate,      "isod") ||
-#endif
-#ifdef ENABLE_MODULE_RSS
-	   !addModule(moduleManager, rssTemplate,       "rss") ||
-#endif
-#ifdef ENABLE_MODULE_TWITCH
-	   !addModule(moduleManager, twitchTemplate,    "twitch") ||
-#endif
-	   false) {
-		return false;
+	while(1) {
+		if(!module->busy) {
+			pthread_create(&module->fetching_thread, NULL, fm_fetching_thread, module);
+		}
+		sleep(module->interval_secs);
+	}
+}
+
+static bool fm_create_thread(FetchingModule* module) {
+	return pthread_create(&module->thread, NULL, fm_thread, module) == 0;
+}
+
+static bool fm_destroy_thread(FetchingModule* module) {
+	/* fetching thread quits by itself */
+	pthread_join(module->fetching_thread, NULL);
+
+	return pthread_cancel(module->thread) == 0 &&
+	       pthread_join(module->thread, NULL) == 0;
+}
+
+static bool fm_init(FetchingModule* module, SortedMap* config, FMInitFlags init_flags) {
+	if(!(init_flags & FM_DISABLE_CHECK_TITLE)) {
+		if(!moduleLoadStringFromConfigWithErrorMessage(module, config, "title", &module->notification_title)) {
+			return false;
+		}
+	}
+	if(!(init_flags & FM_DISABLE_CHECK_BODY)) {
+		if(!moduleLoadStringFromConfigWithErrorMessage(module, config, "body", &module->notification_body)) {
+			return false;
+		}
 	}
 
 	return true;
 }
 
-void destroyModuleManager(ModuleManager* moduleManager) {
-	SortedMap mapToFree;
-	int mapToFreeSize;
-	char** keysToFree;
-
-	mapToFree = moduleManager->availableModules;
-	mapToFreeSize = sortedMapSize(&mapToFree);
-	keysToFree = malloc(mapToFreeSize * sizeof *keysToFree);
-	sortedMapKeys(&mapToFree, (void**)keysToFree);
-	for(int i = 0; i < mapToFreeSize; i++) {
-		free(sortedMapGet(&mapToFree, keysToFree[i]));
+static bool fm_manager_add_library(ModuleManager* manager, const char* directory_path, const char* lib_file_name) {
+	bool success = false;
+	char* full_path = malloc(strlen(directory_path) + 1 + strlen(lib_file_name) + 1);
+	if(full_path == NULL) {
+		goto fm_manager_add_library_finish;
 	}
-	free(keysToFree);
 
-	mapToFree = moduleManager->activeModules;
-	mapToFreeSize = sortedMapSize(&mapToFree);
-	keysToFree = malloc(mapToFreeSize * sizeof *keysToFree);
-	sortedMapKeys(&mapToFree, (void**)keysToFree);
-	for(int i = 0; i < mapToFreeSize; i++) {
-		disableModule(moduleManager, keysToFree[i]);
+	sprintf(full_path, "%s/%s", directory_path, lib_file_name);
+
+	void* handle = dlopen(full_path, RTLD_LAZY);
+	if(handle == NULL) {
+		goto fm_manager_add_library_finish;
 	}
-	free(keysToFree);
 
-	sortedMapDestroy(&moduleManager->availableModules);
-	sortedMapDestroy(&moduleManager->activeModules);
+	void (*configure)(FMConfig*) = (void (*)(FMConfig*)) dlsym(handle, "configure");
+	if(configure == NULL) {
+		goto fm_manager_add_library_finish;
+	}
+
+	FMConfig config = {0};
+	configure(&config);
+
+	success = sortedMapPut(&manager->available_modules, config.name, handle);
+
+fm_manager_add_library_finish:
+	free(full_path);
+	return success;
 }
 
-bool moduleLoadBasicSettings(FetchingModule* fetchingModule, SortedMap* config) {
-	if(!configLoadString(config, "_name", &fetchingModule->name) ||
-	   !moduleLoadIntFromConfigWithErrorMessage(fetchingModule, config, "interval", &fetchingModule->intervalSecs)) {
+bool fm_manager_init(ModuleManager* manager) {
+	bool success = false;
+
+	if(!(sortedMapInit(&manager->available_modules, sortedMapCompareFunctionStrcasecmp) &&
+	     sortedMapInit(&manager->active_modules, sortedMapCompareFunctionStrcmp))) {
 		return false;
 	}
 
-	configLoadString(config, "icon", &fetchingModule->iconPath);
-	configLoadInt(config, "verbosity", &fetchingModule->verbosity);
+	/* add modules from directory */
+	char* fm_path = get_fm_path();
+	struct dirent* de;
+	DIR* d = opendir(fm_path);
 
-	char* displayName = sortedMapGet(config, "display");
-	if(displayName == NULL) {
-		moduleLog(fetchingModule, 0, "Invalid display");
+	if(d == NULL)
+		goto fm_manager_init_finish;
+
+	while((de = readdir(d)) != NULL) {
+		/* TODO: find a better way of determining whether a file can be read? */
+		/* TODO: also check whether file is executable */
+		if(de->d_type == DT_REG || de->d_type == DT_LNK) {
+			logWrite("core", 2, coreVerbosity, "Loading module %s", de->d_name);
+			if(!fm_manager_add_library(manager, fm_path, de->d_name)) {
+				logWrite("core", 0, coreVerbosity, "Could not load module %s", de->d_name);
+			}
+		}
+	}
+
+	success = true;
+
+fm_manager_init_finish:
+	closedir(d);
+	free(fm_path);
+	return success;
+}
+
+void fm_manager_destroy(ModuleManager* manager) {
+	SortedMap map_to_free;
+	int map_to_free_size;
+	char** keys_to_free;
+
+	map_to_free = manager->active_modules;
+	map_to_free_size = sortedMapSize(&map_to_free);
+	keys_to_free = malloc(map_to_free_size * sizeof *keys_to_free);
+	sortedMapKeys(&map_to_free, (void**)keys_to_free);
+	for(int i = 0; i < map_to_free_size; i++) {
+		fm_disable(manager, keys_to_free[i]);
+	}
+	free(keys_to_free);
+
+	map_to_free = manager->available_modules;
+	map_to_free_size = sortedMapSize(&map_to_free);
+	keys_to_free = malloc(map_to_free_size * sizeof *keys_to_free);
+	sortedMapKeys(&map_to_free, (void**)keys_to_free);
+	for(int i = 0; i < map_to_free_size; i++) {
+		dlclose(sortedMapGet(&map_to_free, keys_to_free[i]));
+		free(keys_to_free[i]);
+	}
+	free(keys_to_free);
+
+	sortedMapDestroy(&manager->available_modules);
+	sortedMapDestroy(&manager->active_modules);
+}
+
+static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, void* library) {
+	if(!configLoadString(config, "_name", &module->name) ||
+	   !moduleLoadIntFromConfigWithErrorMessage(module, config, "interval", &module->interval_secs)) {
 		return false;
 	}
-	fetchingModule->display = getDisplay(&displayManager, displayName);
-	if(fetchingModule->display == NULL) {
-		moduleLog(fetchingModule, 0, "Display does not exist");
+
+	configLoadString(config, "icon", &module->icon_path);
+	configLoadInt(config, "verbosity", &module->verbosity);
+
+	/* TODO: restore
+	char* display_name = sortedMapGet(config, "display");
+	if(display_name == NULL) {
+		moduleLog(module, 0, "Invalid display");
 		return false;
 	}
-	if(!fetchingModule->display->init()) {
-		moduleLog(fetchingModule, 0, "Failed to init display");
+	module->display = getDisplay(&displayManager, display_name);
+	if(module->display == NULL) {
+		moduleLog(module, 0, "Display does not exist");
 		return false;
 	}
+	if(!module->display->init()) {
+		moduleLog(module, 0, "Failed to init display");
+		return false;
+	}
+	*/
+
+	module->library = library;
 
 	return true;
 }
 
-void moduleFreeBasicSettings(FetchingModule* fetchingModule) {
-	fetchingModule->display->uninit();
-	free(fetchingModule->name);
-	free(fetchingModule->notificationTitle);
-	free(fetchingModule->notificationBody);
-	free(fetchingModule->iconPath);
+static void fm_free_basic_settings(FetchingModule* module) {
+	/* TODO: restore */
+	/* module->display->uninit(); */
+	free(module->name);
+	/*
+	free(module->notification_title);
+	free(module->notification_body);
+	free(module->icon_path);
+	*/
 }
 
-bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, SortedMap* config) {
-	if(moduleManager == NULL || moduleType == NULL || moduleCustomName == NULL || config == NULL) {
+bool fm_enable(ModuleManager* manager, char* type, char* custom_name, SortedMap* config) {
+	if(manager == NULL || type == NULL || custom_name == NULL || config == NULL)
 		return false;
-	}
 
-	FetchingModule* moduleTemplate = sortedMapGet(&moduleManager->availableModules, moduleType);
+	void* library = sortedMapGet(&manager->available_modules, type);
+	bool (*enable)(FetchingModule*);
 	FetchingModule* module;
 
-	if(moduleTemplate == NULL) {
+	if(library == NULL)
 		return false;
-	}
+
+	enable = (bool (*)(FetchingModule*)) dlsym(library, "enable");
+	if(dlerror() != NULL)
+		return false;
 
 	module = malloc(sizeof *module);
-	if(module == NULL) {
+	if(module == NULL)
 		return false;
-	}
 
-	memcpy(module, moduleTemplate, sizeof *module);
-	bool enableModuleSuccess = moduleLoadBasicSettings(module, config) && module->enable(module, config) && fetchingModuleCreateThread(module);
+	bool success = fm_load_basic_settings(module, config, library) &&
+		           enable(module) &&
+				   fm_create_thread(module);
 
-	if(enableModuleSuccess) {
+	if(success) {
 		moduleLog(module, 1, "Module enabled");
-		sortedMapPut(&moduleManager->activeModules, moduleCustomName, module);
+		sortedMapPut(&manager->active_modules, custom_name, module);
 	}
-	return enableModuleSuccess;
+	return success;
 }
 
-bool disableModule(ModuleManager* moduleManager, char* moduleCustomName) {
-	FetchingModule* module = sortedMapGet(&moduleManager->activeModules, moduleCustomName);
-	char* moduleCustomNameCopy = strdup(moduleCustomName);
-	int moduleVerbosity = module->verbosity;
+bool fm_disable(ModuleManager* manager, char* custom_name) {
+	FetchingModule* module = sortedMapGet(&manager->active_modules, custom_name);
+	void (*disable)(FetchingModule*) = (void (*)(FetchingModule*)) dlsym(module->library, "disable");
+	char* custom_name_copy = strdup(custom_name);
+	int verbosity = module->verbosity;
 
 	if(module == NULL) {
 		return false;
 	}
 
-	char* keyToFree;
+	char* key_to_free;
 
-	fetchingModuleDestroyThread(module);
-	module->disable(module);
-	moduleFreeBasicSettings(module);
-	sortedMapRemove(&moduleManager->activeModules, moduleCustomName, (void**)&keyToFree, NULL); // value is already stored in "module"
-	free(keyToFree);
+	fm_destroy_thread(module);
+	disable(module);
+	fm_free_basic_settings(module);
+	sortedMapRemove(&manager->active_modules, custom_name, (void**)&key_to_free, NULL); /* value is already stored in "module" */
+	free(key_to_free);
 	free(module);
 
-	logWrite(moduleCustomNameCopy, moduleVerbosity, 1, "Module disabled");
-	free(moduleCustomNameCopy);
+	logWrite(custom_name_copy, verbosity, 1, "Module disabled");
+	free(custom_name_copy);
 	return true;
 }

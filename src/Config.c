@@ -1,5 +1,5 @@
 #include "Structures/SortedMap.h"
-#include "Dirs.h"
+#include "Paths.h"
 #include "Globals.h"
 #include "StringOperations.h"
 #include "Log.h"
@@ -40,7 +40,7 @@ bool configLoadString(SortedMap* config, char* key, char** output) {
 }
 
 bool configOpen() {
-	char* configDirectory = getConfigDirectory();
+	char* configDirectory = get_config_file_path();
 	config = iniparser_load(configDirectory);
 	free(configDirectory);
 	return config != NULL;
@@ -231,7 +231,7 @@ loadConfigGlobalSection:
 			char* enabled = sortedMapGet(configMap, "enabled");
 			if(enabled != NULL && !strcmp(enabled, "false")) {
 				free(sectionName);
-			} else if(!enableModule(&moduleManager, moduleType, sectionName, configMap)) {
+			} else if(!fm_enable(&moduleManager, moduleType, sectionName, configMap)) {
 				logWrite("core", coreVerbosity, 0, "Error while enabling module %s", sectionName);
 				free(sectionName);
 			}

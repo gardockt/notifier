@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(notifier VERSION 0.1 LANGUAGES C)
+project(notifier LANGUAGES C)
 
 option(ENABLE_DISPLAY_LIBNOTIFY "Compile libnotify display" ON)
 
@@ -9,8 +9,24 @@ option(ENABLE_MODULE_ISOD "Compile ISOD module" ON)
 option(ENABLE_MODULE_RSS "Compile RSS module" ON)
 option(ENABLE_MODULE_TWITCH "Compile Twitch module" ON)
 
-file(GLOB_RECURSE source_files "src/*.h" "src/*.c")
-add_executable(notifier ${source_files})
+set(notifier_sources
+	src/Config.c
+	src/DisplayManager.c
+	src/Log.c
+	src/Main.c
+	src/ModuleManager.c
+	src/Network.c
+	src/Paths.c
+	src/Stash.c
+	src/StringOperations.c
+	src/Displays/Display.c
+	src/Displays/Libnotify.c
+	src/FetchingModules/Utilities/FetchingModuleUtilities.c
+	src/Structures/BinaryTree.c
+	src/Structures/SortedMap.c
+)
+
+add_executable(notifier ${notifier_sources})
 
 find_package(Threads REQUIRED)
 find_package(CURL REQUIRED) # can be eventually set as optional
@@ -56,7 +72,7 @@ if(UNIX)
 endif()
 
 target_compile_options(notifier PUBLIC -ggdb)
-target_link_libraries(notifier PUBLIC -liniparser -lm ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(notifier PUBLIC -liniparser -lm -ldl ${CMAKE_THREAD_LIBS_INIT})
 
 function(compile_if_needed dependency_name)
 	string(TOUPPER ${dependency_name} dependency_name_uppercase)

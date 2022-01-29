@@ -4,18 +4,20 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <dirent.h>
+#include <dlfcn.h>
 
 #include "Structures/SortedMap.h"
 
 typedef struct {
-	SortedMap availableModules;
-	SortedMap activeModules;
+	SortedMap available_modules;
+	SortedMap active_modules;
 } ModuleManager;
 
-bool initModuleManager(ModuleManager* moduleManager);
-void destroyModuleManager(ModuleManager* moduleManager);
+bool fm_manager_init(ModuleManager* manager);
+void fm_manager_destroy(ModuleManager* manager);
 
-bool enableModule(ModuleManager* moduleManager, char* moduleType, char* moduleCustomName, SortedMap* config);
-bool disableModule(ModuleManager* moduleManager, char* moduleCustomName);
+bool fm_enable(ModuleManager* manager, char* type, char* custom_name, SortedMap* config);
+bool fm_disable(ModuleManager* manager, char* custom_name);
 
 #endif // ifndef MODULEMANAGER_H

@@ -1,4 +1,4 @@
-#include "Dirs.h"
+#include "Paths.h"
 #include "Log.h"
 #include "Globals.h"
 #include "Stash.h"
@@ -6,7 +6,7 @@
 dictionary* stash = NULL;
 
 bool stashInit() {
-	char* stashDirectory = getStashDirectory();
+	char* stashDirectory = get_stash_path();
 	stash = iniparser_load(stashDirectory);
 	if(stash == NULL) {
 		logWrite("core", coreVerbosity, 2, "Stash file was not found, creating new stash");
@@ -25,10 +25,10 @@ bool stashSave() {
 		return false;
 	}
 
-	char* stashDirectory = getStashDirectory();
+	char* stashDirectory = get_stash_path();
 	FILE* filePointer = fopen(stashDirectory, "w");
 	if(filePointer == NULL) {
-		if(createStashDirectory()) {
+		if(create_stash_dir()) {
 			filePointer = fopen(stashDirectory, "w");
 		} else {
 			free(stashDirectory);
