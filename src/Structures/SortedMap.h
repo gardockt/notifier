@@ -23,7 +23,7 @@ bool sortedMapInit(SortedMap* map, int (*compareFunction)(const void*, const voi
 void sortedMapDestroy(SortedMap* map);
 
 bool sortedMapPut(SortedMap* map, void* key, void* value);
-void* sortedMapGet(SortedMap* map, void* key);
+void* sortedMapGet(SortedMap* map, const void* key);
 bool sortedMapRemove(SortedMap* map, void* key, void** keyAddress, void** valueAddress);
 bool sortedMapExists(SortedMap* map, const void* key);
 int sortedMapSize(SortedMap* map);

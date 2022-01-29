@@ -11,6 +11,7 @@
 typedef struct FetMod {
 	char* name;
 	int interval_secs;
+	void* custom_data;
 	void* config;
 	pthread_t thread;
 	pthread_t fetching_thread;
@@ -40,5 +41,10 @@ typedef enum {
 } FMInitFlags;
 
 #define fm_config_set_name(config, fm_name) ((config)->name = strdup(fm_name))
+
+#define fm_get_config_var(module, var_name) ((module)->get_config_var(module, var_name))
+
+#define fm_set_data(module, data) ((module)->custom_data = data)
+#define fm_get_data(module)       ((module)->custom_data)
 
 #endif /* ifndef FETCHING_MODULE_H */

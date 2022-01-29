@@ -86,7 +86,7 @@ int getKeyIndex(SortedMap* map, const void* key) {
 	return -1;
 }
 
-void* sortedMapGet(SortedMap* map, void* key) {
+void* sortedMapGet(SortedMap* map, const void* key) {
 	int index = getKeyIndex(map, key);
 	return index >= 0 ? map->elements[index].value : NULL;
 }

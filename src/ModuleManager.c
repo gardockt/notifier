@@ -10,6 +10,11 @@
 
 /* TODO: rename to FMManager */
 
+static const char* fm_get_config_var_definition(FetchingModule* module, const char* var_name) {
+	SortedMap* config = module->config;
+	return sortedMapGet(config, var_name);
+}
+
 static void* fm_fetching_thread(void* args) {
 	FetchingModule* module = args;
 	void (*fetch)(FetchingModule*) = (void (*)(FetchingModule*)) dlsym(module->library, "fetch");
@@ -180,6 +185,9 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 	*/
 
 	module->library = library;
+
+	module->get_config_var = fm_get_config_var_definition;
+	module->config = config;
 
 	return true;
 }
