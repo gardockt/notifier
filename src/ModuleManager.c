@@ -4,15 +4,62 @@
 #include "Paths.h"
 #include "Structures/SortedMap.h"
 #include "FetchingModules/FetchingModule.h"
-#include "FetchingModules/Utilities/FetchingModuleUtilities.h"
 #include "Displays/Display.h"
 #include "ModuleManager.h"
 
 /* TODO: rename to FMManager */
 
-static const char* fm_get_config_var_definition(FetchingModule* module, const char* var_name) {
+static void fm_log_definition(FetchingModule* module, int message_verbosity, const char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	logWriteVararg(module->name, module->verbosity, message_verbosity, format, args);
+	va_end(args);
+}
+
+static const char* fm_get_config_readonly_var_definition(FetchingModule* module, const char* var_name) {
 	SortedMap* config = module->config;
 	return sortedMapGet(config, var_name);
+}
+
+/* TODO: implement in FM */
+static bool fm_get_config_string_definition(FetchingModule* module, const char* var_name, char** output) {
+	const char* value = fm_get_config_readonly_var_definition(module, var_name);
+	if(value != NULL) {
+		*output = strdup(value);
+	}
+	return value != NULL;
+}
+
+static bool fm_get_config_int_definition(FetchingModule* module, const char* var_name, int* output) {
+	const char* value = fm_get_config_readonly_var_definition(module, var_name);
+	if(value == NULL) {
+		return false;
+	}
+
+	for(int i = 0; value[i] != '\0'; i++) {
+		if(!(isdigit(value[i]) || (i == 0 && value[i] == '-'))) {
+			return false;
+		}
+	}
+
+	*output = atoi(value);
+	return true;
+}
+
+static bool fm_get_config_string_log_definition(FetchingModule* module, const char* var_name, char** output, int message_verbosity) {
+	bool success = fm_get_config_string_definition(module, var_name, output);
+	if(!success) {
+		fm_log_definition(module, message_verbosity, "Invalid %s", var_name);
+	}
+	return success;
+}
+
+static bool fm_get_config_int_log_definition(FetchingModule* module, const char* var_name, int* output, int message_verbosity) {
+	bool success = fm_get_config_int_definition(module, var_name, output);
+	if(!success) {
+		fm_log_definition(module, message_verbosity, "Invalid %s", var_name);
+	}
+	return success;
 }
 
 static Message* fm_new_message_definition() {
@@ -34,11 +81,11 @@ static void* fm_fetching_thread(void* args) {
 	FetchingModule* module = args;
 	void (*fetch)(FetchingModule*) = (void (*)(FetchingModule*)) dlsym(module->library, "fetch");
 
-	moduleLog(module, 2, "Fetch started");
+	module->log(module, 2, "Fetch started");
 	module->busy = true;
 	fetch(module);
 	module->busy = false;
-	moduleLog(module, 2, "Fetch finished");
+	module->log(module, 2, "Fetch finished");
 
 	pthread_exit(NULL);
 }
@@ -159,37 +206,44 @@ void fm_manager_destroy(ModuleManager* manager) {
 }
 
 static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, void* library) {
-	if(!configLoadString(config, "_name", &module->name) ||
-	   !moduleLoadIntFromConfigWithErrorMessage(module, config, "interval", &module->interval_secs)) {
+	module->config = config;
+
+	if(!fm_get_config_string_definition(module, "_name", &module->name) ||
+	   !fm_get_config_int_log_definition(module, "interval", &module->interval_secs, 0)) {
 		return false;
 	}
 
-	configLoadInt(config, "verbosity", &module->verbosity);
+	fm_get_config_int_definition(module, "verbosity", &module->verbosity);
 
 	char* display_name = sortedMapGet(config, "display");
 	if(display_name == NULL) {
-		moduleLog(module, 0, "Invalid display");
+		module->log(module, 0, "Invalid display");
 		return false;
 	}
 
 	Display* display = display_manager_get_display(&displayManager, display_name);
 	if(display == NULL) {
-		moduleLog(module, 0, "Display does not exist");
+		module->log(module, 0, "Display does not exist");
 		return false;
 	}
 	if(!display->init()) {
-		moduleLog(module, 0, "Failed to init display");
+		module->log(module, 0, "Failed to init display");
 		return false;
 	}
 
 	module->display = display;
 	module->library = library;
 
-	module->get_config_var = fm_get_config_var_definition;
+	module->get_config_readonly_var = fm_get_config_readonly_var_definition;
+	module->get_config_string = fm_get_config_string_definition;
+	module->get_config_int = fm_get_config_int_definition;
+	module->get_config_string_log = fm_get_config_string_log_definition;
+	module->get_config_int_log = fm_get_config_int_log_definition;
+
 	module->new_message = fm_new_message_definition;
 	module->display_message = fm_display_message_definition;
 	module->free_message = fm_free_message_definition;
-	module->config = config;
+	module->log = fm_log_definition;
 
 	/* TODO: config can be reached only on enable? verify and do something about it  */
 
@@ -226,7 +280,7 @@ bool fm_enable(ModuleManager* manager, char* type, char* custom_name, SortedMap*
 				   fm_create_thread(module);
 
 	if(success) {
-		moduleLog(module, 1, "Module enabled");
+		module->log(module, 1, "Module enabled");
 		sortedMapPut(&manager->active_modules, custom_name, module);
 	}
 	return success;

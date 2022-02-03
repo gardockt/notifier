@@ -6,6 +6,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <stdarg.h>
 
 #include "Structures/SortedMap.h"
 

@@ -1,6 +1,6 @@
 #include "Log.h"
 
-void logWriteVararg(char* sectionName, int desiredVerbosity, int verbosity, char* format, va_list args) {
+void logWriteVararg(const char* sectionName, int desiredVerbosity, int verbosity, const char* format, va_list args) {
 	if(desiredVerbosity < verbosity) {
 		return;
 	}
@@ -11,7 +11,7 @@ void logWriteVararg(char* sectionName, int desiredVerbosity, int verbosity, char
 	free(customFormat);
 }
 
-void logWrite(char* sectionName, int desiredVerbosity, int verbosity, char* format, ...) {
+void logWrite(const char* sectionName, int desiredVerbosity, int verbosity, const char* format, ...) {
 	va_list args;
 	va_start(args, format);
 	logWriteVararg(sectionName, desiredVerbosity, verbosity, format, args);

@@ -21,7 +21,6 @@ set(notifier_sources
 	src/Stash.c
 	src/StringOperations.c
 	src/Displays/Libnotify.c
-	src/FetchingModules/Utilities/FetchingModuleUtilities.c
 	src/Structures/BinaryTree.c
 	src/Structures/SortedMap.c
 )
