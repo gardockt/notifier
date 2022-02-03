@@ -5,26 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum {
-	NONE,
-	URL
-} NotificationActionType;
-
-typedef struct {
-	char* title;
-	char* body;
-	char* actionData;
-	NotificationActionType actionType;
-	char* iconPath;
-} Message;
+#include "../Message.h"
 
 typedef struct {
 	bool (*init)();
-	bool (*displayMessage)(Message* message);
+	bool (*display_message)(const Message* message);
 	void (*uninit)();
 } Display;
 
-Message* messageClone(Message* message);
-void messageFreeAllChildren(Message* message);
-
-#endif // ifndef DISPLAY_H
+#endif /* ifndef DISPLAY_H */

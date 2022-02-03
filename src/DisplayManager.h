@@ -1,5 +1,5 @@
-#ifndef DISPLAYMANAGER_H
-#define DISPLAYMANAGER_H
+#ifndef DISPLAY_MANAGER_H
+#define DISPLAY_MANAGER_H
 
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +12,9 @@ typedef struct {
 	SortedMap displays;
 } DisplayManager;
 
-bool initDisplayManager(DisplayManager* displayManager);
-void destroyDisplayManager(DisplayManager* displayManager);
+bool display_manager_init(DisplayManager* manager);
+void display_manager_destroy(DisplayManager* manager);
 
-Display* getDisplay(DisplayManager* displayManager, char* displayName);
+Display* display_manager_get_display(DisplayManager* manager, const char* name);
 
-#endif // ifndef DISPLAYMANAGER_H
+#endif /* ifndef DISPLAY_MANAGER_H */

@@ -6,7 +6,7 @@
 #include <unistd.h> /* sleep */
 #include <string.h> /* strdup */
 
-/* TODO: avoid having to call functions directly from struct */
+#include "../Message.h"
 
 typedef struct FetMod {
 	char* name;
@@ -17,9 +17,6 @@ typedef struct FetMod {
 	pthread_t fetching_thread;
 	bool busy;
 	void* display;
-	char* notification_title;
-	char* notification_body;
-	char* icon_path;
 	int verbosity;
 	void* library;
 
@@ -28,17 +25,15 @@ typedef struct FetMod {
 	void (*disable)(struct FetMod* module);
 
 	const char* (*get_config_var)(struct FetMod* module, const char* var_name);
+
+	Message* (*new_message)();
+	bool (*display_message)(struct FetMod* module, const Message* message);
+	void (*free_message)(Message* message);
 } FetchingModule;
 
 typedef struct {
 	char* name;
 } FMConfig;
-
-typedef enum {
-	FM_DEFAULTS            = 0,
-	FM_DISABLE_CHECK_TITLE = 1 << 0,
-	FM_DISABLE_CHECK_BODY  = 1 << 1
-} FMInitFlags;
 
 #define fm_config_set_name(config, fm_name) ((config)->name = strdup(fm_name))
 
@@ -46,5 +41,9 @@ typedef enum {
 
 #define fm_set_data(module, data) ((module)->custom_data = data)
 #define fm_get_data(module)       ((module)->custom_data)
+
+#define fm_new_message()                ((module)->new_message())
+#define fm_display_message(module, msg) ((module)->display_message(module, msg))
+#define fm_free_message(msg)            ((module)->free_message(msg))
 
 #endif /* ifndef FETCHING_MODULE_H */

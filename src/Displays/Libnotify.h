@@ -12,12 +12,7 @@
 
 #include "Display.h"
 
-bool libnotifyInit();
-void libnotifyUninit();
-
-bool libnotifyDisplayMessage(Message* message);
-
-bool libnotifyStructure(Display* display);
+bool libnotify_structure(Display* display);
 
 #endif // ifdef ENABLE_DISPLAY_LIBNOTIFY
 

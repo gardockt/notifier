@@ -20,9 +20,6 @@ bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, 
 bool moduleLoadBasicSettings(FetchingModule* fetchingModule, SortedMap* config);
 void moduleFreeBasicSettings(FetchingModule* fetchingModule);
 
-void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg, ModuleFillBasicMessageOptArgs* optArgs);
-void moduleDestroyBasicMessage(Message* message);
-
 void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...);
 
 #endif // ifndef FETCHING_MODULE_UTILITIES_H

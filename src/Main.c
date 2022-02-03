@@ -25,7 +25,7 @@ bool initFunctionality() {
 		return false;
 	}
 
-	if(!initDisplayManager(&displayManager)) {
+	if(!display_manager_init(&displayManager)) {
 		logWrite("core", coreVerbosity, 0, "Error initializing display manager");
 		return false;
 	}
@@ -56,7 +56,7 @@ bool initFunctionality() {
 
 void destroyFunctionality(int signal) {
 	fm_manager_destroy(&moduleManager);
-	destroyDisplayManager(&displayManager);
+	display_manager_destroy(&displayManager);
 	stashDestroy();
 
 #ifdef REQUIRED_CURL

@@ -15,6 +15,21 @@ static const char* fm_get_config_var_definition(FetchingModule* module, const ch
 	return sortedMapGet(config, var_name);
 }
 
+static Message* fm_new_message_definition() {
+	Message* msg = malloc(sizeof *msg);
+	memset(msg, 0, sizeof *msg);
+	return msg;
+}
+
+static void fm_free_message_definition(Message* msg) {
+	free(msg);
+}
+
+static bool fm_display_message_definition(FetchingModule* module, const Message* message) {
+	Display* display = module->display;
+	return display->display_message(message);
+}
+
 static void* fm_fetching_thread(void* args) {
 	FetchingModule* module = args;
 	void (*fetch)(FetchingModule*) = (void (*)(FetchingModule*)) dlsym(module->library, "fetch");
@@ -49,21 +64,6 @@ static bool fm_destroy_thread(FetchingModule* module) {
 
 	return pthread_cancel(module->thread) == 0 &&
 	       pthread_join(module->thread, NULL) == 0;
-}
-
-static bool fm_init(FetchingModule* module, SortedMap* config, FMInitFlags init_flags) {
-	if(!(init_flags & FM_DISABLE_CHECK_TITLE)) {
-		if(!moduleLoadStringFromConfigWithErrorMessage(module, config, "title", &module->notification_title)) {
-			return false;
-		}
-	}
-	if(!(init_flags & FM_DISABLE_CHECK_BODY)) {
-		if(!moduleLoadStringFromConfigWithErrorMessage(module, config, "body", &module->notification_body)) {
-			return false;
-		}
-	}
-
-	return true;
 }
 
 static bool fm_manager_add_library(ModuleManager* manager, const char* directory_path, const char* lib_file_name) {
@@ -164,43 +164,42 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 		return false;
 	}
 
-	configLoadString(config, "icon", &module->icon_path);
 	configLoadInt(config, "verbosity", &module->verbosity);
 
-	/* TODO: restore
 	char* display_name = sortedMapGet(config, "display");
 	if(display_name == NULL) {
 		moduleLog(module, 0, "Invalid display");
 		return false;
 	}
-	module->display = getDisplay(&displayManager, display_name);
-	if(module->display == NULL) {
+
+	Display* display = display_manager_get_display(&displayManager, display_name);
+	if(display == NULL) {
 		moduleLog(module, 0, "Display does not exist");
 		return false;
 	}
-	if(!module->display->init()) {
+	if(!display->init()) {
 		moduleLog(module, 0, "Failed to init display");
 		return false;
 	}
-	*/
 
+	module->display = display;
 	module->library = library;
 
 	module->get_config_var = fm_get_config_var_definition;
+	module->new_message = fm_new_message_definition;
+	module->display_message = fm_display_message_definition;
+	module->free_message = fm_free_message_definition;
 	module->config = config;
+
+	/* TODO: config can be reached only on enable? verify and do something about it  */
 
 	return true;
 }
 
 static void fm_free_basic_settings(FetchingModule* module) {
-	/* TODO: restore */
-	/* module->display->uninit(); */
+	Display* display = module->display;
+	display->uninit();
 	free(module->name);
-	/*
-	free(module->notification_title);
-	free(module->notification_body);
-	free(module->icon_path);
-	*/
 }
 
 bool fm_enable(ModuleManager* manager, char* type, char* custom_name, SortedMap* config) {

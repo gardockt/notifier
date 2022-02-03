@@ -19,19 +19,6 @@ bool moduleLoadStringFromConfigWithErrorMessage(FetchingModule* fetchingModule, 
 	return success;
 }
 
-void moduleFillBasicMessage(FetchingModule* fetchingModule, Message* message, char* (*textEditingFunction)(char*, void*), void* textEditingFunctionArg, ModuleFillBasicMessageOptArgs* optArgs) {
-	message->title = textEditingFunction(optArgs != NULL && optArgs->title != NULL ?
-			optArgs->title : fetchingModule->notification_title, textEditingFunctionArg);
-	message->body = textEditingFunction(optArgs != NULL && optArgs->body != NULL ?
-			optArgs->body : fetchingModule->notification_body, textEditingFunctionArg);
-	message->iconPath = fetchingModule->icon_path;
-}
-
-void moduleDestroyBasicMessage(Message* message) {
-	free(message->title);
-	free(message->body);
-}
-
 void moduleLog(FetchingModule* fetchingModule, int verbosity, char* format, ...) {
 	va_list args;
 	va_start(args, format);

@@ -3,19 +3,19 @@
 // displays
 #include "Displays/Libnotify.h"
 
-#define ADDDISPLAY(structure,name) (structure(display) && sortedMapPut(&displayManager->displays, name, display))
+#define ADD_DISPLAY(structure,name) (structure(display) && sortedMapPut(&manager->displays, name, display))
 
-bool initDisplayManager(DisplayManager* displayManager) {
+bool display_manager_init(DisplayManager* manager) {
 	Display* display = malloc(sizeof *display);
 
 	if(!(display != NULL &&
-	   sortedMapInit(&displayManager->displays, sortedMapCompareFunctionStrcasecmp))) {
+	   sortedMapInit(&manager->displays, sortedMapCompareFunctionStrcasecmp))) {
 		return false;
 	}
 
 	if(
 #ifdef ENABLE_DISPLAY_LIBNOTIFY
-	   !ADDDISPLAY(libnotifyStructure, "libnotify") ||
+	   !ADD_DISPLAY(libnotify_structure, "libnotify") ||
 #endif
 		false) {
 		return false;
@@ -24,8 +24,8 @@ bool initDisplayManager(DisplayManager* displayManager) {
 	return true;
 }
 
-void destroyDisplayManager(DisplayManager* displayManager) {
-	SortedMap displays = displayManager->displays;
+void display_manager_destroy(DisplayManager* manager) {
+	SortedMap displays = manager->displays;
 
 	for(int i = 0; i < displays.size; i++) {
 		free(displays.elements[i].value);
@@ -34,6 +34,6 @@ void destroyDisplayManager(DisplayManager* displayManager) {
 	sortedMapDestroy(&displays);
 }
 
-Display* getDisplay(DisplayManager* displayManager, char* displayName) {
-	return sortedMapGet(&displayManager->displays, displayName);
+Display* display_manager_get_display(DisplayManager* manager, const char* name) {
+	return sortedMapGet(&manager->displays, name);
 }

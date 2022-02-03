@@ -14,12 +14,12 @@ set(notifier_sources
 	src/DisplayManager.c
 	src/Log.c
 	src/Main.c
+	src/Message.c
 	src/ModuleManager.c
 	src/Network.c
 	src/Paths.c
 	src/Stash.c
 	src/StringOperations.c
-	src/Displays/Display.c
 	src/Displays/Libnotify.c
 	src/FetchingModules/Utilities/FetchingModuleUtilities.c
 	src/Structures/BinaryTree.c
