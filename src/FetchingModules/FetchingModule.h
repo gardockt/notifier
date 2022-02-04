@@ -35,6 +35,9 @@ typedef struct FetMod {
 	void (*free_message)(Message* message);
 
 	void (*log)(struct FetMod* module, int message_verbosity, const char* format, ...);
+
+	int (*split)(const char* text, const char* separators, char*** output);
+	char* (*replace)(const char* input, int pair_count, ...);
 } FetchingModule;
 
 typedef struct {
@@ -57,5 +60,8 @@ typedef struct {
 #define fm_free_message(msg)            ((module)->free_message(msg))
 
 #define fm_log(module, msg_verbosity, format, ...) ((module)->log(module, msg_verbosity, format __VA_OPT__(,) __VA_ARGS__))
+
+#define fm_split(module, text, separators, output) ((module)->split(text, separators, output))
+#define fm_replace(module, input, pair_count, ...) ((module)->replace(input, pair_count, __VA_ARGS__))
 
 #endif /* ifndef FETCHING_MODULE_H */

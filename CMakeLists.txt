@@ -16,7 +16,6 @@ set(notifier_sources
 	src/Main.c
 	src/Message.c
 	src/ModuleManager.c
-	src/Network.c
 	src/Paths.c
 	src/Stash.c
 	src/StringOperations.c

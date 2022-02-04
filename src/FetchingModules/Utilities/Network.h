@@ -10,6 +10,6 @@ typedef struct {
 	int size;
 } NetworkResponse;
 
-size_t networkCallback(char* ptr, size_t size, size_t nmemb, void* userdata);
+size_t network_callback(char* ptr, size_t size, size_t nmemb, void* userdata);
 
-#endif // ifndef NETWORK_H
+#endif /* ifndef NETWORK_H */

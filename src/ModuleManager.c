@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "Log.h"
 #include "Paths.h"
+#include "StringOperations.h" /* only for passing its functions to FM, I wish there was a better way */
 #include "Structures/SortedMap.h"
 #include "FetchingModules/FetchingModule.h"
 #include "Displays/Display.h"
@@ -21,7 +22,6 @@ static const char* fm_get_config_readonly_var_definition(FetchingModule* module,
 	return sortedMapGet(config, var_name);
 }
 
-/* TODO: implement in FM */
 static bool fm_get_config_string_definition(FetchingModule* module, const char* var_name, char** output) {
 	const char* value = fm_get_config_readonly_var_definition(module, var_name);
 	if(value != NULL) {
@@ -117,6 +117,7 @@ static bool fm_manager_add_library(ModuleManager* manager, const char* directory
 	bool success = false;
 	char* full_path = malloc(strlen(directory_path) + 1 + strlen(lib_file_name) + 1);
 	if(full_path == NULL) {
+		logWrite("core", coreVerbosity, 0, "Out of memory");
 		goto fm_manager_add_library_finish;
 	}
 
@@ -124,11 +125,13 @@ static bool fm_manager_add_library(ModuleManager* manager, const char* directory
 
 	void* handle = dlopen(full_path, RTLD_LAZY);
 	if(handle == NULL) {
+		logWrite("core", coreVerbosity, 0, "Could not open library \"%s\": %s", lib_file_name, dlerror());
 		goto fm_manager_add_library_finish;
 	}
 
 	void (*configure)(FMConfig*) = (void (*)(FMConfig*)) dlsym(handle, "configure");
 	if(configure == NULL) {
+		logWrite("core", coreVerbosity, 0, "Configure function not found in library \"%s\"", lib_file_name);
 		goto fm_manager_add_library_finish;
 	}
 
@@ -162,9 +165,9 @@ bool fm_manager_init(ModuleManager* manager) {
 		/* TODO: find a better way of determining whether a file can be read? */
 		/* TODO: also check whether file is executable */
 		if(de->d_type == DT_REG || de->d_type == DT_LNK) {
-			logWrite("core", 2, coreVerbosity, "Loading module %s", de->d_name);
+			logWrite("core", 2, coreVerbosity, "Loading module \"%s\"", de->d_name);
 			if(!fm_manager_add_library(manager, fm_path, de->d_name)) {
-				logWrite("core", 0, coreVerbosity, "Could not load module %s", de->d_name);
+				logWrite("core", coreVerbosity, 0, "Could not load module \"%s\"", de->d_name);
 			}
 		}
 	}
@@ -182,6 +185,8 @@ void fm_manager_destroy(ModuleManager* manager) {
 	int map_to_free_size;
 	char** keys_to_free;
 
+	/* TODO: create a function for getting key/value pairs instead of doing this? */
+
 	map_to_free = manager->active_modules;
 	map_to_free_size = sortedMapSize(&map_to_free);
 	keys_to_free = malloc(map_to_free_size * sizeof *keys_to_free);
@@ -196,7 +201,10 @@ void fm_manager_destroy(ModuleManager* manager) {
 	keys_to_free = malloc(map_to_free_size * sizeof *keys_to_free);
 	sortedMapKeys(&map_to_free, (void**)keys_to_free);
 	for(int i = 0; i < map_to_free_size; i++) {
-		dlclose(sortedMapGet(&map_to_free, keys_to_free[i]));
+		void* handle = sortedMapGet(&map_to_free, keys_to_free[i]);
+		dlclose(handle);
+	}
+	for(int i = 0; i < map_to_free_size; i++) {
 		free(keys_to_free[i]);
 	}
 	free(keys_to_free);
@@ -245,6 +253,9 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 	module->free_message = fm_free_message_definition;
 	module->log = fm_log_definition;
 
+	module->split = split;
+	module->replace = replace;
+
 	/* TODO: config can be reached only on enable? verify and do something about it  */
 
 	return true;
@@ -257,33 +268,60 @@ static void fm_free_basic_settings(FetchingModule* module) {
 }
 
 bool fm_enable(ModuleManager* manager, char* type, char* custom_name, SortedMap* config) {
-	if(manager == NULL || type == NULL || custom_name == NULL || config == NULL)
+	if(manager == NULL) {
+		logWrite("core", coreVerbosity, 0, "Manager is NULL");
 		return false;
+	}
+	if(type == NULL) {
+		logWrite("core", coreVerbosity, 0, "Module type is NULL");
+		return false;
+	}
+	if(custom_name == NULL) {
+		logWrite("core", coreVerbosity, 0, "Module custom name is NULL");
+		return false;
+	}
+	if(config == NULL) {
+		logWrite("core", coreVerbosity, 0, "Config for module %s is NULL", custom_name);
+		return false;
+	}
 
 	void* library = sortedMapGet(&manager->available_modules, type);
 	bool (*enable)(FetchingModule*);
 	FetchingModule* module;
 
-	if(library == NULL)
+	if(library == NULL) {
+		logWrite("core", coreVerbosity, 0, "Fetching module \"%s\" not found", type);
 		return false;
+	}
 
 	enable = (bool (*)(FetchingModule*)) dlsym(library, "enable");
-	if(dlerror() != NULL)
+	if(dlerror() != NULL) {
+		logWrite("core", coreVerbosity, 0, "Enable function not found in fetching module \"%s\"", type);
 		return false;
+	}
 
 	module = malloc(sizeof *module);
-	if(module == NULL)
+	if(module == NULL) {
+		logWrite("core", coreVerbosity, 0, "Out of memory");
 		return false;
-
-	bool success = fm_load_basic_settings(module, config, library) &&
-		           enable(module) &&
-				   fm_create_thread(module);
-
-	if(success) {
-		module->log(module, 1, "Module enabled");
-		sortedMapPut(&manager->active_modules, custom_name, module);
 	}
-	return success;
+
+	if(!fm_load_basic_settings(module, config, library)) {
+		logWrite("core", coreVerbosity, 0, "Could not initialize fetching module \"%s\"", custom_name);
+		return false;
+	}
+	if(!enable(module)) {
+		logWrite("core", coreVerbosity, 0, "Failed to enable fetching module \"%s\"", custom_name);
+		return false;
+	}
+	if(!fm_create_thread(module)) {
+		logWrite("core", coreVerbosity, 0, "Failed to create thread for fetching module \"%s\"", custom_name);
+		return false;
+	}
+
+	fm_log_definition(module, 1, "Module enabled");
+	sortedMapPut(&manager->active_modules, custom_name, module);
+	return true;
 }
 
 bool fm_disable(ModuleManager* manager, char* custom_name) {

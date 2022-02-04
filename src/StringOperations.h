@@ -1,12 +1,12 @@
-#ifndef STRINGOPERATIONS_H
-#define STRINGOPERATIONS_H
+#ifndef STRING_OPERATIONS_H
+#define STRING_OPERATIONS_H
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdarg.h>
 
-int split(char* text, char* separators, char*** output);
-char* replace(char* input, int pairCount, ...);
+int split(const char* text, const char* separators, char*** output);
+char* replace(const char* input, int pairCount, ...);
 
-#endif // ifndef STRINGOPERATIONS_H
+#endif /* ifndef STRING_OPERATIONS_H */
