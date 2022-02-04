@@ -20,6 +20,7 @@ typedef struct {
 
 	char* title_template;
 	char* body_template;
+	char* icon_path;
 } Config;
 
 typedef struct {
@@ -72,7 +73,10 @@ generate_notification_url_finish:
 
 static bool parse_config(FetchingModule* module) {
 	Config* config = malloc(sizeof *config);
+	memset(config, 0, sizeof *config);
 	bool success = false;
+
+	fm_get_config_string(module, "icon", &config->icon_path);
 
 	if(!fm_get_config_string_log(module, "token", &config->token, 0) ||
 	   !fm_get_config_string_log(module, "title", &config->title_template, 0) ||
@@ -138,9 +142,12 @@ static void display_notification(FetchingModule* module, NotificationData* notif
 	Message* message = fm_new_message();
 	message->title = replace_variables(module, config->title_template, notification_data);
 	message->body = replace_variables(module, config->body_template, notification_data);
+	message->icon_path = config->icon_path;
 	message->action_data = notification_data->url;
 	message->action_type = URL;
 	fm_display_message(module, message);
+	free(message->title);
+	free(message->body);
 	fm_free_message(message);
 }
 
@@ -243,5 +250,6 @@ void disable(FetchingModule* module) {
 	free(config->token);
 	free(config->title_template);
 	free(config->body_template);
+	free(config->icon_path);
 	free(config);
 }

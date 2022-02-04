@@ -30,7 +30,7 @@ bool initFunctionality() {
 		return false;
 	}
 
-	if(!stashInit()) {
+	if(!stash_init()) {
 		logWrite("core", coreVerbosity, 0, "Error loading stash file");
 		return false;
 	}
@@ -57,7 +57,7 @@ bool initFunctionality() {
 void destroyFunctionality(int signal) {
 	fm_manager_destroy(&moduleManager);
 	display_manager_destroy(&displayManager);
-	stashDestroy();
+	stash_destroy();
 
 #ifdef REQUIRED_CURL
 	curl_global_cleanup();

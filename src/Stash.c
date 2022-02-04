@@ -5,91 +5,91 @@
 
 dictionary* stash = NULL;
 
-bool stashInit() {
-	char* stashDirectory = get_stash_path();
-	stash = iniparser_load(stashDirectory);
+bool stash_init() {
+	char* stash_path = get_stash_path();
+	stash = iniparser_load(stash_path);
 	if(stash == NULL) {
 		logWrite("core", coreVerbosity, 2, "Stash file was not found, creating new stash");
 		stash = dictionary_new(0);
 	}
-	free(stashDirectory);
+	free(stash_path);
 	return stash != NULL;
 }
 
-void stashDestroy() {
+void stash_destroy() {
 	iniparser_freedict(stash);
 }
 
-bool stashSave() {
+static bool stash_save() {
 	if(stash == NULL) {
 		return false;
 	}
 
-	char* stashDirectory = get_stash_path();
-	FILE* filePointer = fopen(stashDirectory, "w");
-	if(filePointer == NULL) {
+	char* stash_path = get_stash_path();
+	FILE* file_ptr = fopen(stash_path, "w");
+	if(file_ptr == NULL) {
 		if(create_stash_dir()) {
-			filePointer = fopen(stashDirectory, "w");
+			file_ptr = fopen(stash_path, "w");
 		} else {
-			free(stashDirectory);
+			free(stash_path);
 			return false;
 		}
 	}
-	iniparser_dump_ini(stash, filePointer);
+	iniparser_dump_ini(stash, file_ptr);
 
-	free(stashDirectory);
-	fclose(filePointer);
+	free(stash_path);
+	fclose(file_ptr);
 	return true;
 }
 
-// returned value has to be freed
-char* stashCreateSectionName(char* section, char* key) {
-	char* sectionName = malloc(strlen(section) + 1 + strlen(key) + 1);
-	if(sectionName != NULL) {
-		sprintf(sectionName, "%s:%s", section, key);
+/* returned value has to be freed */
+static char* stash_create_section_name(const char* section, const char* key) {
+	char* section_name = malloc(strlen(section) + 1 + strlen(key) + 1);
+	if(section_name != NULL) {
+		sprintf(section_name, "%s:%s", section, key);
 	}
-	return sectionName;
+	return section_name;
 }
 
-bool stashSetString(char* section, char* key, char* value) {
-	char* sectionName = stashCreateSectionName(section, key);
-	bool result = (dictionary_set(stash, section, NULL) == 0 && dictionary_set(stash, sectionName, value) == 0);
+bool stash_set_string(const char* section, const char* key, const char* value) {
+	char* section_name = stash_create_section_name(section, key);
+	bool result = (dictionary_set(stash, section, NULL) == 0 && dictionary_set(stash, section_name, value) == 0);
 	if(result) {
-		stashSave();
+		stash_save();
 	}
 
-	free(sectionName);
+	free(section_name);
 	return result;
 }
 
-bool stashSetInt(char* section, char* key, int value) {
-	char* sectionName = stashCreateSectionName(section, key);
-	char* stringValue = malloc(ilogb(value) + 1 + 1);
+bool stash_set_int(const char* section, const char* key, int value) {
+	char* section_name = stash_create_section_name(section, key);
+	char* string_value = malloc(ilogb(value) + 1 + 1);
 	bool result = false;
 
-	if(sectionName != NULL && stringValue != NULL) {
-		sprintf(stringValue, "%d", value);
-		result = (dictionary_set(stash, section, NULL) == 0 && dictionary_set(stash, sectionName, stringValue) == 0);
+	if(section_name != NULL && string_value != NULL) {
+		sprintf(string_value, "%d", value);
+		result = (dictionary_set(stash, section, NULL) == 0 && dictionary_set(stash, section_name, string_value) == 0);
 		if(result) {
-			stashSave();
+			stash_save();
 		}
 	}
 
-	free(sectionName);
-	free(stringValue);
+	free(section_name);
+	free(string_value);
 	return result;
 }
 
-const char* stashGetString(char* section, char* key, char* defaultValue) {
-	char* sectionName = stashCreateSectionName(section, key);
-	const char* result = iniparser_getstring(stash, sectionName, defaultValue);
-	free(sectionName);
+const char* stash_get_string(const char* section, const char* key, const char* default_value) {
+	char* section_name = stash_create_section_name(section, key);
+	const char* result = iniparser_getstring(stash, section_name, default_value);
+	free(section_name);
 	return result;
 }
 
-int stashGetInt(char* section, char* key, int defaultValue) {
-	char* sectionName = stashCreateSectionName(section, key);
-	int result = iniparser_getint(stash, sectionName, defaultValue);
-	free(sectionName);
+int stash_get_int(const char* section, const char* key, int default_value) {
+	char* section_name = stash_create_section_name(section, key);
+	int result = iniparser_getint(stash, section_name, default_value);
+	free(section_name);
 	return result;
 }

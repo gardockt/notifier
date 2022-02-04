@@ -3,6 +3,7 @@
 #include "Log.h"
 #include "Paths.h"
 #include "StringOperations.h" /* only for passing its functions to FM, I wish there was a better way */
+#include "Stash.h"
 #include "Structures/SortedMap.h"
 #include "FetchingModules/FetchingModule.h"
 #include "Displays/Display.h"
@@ -17,13 +18,13 @@ static void fm_log_definition(FetchingModule* module, int message_verbosity, con
 	va_end(args);
 }
 
-static const char* fm_get_config_readonly_var_definition(FetchingModule* module, const char* var_name) {
+static const char* fm_get_config_var(FetchingModule* module, const char* var_name) {
 	SortedMap* config = module->config;
 	return sortedMapGet(config, var_name);
 }
 
 static bool fm_get_config_string_definition(FetchingModule* module, const char* var_name, char** output) {
-	const char* value = fm_get_config_readonly_var_definition(module, var_name);
+	const char* value = fm_get_config_var(module, var_name);
 	if(value != NULL) {
 		*output = strdup(value);
 	}
@@ -31,7 +32,7 @@ static bool fm_get_config_string_definition(FetchingModule* module, const char* 
 }
 
 static bool fm_get_config_int_definition(FetchingModule* module, const char* var_name, int* output) {
-	const char* value = fm_get_config_readonly_var_definition(module, var_name);
+	const char* value = fm_get_config_var(module, var_name);
 	if(value == NULL) {
 		return false;
 	}
@@ -72,8 +73,9 @@ static void fm_free_message_definition(Message* msg) {
 	free(msg);
 }
 
-static bool fm_display_message_definition(FetchingModule* module, const Message* message) {
+static bool fm_display_message_definition(const FetchingModule* module, const Message* message) {
 	Display* display = module->display;
+	logWrite("core", coreVerbosity, 3, "Displaying message:\nTitle: %s\nBody: %s\nAction data: %s", message->title, message->body, message->action_data);
 	return display->display_message(message);
 }
 
@@ -242,7 +244,6 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 	module->display = display;
 	module->library = library;
 
-	module->get_config_readonly_var = fm_get_config_readonly_var_definition;
 	module->get_config_string = fm_get_config_string_definition;
 	module->get_config_int = fm_get_config_int_definition;
 	module->get_config_string_log = fm_get_config_string_log_definition;
@@ -252,6 +253,11 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 	module->display_message = fm_display_message_definition;
 	module->free_message = fm_free_message_definition;
 	module->log = fm_log_definition;
+
+	module->get_stash_string = stash_get_string;
+	module->get_stash_int = stash_get_int;
+	module->set_stash_string = stash_set_string;
+	module->set_stash_int = stash_set_int;
 
 	module->split = split;
 	module->replace = replace;

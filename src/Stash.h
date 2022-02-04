@@ -9,13 +9,13 @@
 #include <stdio.h>
 #include <math.h>
 
-bool stashInit();
-void stashDestroy();
+bool stash_init();
+void stash_destroy();
 
-bool stashSetString(char* section, char* key, char* value);
-bool stashSetInt(char* section, char* key, int value);
+bool stash_set_string(const char* section, const char* key, const char* value);
+bool stash_set_int(const char* section, const char* key, int value);
 
-const char* stashGetString(char* section, char* key, char* defaultValue);
-int stashGetInt(char* section, char* key, int defaultValue);
+const char* stash_get_string(const char* section, const char* key, const char* default_value);
+int stash_get_int(const char* section, const char* key, int default_value);
 
-#endif // ifndef STASH_H
+#endif /* ifndef STASH_H */
