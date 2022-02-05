@@ -1,24 +1,41 @@
-#ifdef ENABLE_MODULE_RSS
+#include <stdlib.h>
+#include <stdbool.h>
 
-#include "../Structures/SortedMap.h"
-#include "../StringOperations.h"
-#include "../Stash.h"
-#include "../Network.h"
-#include "../Globals.h"
-#include "Utilities/FetchingModuleUtilities.h"
-#include "Rss.h"
+#include <curl/curl.h>
+#include <libxml/tree.h>
+#include <libxml/xpath.h>
+#include <libxml/xpathInternals.h>
 
-#define RSS_FORMATTED_DATE_TEMPLATE "YYYY-MM-DD HH:MM:SS"
+#include "../Globals.h" /* LIST_ENTRY_SEPARATORS */
+#include "Utilities/Network.h"
+#include "FetchingModule.h"
+
+#define FORMATTED_DATE_TEMPLATE "YYYY-MM-DD HH:MM:SS"
+
+typedef struct {
+	char* url;
+	char* last_read;
+} Source;
+
+typedef struct {
+	Source* sources;
+	int source_count;
+	CURL* curl;
+
+	char* title_template;
+	char* body_template;
+	char* icon_path;
+} Config;
 
 typedef struct {
 	char* title;
-	char* sourceName;
+	char* source_name;
 	char* url;
-} RssNotificationData;
+} NotificationData;
 
 typedef struct {
 	int year, month, day, hour, minute, second;
-} RssDate;
+} Date;
 
 typedef enum {
 	UNKNOWN,
@@ -30,193 +47,205 @@ typedef struct {
 	RssStandard standard;
 	const char* title;
 	const char* items;
-	const char* dateNode;
-	const char* titleNode;
-	const char* urlNode;
-	const char* defaultDate;
+	const char* date_node;
+	const char* title_node;
+	const char* url_node;
+	const char* default_date;
 } RssStandardInfo;
 
-char* rssBase16Table = "0123456789abcdef";
+char* base16_table = "0123456789abcdef";
 
-// base 16 encoding's output is 2x longer than input
+/* base 16 encoding's output is 2x longer than input */
 
-char* rssBase16Encode(char* input) {
+static char* base16_encode(const char* input) {
 	if(input == NULL) {
 		return NULL;
 	}
 
 	char* output = malloc(2 * strlen(input) + 1);
-	int inputPointer = 0;
+	int input_ptr = 0;
 	do {
-		output[inputPointer * 2 + 0] = rssBase16Table[input[inputPointer] >> 4];
-		output[inputPointer * 2 + 1] = rssBase16Table[input[inputPointer] & ((1 << 4) - 1)];
-	} while(input[++inputPointer] != '\0');
-	output[inputPointer * 2] = '\0';
+		output[input_ptr * 2 + 0] = base16_table[input[input_ptr] >> 4];
+		output[input_ptr * 2 + 1] = base16_table[input[input_ptr] & ((1 << 4) - 1)];
+	} while(input[++input_ptr] != '\0');
+	output[input_ptr * 2] = '\0';
 	return output;
 }
 
-void rssFillNotificationData(RssNotificationData* notificationData, xmlNode* itemNode, RssStandardInfo* standardData) {
-	xmlNode* infoNode = itemNode->children;
+static void fill_notification_data(NotificationData* notification_data, const xmlNode* item_node, const RssStandardInfo* standard_info) {
+	xmlNode* info_node = item_node->children;
 
-	while(infoNode != NULL) {
-		const char* infoNodeName = infoNode->name;
+	while(info_node != NULL) {
+		const char* info_node_name = info_node->name;
 
-		if(!strcmp(infoNodeName, standardData->titleNode)) {
-			notificationData->title = xmlNodeGetContent(infoNode);
-		} else if(!strcmp(infoNodeName, standardData->urlNode)) {
-			notificationData->url = xmlNodeGetContent(infoNode);
+		if(!strcmp(info_node_name, standard_info->title_node)) {
+			notification_data->title = xmlNodeGetContent(info_node);
+		} else if(!strcmp(info_node_name, standard_info->url_node)) {
+			notification_data->url = xmlNodeGetContent(info_node);
 		}
 
-		infoNode = infoNode->next;
+		info_node = info_node->next;
 	}
 }
 
-char* rssGetDateFromNode(xmlNode* itemNode, RssStandardInfo* standardData) {
-	xmlNode* infoNode = itemNode->children;
+static char* get_date_from_node(const xmlNode* item_node, const RssStandardInfo* standard_info) {
+	xmlNode* info_node = item_node->children;
 
-	while(infoNode != NULL) {
-		const char* infoNodeName = infoNode->name;
+	while(info_node != NULL) {
+		const char* info_node_name = info_node->name;
 
-		if(!strcmp(infoNodeName, standardData->dateNode)) {
-			return xmlNodeGetContent(infoNode);
+		if(!strcmp(info_node_name, standard_info->date_node)) {
+			return xmlNodeGetContent(info_node);
 		}
 
-		infoNode = infoNode->next;
+		info_node = info_node->next;
 	}
 }
 
-char* rssFormatDate(const char* unformattedDate, RssStandardInfo* standardInfo) {
-	int desiredLength = strlen(RSS_FORMATTED_DATE_TEMPLATE);
-	char* dateString = malloc(desiredLength + 1);
+static char* format_date(const char* unformatted_date, RssStandardInfo* standard_info) {
+	int desired_length = strlen(FORMATTED_DATE_TEMPLATE);
+	char* date_string = malloc(desired_length + 1);
 
-	if(standardInfo->standard == RSS) { // date format: Tue, 08 Jun 2021 06:32:03 +0000
-		RssDate dateStruct;
-		char* unformattedMonth = malloc(16);
-		const char* monthShortNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+	if(standard_info->standard == RSS) { /* date format: Tue, 08 Jun 2021 06:32:03 +0000 */
+		Date date_struct;
+		char* unformatted_month = malloc(16);
+		const char* month_short_names[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-		sscanf(unformattedDate, "%*s %d %s %d %d:%d:%d %*s", &dateStruct.day, unformattedMonth, &dateStruct.year, &dateStruct.hour, &dateStruct.minute, &dateStruct.second);
+		sscanf(unformatted_date, "%*s %d %s %d %d:%d:%d %*s", &date_struct.day, unformatted_month, &date_struct.year, &date_struct.hour, &date_struct.minute, &date_struct.second);
 
-		for(int i = 0; i < sizeof monthShortNames / sizeof *monthShortNames; i++) {
-			if(!strcmp(unformattedMonth, monthShortNames[i])) {
-				dateStruct.month = i + 1;
+		for(int i = 0; i < sizeof month_short_names / sizeof *month_short_names; i++) {
+			if(!strcmp(unformatted_month, month_short_names[i])) {
+				date_struct.month = i + 1;
 				break;
 			}
 		}
 
-		free(unformattedMonth);
-		sprintf(dateString, "%04d-%02d-%02d %02d:%02d:%02d", dateStruct.year, dateStruct.month, dateStruct.day, dateStruct.hour, dateStruct.minute, dateStruct.second);
-	} else if(standardInfo->standard == ATOM) {// date format: 1970-01-01T00:00:00+00:00
-		strncpy(dateString, unformattedDate, desiredLength);
-		dateString[10] = ' '; // replace T with space
-		dateString[desiredLength] = '\0';
+		free(unformatted_month);
+		sprintf(date_string, "%04d-%02d-%02d %02d:%02d:%02d", date_struct.year, date_struct.month, date_struct.day, date_struct.hour, date_struct.minute, date_struct.second);
+	} else if(standard_info->standard == ATOM) {/* date format: 1970-01-01T00:00:00+00:00 */
+		strncpy(date_string, unformatted_date, desired_length);
+		date_string[10] = ' '; /* replace T with space */
+		date_string[desired_length] = '\0';
 	}
 
-	return dateString;
+	return date_string;
 }
 
-int rssCompareDates(char* a, char* b) {
+static int compare_dates(const char* a, const char* b) {
 	return strcmp(a, b);
 }
 
-char* rssGenerateLastReadKeyName(char* url) {
-	char* encodedUrl = rssBase16Encode(url);
-	char* sectionName = malloc(strlen("last_read_") + strlen(encodedUrl) + 1);
-	sprintf(sectionName, "last_read_%s", encodedUrl);
-	free(encodedUrl);
-	return sectionName;
+static char* generate_last_read_key_name(const char* url) {
+	char* encoded_url = base16_encode(url);
+	char* section_name = malloc(strlen("last_read_") + strlen(encoded_url) + 1);
+	sprintf(section_name, "last_read_%s", encoded_url);
+	free(encoded_url);
+	return section_name;
 }
 
-bool rssParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	RssConfig* config = malloc(sizeof *config);
-	fetchingModule->config = config;
+static bool parse_config(FetchingModule* module) {
+	Config* config = malloc(sizeof *config);
+	memset(config, 0, sizeof *config);
 
-	char* sourcesRaw = sortedMapGet(configToParse, "sources");
-	if(sourcesRaw == NULL) {
-		moduleLog(fetchingModule, 0, "Invalid sources");
+	char* sources_raw;
+	if(!fm_get_config_string_log(module, "sources", &sources_raw, 0) ||
+	   !fm_get_config_string_log(module, "title", &config->title_template, 0) ||
+	   !fm_get_config_string_log(module, "body", &config->body_template, 0)) {
 		return false;
 	}
 
+	fm_get_config_string(module, "icon", &config->icon_path);
+
 	char** sources;
-	config->sourceCount = split(sourcesRaw, LIST_ENTRY_SEPARATORS, &sources);
-	config->sources = malloc(config->sourceCount * sizeof *config->sources);
-	for(int i = 0; i < config->sourceCount; i++) {
+	config->source_count = fm_split(module, sources_raw, LIST_ENTRY_SEPARATORS, &sources);
+	config->sources = malloc(config->source_count * sizeof *config->sources);
+	for(int i = 0; i < config->source_count; i++) {
 		config->sources[i].url = sources[i];
 
-		char* sectionName = rssGenerateLastReadKeyName(sources[i]);
-		config->sources[i].lastRead = strdup(stashGetString("rss", sectionName, "1970-01-01 00:00:00"));
-		free(sectionName);
+		char* section_name = generate_last_read_key_name(sources[i]);
+		config->sources[i].last_read = strdup(fm_get_stash_string(module, "rss", section_name, "1970-01-01 00:00:00"));
+		free(section_name);
 	}
 
 	free(sources);
+	fm_set_data(module, config);
 	return true;
 }
 
-bool rssEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	if(!fetchingModuleInit(fetchingModule, configToParse, FM_DEFAULTS) ||
-	   !rssParseConfig(fetchingModule, configToParse)) {
+void configure(FMConfig* config) {
+	fm_config_set_name(config, "rss");
+}
+
+bool enable(FetchingModule* module) {
+	if(!parse_config(module)) {
 		return false;
 	}
 
-	RssConfig* config = fetchingModule->config;
-	bool retVal = (config->curl = curl_easy_init()) != NULL;
+	Config* config = fm_get_data(module);
+	bool success = (config->curl = curl_easy_init()) != NULL;
 
-	if(retVal) {
-		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
+	if(success) {
+		curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, network_callback);
 	}
 
-	return retVal;
+	return success;
 }
 
-char* rssReplaceVariables(char* text, void* notificationDataPtr) {
-	RssNotificationData* notificationData = notificationDataPtr;
-	return replace(text, 3,
-		"<title>", notificationData->title,
-		"<source-name>", notificationData->sourceName,
-		"<url>", notificationData->url);
+static char* replace_variables(const FetchingModule* module, const char* text, const NotificationData* notification_data) {
+	return fm_replace(module, text, 3,
+		"<title>", notification_data->title,
+		"<source-name>", notification_data->source_name,
+		"<url>", notification_data->url);
 }
 
-void rssDisplayNotification(FetchingModule* fetchingModule, RssNotificationData* notificationData) {
-	Message message = {0};
-	moduleFillBasicMessage(fetchingModule, &message, rssReplaceVariables, notificationData, NULL);
-	message.actionData = notificationData->url;
-	message.actionType = URL;
-	fetchingModule->display->displayMessage(&message);
-	moduleDestroyBasicMessage(&message);
+static void display_notification(const FetchingModule* module, const NotificationData* notification_data) {
+	Config* config = fm_get_data(module);
+	Message* message = fm_new_message();
+	message->title = replace_variables(module, config->title_template, notification_data);
+	message->body = replace_variables(module, config->body_template, notification_data);
+	message->icon_path = config->icon_path;
+	message->action_data = notification_data->url;
+	message->action_type = URL;
+	fm_display_message(module, message);
+
+	free(message->title);
+	free(message->body);
+	fm_free_message(message);
 }
 
-void rssDetectStandard(xmlXPathContext* xmlContext, RssStandardInfo* output) {
-	xmlXPathObject* xmlObject;
+static void detect_rss_standard(xmlXPathContext* xml_context, RssStandardInfo* output) {
+	xmlXPathObject* xml_object;
 	bool found = false;
 
-	// RSS
-	xmlObject = xmlXPathEvalExpression("/rss", xmlContext);
-	if(xmlObject->nodesetval->nodeNr > 0) {
+	/* RSS */
+	xml_object = xmlXPathEvalExpression("/rss", xml_context);
+	if(xml_object->nodesetval->nodeNr > 0) {
 		output->standard = RSS;
 		output->title = "/rss/channel/title";
 		output->items = "/rss/channel/item";
-		output->dateNode = "pubDate";
-		output->titleNode = "title";
-		output->urlNode = "link";
+		output->date_node = "pubDate";
+		output->title_node = "title";
+		output->url_node = "link";
 		found = true;
 	}
-	xmlXPathFreeObject(xmlObject);
+	xmlXPathFreeObject(xml_object);
 	if(found) {
 		return;
 	}
 
-	// Atom
-	xmlXPathRegisterNs(xmlContext, "atom", "http://www.w3.org/2005/Atom");
-	xmlObject = xmlXPathEvalExpression("/atom:feed", xmlContext);
-	if(xmlObject->nodesetval->nodeNr > 0) {
+	/* Atom */
+	xmlXPathRegisterNs(xml_context, "atom", "http://www.w3.org/2005/Atom");
+	xml_object = xmlXPathEvalExpression("/atom:feed", xml_context);
+	if(xml_object->nodesetval->nodeNr > 0) {
 		output->standard = ATOM;
 		output->title = "/atom:feed/atom:title";
 		output->items = "/atom:feed/atom:entry";
-		output->dateNode = "updated";
-		output->titleNode = "title";
-		output->urlNode = "link";
+		output->date_node = "updated";
+		output->title_node = "title";
+		output->url_node = "link";
 		found = true;
 	}
-	xmlXPathFreeObject(xmlObject);
+	xmlXPathFreeObject(xml_object);
 	if(found) {
 		return;
 	}
@@ -225,122 +254,117 @@ void rssDetectStandard(xmlXPathContext* xmlContext, RssStandardInfo* output) {
 	return;
 }
 
-void rssParseResponse(FetchingModule* fetchingModule, char* response, int responseSize, int sourceIndex) {
-	RssConfig* config = fetchingModule->config;
-	xmlXPathContext* xPathContext;
-	xmlXPathObject* xPathObject;
-	xmlDoc* doc = xmlReadMemory(response, responseSize, config->sources[sourceIndex].url, NULL, 0);
-	RssStandardInfo standardData = {0};
+static void parse_response(const FetchingModule* module, const char* response, int response_size, int source_index) {
+	Config* config = fm_get_data(module);
+	xmlXPathContext* xpath_context;
+	xmlXPathObject* xpath_object;
+	xmlDoc* doc = xmlReadMemory(response, response_size, config->sources[source_index].url, NULL, 0);
+	RssStandardInfo standard_info = {0};
 
 	if(doc == NULL) {
-		moduleLog(fetchingModule, 0, "Error parsing feed %s", config->sources[sourceIndex].url);
+		fm_log(module, 0, "Error parsing feed %s", config->sources[source_index].url);
 		return;
 	}
 
-	xPathContext = xmlXPathNewContext(doc);
-	rssDetectStandard(xPathContext, &standardData);
-	if(standardData.standard == UNKNOWN) {
-		moduleLog(fetchingModule, 0, "Unrecognized format of feed %s", config->sources[sourceIndex].url);
-		goto xmlParseResponseFreeDoc;
+	xpath_context = xmlXPathNewContext(doc);
+	detect_rss_standard(xpath_context, &standard_info);
+	if(standard_info.standard == UNKNOWN) {
+		fm_log(module, 0, "Unrecognized format of feed %s", config->sources[source_index].url);
+		goto xml_parse_response_free_doc;
 	}
 
-	xPathObject = xmlXPathEvalExpression(standardData.title, xPathContext);
-	if(xPathObject->nodesetval->nodeTab == NULL) {
-		moduleLog(fetchingModule, 0, "Could not get title of feed %s", config->sources[sourceIndex].url);
-		goto xmlParseResponseFreeObject;
+	xpath_object = xmlXPathEvalExpression(standard_info.title, xpath_context);
+	if(xpath_object->nodesetval->nodeTab == NULL) {
+		fm_log(module, 0, "Could not get title of feed %s", config->sources[source_index].url);
+		goto xml_parse_response_free_object;
 	}
 
-	char* title = xmlNodeGetContent(xPathObject->nodesetval->nodeTab[0]);
-	xmlXPathFreeObject(xPathObject);
+	char* title = xmlNodeGetContent(xpath_object->nodesetval->nodeTab[0]);
+	xmlXPathFreeObject(xpath_object);
 
-	xPathObject = xmlXPathEvalExpression(standardData.items, xPathContext);
-	xmlNodeSet* nodes = xPathObject->nodesetval;
-	int unreadMessagesPointer = 0;
-	char* newLastRead = NULL;
-	for(; unreadMessagesPointer < nodes->nodeNr; unreadMessagesPointer++) {
-		char* unformattedDate = rssGetDateFromNode(nodes->nodeTab[unreadMessagesPointer], &standardData);
-		if(unformattedDate == NULL) {
-			moduleLog(fetchingModule, 0, "Could not get date for feed %s, message %d", config->sources[sourceIndex].url, unreadMessagesPointer);
+	xpath_object = xmlXPathEvalExpression(standard_info.items, xpath_context);
+	xmlNodeSet* nodes = xpath_object->nodesetval;
+	int unread_messages_ptr = 0;
+	char* new_last_read = NULL;
+	for(; unread_messages_ptr < nodes->nodeNr; unread_messages_ptr++) {
+		char* unformatted_date = get_date_from_node(nodes->nodeTab[unread_messages_ptr], &standard_info);
+		if(unformatted_date == NULL) {
+			fm_log(module, 0, "Could not get date for feed %s, message %d", config->sources[source_index].url, unread_messages_ptr);
 			break;
 		}
-		char* formattedDate = rssFormatDate(unformattedDate, &standardData);
-		bool isUnread = rssCompareDates(config->sources[sourceIndex].lastRead, formattedDate) < 0;
+		char* formatted_date = format_date(unformatted_date, &standard_info);
+		bool is_unread = compare_dates(config->sources[source_index].last_read, formatted_date) < 0;
 
-		free(unformattedDate);
+		free(unformatted_date);
 
-		if(isUnread) {
-			RssNotificationData notificationData = {0};
-			rssFillNotificationData(&notificationData, nodes->nodeTab[unreadMessagesPointer], &standardData);
-			notificationData.sourceName = title;
-			rssDisplayNotification(fetchingModule, &notificationData);
+		if(is_unread) {
+			NotificationData notification_data = {0};
+			fill_notification_data(&notification_data, nodes->nodeTab[unread_messages_ptr], &standard_info);
+			notification_data.source_name = title;
+			display_notification(module, &notification_data);
 
-			if(newLastRead == NULL || rssCompareDates(newLastRead, formattedDate) < 0) {
-				newLastRead = formattedDate;
+			if(new_last_read == NULL || compare_dates(new_last_read, formatted_date) < 0) {
+				new_last_read = formatted_date;
 			} else {
-				free(formattedDate);
+				free(formatted_date);
 			}
 		} else {
-			free(formattedDate);
+			free(formatted_date);
 		}
 	}
 
-	if(newLastRead != NULL) { // unread messages exist
-		char* sectionName = rssGenerateLastReadKeyName(config->sources[sourceIndex].url);
-		stashSetString("rss", sectionName, newLastRead);
-		free(sectionName);
+	if(new_last_read != NULL) { /* unread messages exist */
+		char* section_name = generate_last_read_key_name(config->sources[source_index].url);
+		fm_set_stash_string(module, "rss", section_name, new_last_read);
+		free(section_name);
 
-		free(config->sources[sourceIndex].lastRead);
-		config->sources[sourceIndex].lastRead = newLastRead;
+		free(config->sources[source_index].last_read);
+		config->sources[source_index].last_read = new_last_read;
 	}
 
 	free(title);
-	xmlXPathFreeContext(xPathContext);
+	xmlXPathFreeContext(xpath_context);
 
-xmlParseResponseFreeObject:
-	xmlXPathFreeObject(xPathObject);
+xml_parse_response_free_object:
+	xmlXPathFreeObject(xpath_object);
 
-xmlParseResponseFreeDoc:
+xml_parse_response_free_doc:
 	xmlFreeDoc(doc);
 }
 
-void rssFetch(FetchingModule* fetchingModule) {
-	RssConfig* config = fetchingModule->config;
+void fetch(const FetchingModule* module) {
+	Config* config = fm_get_data(module);
 
-	// TODO: use curl_multi instead
-	for(int i = 0; i < config->sourceCount; i++) {
+	/* TODO: use curl_multi instead */
+	for(int i = 0; i < config->source_count; i++) {
 		NetworkResponse response = {NULL, 0};
 		curl_easy_setopt(config->curl, CURLOPT_URL, config->sources[i].url);
 		curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, (void*)&response);
 		CURLcode code = curl_easy_perform(config->curl);
 
 		if(code == CURLE_OK) {
-			moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
-			rssParseResponse(fetchingModule, response.data, response.size, i); 
+			fm_log(module, 3, "Received response:\n%s", response.data);
+			parse_response(module, response.data, response.size, i); 
 		} else {
-			moduleLog(fetchingModule, 0, "Request failed with code %d", code);
+			fm_log(module, 0, "Request failed with code %d", code);
 		}
 		free(response.data);
 	}
 }
 
-void rssDisable(FetchingModule* fetchingModule) {
-	RssConfig* config = fetchingModule->config;
+void disable(const FetchingModule* module) {
+	Config* config = fm_get_data(module);
 
 	curl_easy_cleanup(config->curl);
 
-	for(int i = 0; i < config->sourceCount; i++) {
+	for(int i = 0; i < config->source_count; i++) {
 		free(config->sources[i].url);
-		free(config->sources[i].lastRead);
+		free(config->sources[i].last_read);
 	}
 
 	free(config->sources);
+	free(config->title_template);
+	free(config->body_template);
+	free(config->icon_path);
 	free(config);
 }
-
-void rssTemplate(FetchingModule* fetchingModule) {
-	fetchingModule->enable = rssEnable;
-	fetchingModule->fetch = rssFetch;
-	fetchingModule->disable = rssDisable;
-}
-
-#endif // ifdef ENABLE_MODULE_RSS

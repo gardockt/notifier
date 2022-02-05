@@ -11,7 +11,7 @@
 
 /* TODO: rename to FMManager */
 
-static void fm_log_definition(FetchingModule* module, int message_verbosity, const char* format, ...) {
+static void fm_log_definition(const FetchingModule* module, int message_verbosity, const char* format, ...) {
 	va_list args;
 	va_start(args, format);
 	logWriteVararg(module->name, module->verbosity, message_verbosity, format, args);

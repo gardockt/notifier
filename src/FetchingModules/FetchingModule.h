@@ -33,7 +33,7 @@ typedef struct FetMod {
 	bool (*display_message)(const struct FetMod* module, const Message* message);
 	void (*free_message)(Message* message);
 
-	void (*log)(struct FetMod* module, int message_verbosity, const char* format, ...);
+	void (*log)(const struct FetMod* module, int message_verbosity, const char* format, ...);
 
 	bool (*set_stash_string)(const char* section, const char* key, const char* value);
 	bool (*set_stash_int)(const char* section, const char* key, int value);
