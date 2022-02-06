@@ -124,7 +124,7 @@ if(UNIX)
 endif()
 
 target_compile_options(notifier PUBLIC -ggdb)
-target_link_libraries(notifier PUBLIC -liniparser -lm -ldl ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(notifier PUBLIC -liniparser -lm ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
 function(compile_if_needed dependency_name)
 	string(TOUPPER ${dependency_name} dependency_name_uppercase)
