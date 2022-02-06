@@ -66,10 +66,11 @@ bool create_stash_dir() {
 	return true;
 }
 
+/* $HOME/.config/notifier/fetchingmodules */
 char* get_fm_path() {
 	char* config_path = get_config_path();
-	char* ret = malloc(strlen(config_path) + strlen("/modules") + 1);
-	sprintf(ret, "%s/modules", config_path);
+	char* ret = malloc(strlen(config_path) + strlen("/fetchingmodules") + 1);
+	sprintf(ret, "%s/fetchingmodules", config_path);
 	free(config_path);
 	return ret;
 }
