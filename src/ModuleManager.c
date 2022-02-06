@@ -83,11 +83,11 @@ static void* fm_fetching_thread(void* args) {
 	FetchingModule* module = args;
 	void (*fetch)(FetchingModule*) = (void (*)(FetchingModule*)) dlsym(module->library, "fetch");
 
-	module->log(module, 2, "Fetch started");
+	fm_log_definition(module, 2, "Fetch started");
 	module->busy = true;
 	fetch(module);
 	module->busy = false;
-	module->log(module, 2, "Fetch finished");
+	fm_log_definition(module, 2, "Fetch finished");
 
 	pthread_exit(NULL);
 }
@@ -227,17 +227,17 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 
 	char* display_name = sorted_map_get(config, "display");
 	if(display_name == NULL) {
-		module->log(module, 0, "Invalid display");
+		fm_log_definition(module, 0, "Invalid display");
 		return false;
 	}
 
 	Display* display = display_manager_get_display(&display_manager, display_name);
 	if(display == NULL) {
-		module->log(module, 0, "Display does not exist");
+		fm_log_definition(module, 0, "Display does not exist");
 		return false;
 	}
 	if(!display->init()) {
-		module->log(module, 0, "Failed to init display");
+		fm_log_definition(module, 0, "Failed to init display");
 		return false;
 	}
 
