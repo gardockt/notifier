@@ -29,7 +29,4 @@ bool sortedMapExists(SortedMap* map, const void* key);
 int sortedMapSize(SortedMap* map);
 void sortedMapKeys(SortedMap* map, void** keyArray);
 
-int sortedMapCompareFunctionStrcmp(const void* a, const void* b);
-int sortedMapCompareFunctionStrcasecmp(const void* a, const void* b);
-
 #endif // ifndef SORTEDMAP_H

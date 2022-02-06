@@ -150,8 +150,8 @@ fm_manager_add_library_finish:
 bool fm_manager_init(ModuleManager* manager) {
 	bool success = false;
 
-	if(!(sortedMapInit(&manager->available_modules, sortedMapCompareFunctionStrcasecmp) &&
-	     sortedMapInit(&manager->active_modules, sortedMapCompareFunctionStrcmp))) {
+	if(!(sortedMapInit(&manager->available_modules, (int (*)(const void*, const void*))strcasecmp) &&
+	     sortedMapInit(&manager->active_modules, (int (*)(const void*, const void*))strcmp))) {
 		return false;
 	}
 

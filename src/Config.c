@@ -91,7 +91,7 @@ SortedMap* configLoadSection(dictionary* config, char* sectionName) {
 	iniparser_getseckeys(config, sectionName, keys);
 
 	SortedMap* ret = malloc(sizeof *ret);
-	sortedMapInit(ret, sortedMapCompareFunctionStrcmp);
+	sortedMapInit(ret, (int (*)(const void*, const void*))strcmp);
 
 	sortedMapPut(ret, strdup(CONFIG_NAME_FIELD_NAME), strdup(sectionName));
 
@@ -172,7 +172,7 @@ bool configLoad() {
 	qsort(configSectionNames, configSectionCount, sizeof *configSectionNames, configCompareSectionNames);
 
 	SortedMap* specialSections = malloc(sizeof *specialSections); // map of section maps
-	sortedMapInit(specialSections, sortedMapCompareFunctionStrcmp);
+	sortedMapInit(specialSections, (int (*)(const void*, const void*))strcmp);
 
 	SortedMap* globalSection = NULL;
 	char* globalSectionConfigSectionName;

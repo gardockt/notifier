@@ -124,11 +124,3 @@ void sortedMapKeys(SortedMap* map, void** keyArray) {
 		keyArray[i] = map->elements[i].key;
 	}
 }
-
-int sortedMapCompareFunctionStrcmp(const void* a, const void* b) {
-	return strcmp((const char*)a, (const char*)b);
-}
-
-int sortedMapCompareFunctionStrcasecmp(const void* a, const void* b) {
-	return strcasecmp((const char*)a, (const char*)b);
-}

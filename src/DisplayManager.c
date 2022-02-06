@@ -9,7 +9,7 @@ bool display_manager_init(DisplayManager* manager) {
 	Display* display = malloc(sizeof *display);
 
 	if(!(display != NULL &&
-	   sortedMapInit(&manager->displays, sortedMapCompareFunctionStrcasecmp))) {
+	   sortedMapInit(&manager->displays, (int (*)(const void*, const void*))strcasecmp))) {
 		return false;
 	}
 
