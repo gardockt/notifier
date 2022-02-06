@@ -7,37 +7,37 @@
 #include "Paths.h"
 #include "Main.h"
 
-ModuleManager moduleManager;
-DisplayManager displayManager;
+ModuleManager module_manager;
+DisplayManager display_manager;
 
-int silentErrorCallback(const char* format, ...) {
+static int silent_error_callback(const char* format, ...) {
 	return 0;
 }
 
-bool initFunctionality() {
-	configLoadCore();
+static bool init_functionality() {
+	config_load_core();
 
 	/* silence iniparser errors on core verbosity <= 0 */
-	iniparser_set_error_callback(coreVerbosity <= 0 ? silentErrorCallback : NULL);
+	iniparser_set_error_callback(core_verbosity <= 0 ? silent_error_callback : NULL);
 
-	if(!fm_manager_init(&moduleManager)) {
-		logWrite("core", coreVerbosity, 0, "Error initializing module manager");
+	if(!fm_manager_init(&module_manager)) {
+		log_write("core", core_verbosity, 0, "Error initializing module manager");
 		return false;
 	}
 
-	if(!display_manager_init(&displayManager)) {
-		logWrite("core", coreVerbosity, 0, "Error initializing display manager");
+	if(!display_manager_init(&display_manager)) {
+		log_write("core", core_verbosity, 0, "Error initializing display manager");
 		return false;
 	}
 
 	if(!stash_init()) {
-		logWrite("core", coreVerbosity, 0, "Error loading stash file");
+		log_write("core", core_verbosity, 0, "Error loading stash file");
 		return false;
 	}
 
 #ifdef REQUIRED_CURL
 	if(!curl_global_init(CURL_GLOBAL_DEFAULT)) {
-		logWrite("core", coreVerbosity, 0, "Error initializing CURL library");
+		log_write("core", core_verbosity, 0, "Error initializing CURL library");
 		return false;
 	}
 #endif
@@ -46,17 +46,17 @@ bool initFunctionality() {
 	LIBXML_TEST_VERSION;
 #endif
 
-	if(!configLoad()) {
-		logWrite("core", coreVerbosity, 0, "Error loading config file");
+	if(!config_load()) {
+		log_write("core", core_verbosity, 0, "Error loading config file");
 		return false;
 	}
 
 	return true;
 }
 
-void destroyFunctionality(int signal) {
-	fm_manager_destroy(&moduleManager);
-	display_manager_destroy(&displayManager);
+static void destroy_functionality(int signal) {
+	fm_manager_destroy(&module_manager);
+	display_manager_destroy(&display_manager);
 	stash_destroy();
 
 #ifdef REQUIRED_CURL
@@ -69,13 +69,13 @@ void destroyFunctionality(int signal) {
 }
 
 int main() {
-	struct sigaction signalMgmt;
-	signalMgmt.sa_handler = destroyFunctionality;
-	sigemptyset(&signalMgmt.sa_mask);
-	signalMgmt.sa_flags = 0;
-	sigaction(SIGINT, &signalMgmt, NULL);
+	struct sigaction signal_mgmt;
+	signal_mgmt.sa_handler = destroy_functionality;
+	sigemptyset(&signal_mgmt.sa_mask);
+	signal_mgmt.sa_flags = 0;
+	sigaction(SIGINT, &signal_mgmt, NULL);
 
-	if(!initFunctionality()) {
+	if(!init_functionality()) {
 		return 1;
 	}
 

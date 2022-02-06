@@ -13,4 +13,4 @@
 #include <libxml/parser.h>
 #endif
 
-#endif // ifndef MAIN_H
+#endif /* ifndef MAIN_H */

@@ -10,10 +10,10 @@
 
 #include "Structures/SortedMap.h"
 
-bool configLoadInt(SortedMap* config, char* key, int* output);
-bool configLoadString(SortedMap* config, char* key, char** output);
+bool config_load_int(SortedMap* config, char* key, int* output);
+bool config_load_string(SortedMap* config, char* key, char** output);
 
-void configLoadCore();
-bool configLoad();
+void config_load_core();
+bool config_load();
 
-#endif // ifndef CONFIG_H
+#endif /* ifndef CONFIG_H */

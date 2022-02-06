@@ -78,7 +78,7 @@ char* replace(const char* input, int pair_count, ...) {
 
 	va_list args;
 	BinaryTree replacements;
-	binaryTreeInit(&replacements, compare_replacements);
+	binary_tree_init(&replacements, compare_replacements);
 
 	va_start(args, pair_count);
 	while(pair_count--) {
@@ -91,7 +91,7 @@ char* replace(const char* input, int pair_count, ...) {
 			replacement->after = after;
 			replacement->length_diff = strlen(after) - strlen(before);
 			replacement->next_occurrence = next_occurrence;
-			binaryTreePut(&replacements, replacement);
+			binary_tree_put(&replacements, replacement);
 		}
 	}
 	va_end(args);
@@ -104,7 +104,7 @@ char* replace(const char* input, int pair_count, ...) {
 	bool realloc_after_all_replacements = false;
 	Replacement* next_replacement;
 
-	while((next_replacement = binaryTreePopLowest(&replacements)) != NULL) {
+	while((next_replacement = binary_tree_pop_lowest(&replacements)) != NULL) {
 		output_length += next_replacement->length_diff;
 		if(next_replacement->length_diff > 0) {
 			output = realloc(output, output_length + 1);
@@ -122,14 +122,14 @@ char* replace(const char* input, int pair_count, ...) {
 		next_replacement->next_occurrence = find(&input[input_pointer], next_replacement->before);
 		if(next_replacement->next_occurrence != -1) {
 			next_replacement->next_occurrence += input_pointer;
-			binaryTreePut(&replacements, next_replacement);
+			binary_tree_put(&replacements, next_replacement);
 		} else {
 			free(next_replacement);
 		}
 	}
 
 	strcpy(&output[input_pointer + pointer_diff], &input[input_pointer]);
-	binaryTreeDestroy(&replacements);
+	binary_tree_destroy(&replacements);
 	if(realloc_after_all_replacements) {
 		output = realloc(output, output_length + 1);
 	}

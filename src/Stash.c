@@ -9,7 +9,7 @@ bool stash_init() {
 	char* stash_path = get_stash_path();
 	stash = iniparser_load(stash_path);
 	if(stash == NULL) {
-		logWrite("core", coreVerbosity, 2, "Stash file was not found, creating new stash");
+		log_write("core", core_verbosity, 2, "Stash file was not found, creating new stash");
 		stash = dictionary_new(0);
 	}
 	free(stash_path);

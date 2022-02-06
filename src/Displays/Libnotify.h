@@ -14,6 +14,6 @@
 
 bool libnotify_structure(Display* display);
 
-#endif // ifdef ENABLE_DISPLAY_LIBNOTIFY
+#endif /* ifdef ENABLE_DISPLAY_LIBNOTIFY */
 
-#endif // ifndef LIBNOTIFY_H
+#endif /* ifndef LIBNOTIFY_H */

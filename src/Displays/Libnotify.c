@@ -85,4 +85,4 @@ bool libnotify_structure(Display* display) {
 	return true;
 }
 
-#endif // ifdef ENABLE_DISPLAY_LIBNOTIFY
+#endif /* ifdef ENABLE_DISPLAY_LIBNOTIFY */

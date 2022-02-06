@@ -6,9 +6,9 @@
 
 #define LIST_ENTRY_SEPARATORS " \t\r\n"
 
-extern int coreVerbosity;
+extern int core_verbosity;
 
-extern ModuleManager moduleManager;
-extern DisplayManager displayManager;
+extern ModuleManager module_manager;
+extern DisplayManager display_manager;
 
-#endif // ifndef GLOBALS_H
+#endif /* ifndef GLOBALS_H */

@@ -1,5 +1,5 @@
-#ifndef MODULEMANAGER_H
-#define MODULEMANAGER_H
+#ifndef MODULE_MANAGER_H
+#define MODULE_MANAGER_H
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -21,4 +21,4 @@ void fm_manager_destroy(ModuleManager* manager);
 bool fm_enable(ModuleManager* manager, char* type, char* custom_name, SortedMap* config);
 bool fm_disable(ModuleManager* manager, char* custom_name);
 
-#endif // ifndef MODULEMANAGER_H
+#endif /* ifndef MODULE_MANAGER_H */

@@ -57,12 +57,12 @@ static int oauth_entry_compare(const void* a, const void* b) {
 }
 
 static void oauth_storage_init() {
-	binaryTreeInit(oauth_storage, oauth_entry_compare);
+	binary_tree_init(oauth_storage, oauth_entry_compare);
 	pthread_mutex_init(&oauth_global_mutex, NULL);
 }
 
 static void oauth_storage_destroy() {
-	binaryTreeDestroy(oauth_storage);
+	binary_tree_destroy(oauth_storage);
 	pthread_mutex_destroy(&oauth_global_mutex);
 }
 
@@ -134,7 +134,7 @@ static OAuthEntry* oauth_storage_add_entry(OAuthEntry* entry) {
 		oauth_storage_init();
 	}
 
-	OAuthEntry* oauth_entry_from_map = binaryTreeGet(oauth_storage, entry);
+	OAuthEntry* oauth_entry_from_map = binary_tree_get(oauth_storage, entry);
 	if(oauth_entry_from_map != NULL) {
 		oauth_entry_from_map->use_count++;
 		goto oauth_storage_add_entry_unlock_mutex;
@@ -149,7 +149,7 @@ static OAuthEntry* oauth_storage_add_entry(OAuthEntry* entry) {
 	oauth_entry_from_map->refresh_counter = 0;
 	pthread_mutex_init(&oauth_entry_from_map->mutex, NULL);
 
-	binaryTreePut(oauth_storage, oauth_entry_from_map);
+	binary_tree_put(oauth_storage, oauth_entry_from_map);
 
 oauth_storage_add_entry_unlock_mutex:
 	pthread_mutex_unlock(&oauth_global_mutex);
@@ -157,7 +157,7 @@ oauth_storage_add_entry_unlock_mutex:
 }
 
 static void oauth_storage_remove_entry(const OAuthEntry* entry) {
-	OAuthEntry* oauth_entry_from_map = binaryTreeGet(oauth_storage, entry);
+	OAuthEntry* oauth_entry_from_map = binary_tree_get(oauth_storage, entry);
 
 	/* this should never happen */
 	if(oauth_entry_from_map == NULL) {
@@ -166,7 +166,7 @@ static void oauth_storage_remove_entry(const OAuthEntry* entry) {
 
 	oauth_entry_from_map->use_count--;
 	if(oauth_entry_from_map->use_count == 0) {
-		binaryTreeRemove(oauth_storage, oauth_entry_from_map);
+		binary_tree_remove(oauth_storage, oauth_entry_from_map);
 		pthread_mutex_destroy(&oauth_entry_from_map->mutex);
 		free(oauth_entry_from_map->id);
 		free(oauth_entry_from_map->secret);
@@ -312,9 +312,9 @@ static bool parse_config(FetchingModule* module) {
 	free(oauth.token);
 	free(oauth.refresh_url);
 
-	sortedMapInit(config->stream_titles, (int (*)(const void*, const void*))strcmp);
+	sorted_map_init(config->stream_titles, (int (*)(const void*, const void*))strcmp);
 	for(int i = 0; i < config->stream_count; i++) {
-		sortedMapPut(config->stream_titles, config->streams[i], NULL);
+		sorted_map_put(config->stream_titles, config->streams[i], NULL);
 	}
 
 	return true;
@@ -413,7 +413,7 @@ void fetch(const FetchingModule* module) {
 	char** checked_stream_names = malloc(config->stream_count * sizeof *checked_stream_names);
 	NotificationData* new_data = malloc(config->stream_count * sizeof *new_data);
 
-	sortedMapKeys(config->stream_titles, (void**)checked_stream_names);
+	sorted_map_keys(config->stream_titles, (void**)checked_stream_names);
 	new_data = memset(new_data, 0, config->stream_count * sizeof *new_data);
 
 	for(int i = 0; i < config->stream_count; i += 100) {
@@ -449,7 +449,7 @@ fetch_free_response:
 	}
 
 	for(int i = 0; i < config->stream_count; i++) {
-		if(sortedMapGet(config->stream_titles, checked_stream_names[i]) == NULL && new_data[i].title != NULL) {
+		if(sorted_map_get(config->stream_titles, checked_stream_names[i]) == NULL && new_data[i].title != NULL) {
 			NotificationData notification_data = {0};
 			notification_data.streamer_name = new_data[i].streamer_name;
 			notification_data.title         = new_data[i].title;
@@ -458,9 +458,9 @@ fetch_free_response:
 			display_notification(module, &notification_data);
 		}
 		char* last_stream_title;
-		sortedMapRemove(config->stream_titles, checked_stream_names[i], NULL, (void**)&last_stream_title);
+		sorted_map_remove(config->stream_titles, checked_stream_names[i], NULL, (void**)&last_stream_title);
 		free(last_stream_title);
-		sortedMapPut(config->stream_titles, checked_stream_names[i], new_data[i].title);
+		sorted_map_put(config->stream_titles, checked_stream_names[i], new_data[i].title);
 
 		free(new_data[i].streamer_name);
 		free(new_data[i].category);
@@ -479,11 +479,11 @@ void disable(FetchingModule* module) {
 
 	char* stream_title;
 	for(int i = 0; i < config->stream_count; i++) {
-		sortedMapRemove(config->stream_titles, config->streams[i], NULL, (void**)&stream_title);
+		sorted_map_remove(config->stream_titles, config->streams[i], NULL, (void**)&stream_title);
 		free(stream_title);
 	}
 	oauth_storage_remove_entry(config->oauth_entry);
-	sortedMapDestroy(config->stream_titles);
+	sorted_map_destroy(config->stream_titles);
 	free(config->stream_titles);
 	for(int i = 0; i < config->stream_count; i++) {
 		free(config->streams[i]);

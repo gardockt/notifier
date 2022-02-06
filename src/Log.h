@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-void logWriteVararg(const char* sectionName, int desiredVerbosity, int verbosity, const char* format, va_list args);
-void logWrite(const char* sectionName, int desiredVerbosity, int verbosity, const char* format, ...);
+void log_write_vararg(const char* section_name, int desired_verbosity, int verbosity, const char* format, va_list args);
+void log_write(const char* section_name, int desired_verbosity, int verbosity, const char* format, ...);
 
-#endif // ifndef LOG_H
+#endif /* ifndef LOG_H */

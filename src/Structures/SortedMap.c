@@ -2,125 +2,125 @@
 
 #define MIN(x,y) ((x)<(y)?(x):(y))
 
-bool sortedMapInit(SortedMap* map, int (*compareFunction)(const void*, const void*)) {
+bool sorted_map_init(SortedMap* map, int (*compare_function)(const void*, const void*)) {
 	map->elements = malloc(SORTED_MAP_DEFAULT_SIZE * sizeof *map->elements);
-	map->compareFunction = compareFunction;
+	map->compare_function = compare_function;
 	map->size = 0;
-	map->availableSize = map->elements != NULL ? SORTED_MAP_DEFAULT_SIZE : 0;
+	map->available_size = map->elements != NULL ? SORTED_MAP_DEFAULT_SIZE : 0;
 	return map->elements != 0;
 }
 
-void sortedMapDestroy(SortedMap* map) {
+void sorted_map_destroy(SortedMap* map) {
 	free(map->elements);
 	map->size = 0;
-	map->availableSize = 0;
+	map->available_size = 0;
 }
 
-bool doubleMapSize(SortedMap* map) {
-	SortedMapElement* elementsNew = realloc(map->elements, map->availableSize * 2 * sizeof *map->elements);
-	if(elementsNew != NULL) {
-		map->elements = elementsNew;
+static bool sorted_map_double_size(SortedMap* map) {
+	SortedMapElement* elements_new = realloc(map->elements, map->available_size * 2 * sizeof *map->elements);
+	if(elements_new != NULL) {
+		map->elements = elements_new;
 		return true;
 	}
 	return false;
 }
 
-bool sortedMapPut(SortedMap* map, void* key, void* value) {
-	// possible indices of inserted element
-	int insertionIndexMin = 0;
-	int insertionIndexMax = map->size;
+bool sorted_map_put(SortedMap* map, void* key, void* value) {
+	/* possible indices of inserted element */
+	int insertion_index_min = 0;
+	int insertion_index_max = map->size;
 
-	int checkedIndex;
-	SortedMapElement* checkedElement;
-	int cmpResult;
+	int checked_index;
+	SortedMapElement* checked_element;
+	int cmp_result;
 
-	while(insertionIndexMin != insertionIndexMax) {
-		checkedIndex = (insertionIndexMin + insertionIndexMax) / 2;
-		checkedElement = &map->elements[checkedIndex];
-		cmpResult = map->compareFunction(key, checkedElement->key);
+	while(insertion_index_min != insertion_index_max) {
+		checked_index = (insertion_index_min + insertion_index_max) / 2;
+		checked_element = &map->elements[checked_index];
+		cmp_result = map->compare_function(key, checked_element->key);
 
-		if(cmpResult == 0) {
-			checkedElement->value = value;
+		if(cmp_result == 0) {
+			checked_element->value = value;
 			return true;
-		} else if(cmpResult > 0) {
-			insertionIndexMin = checkedIndex + 1;
-		} else { // cmpResult < 0
-			insertionIndexMax = checkedIndex;
+		} else if(cmp_result > 0) {
+			insertion_index_min = checked_index + 1;
+		} else { /* cmp_result < 0 */
+			insertion_index_max = checked_index;
 		}
 	}
 
-	if(map->size >= map->availableSize && !doubleMapSize(map)) {
+	if(map->size >= map->available_size && !sorted_map_double_size(map)) {
 		return false;
 	}
 
-	int insertionIndex = insertionIndexMin;
-	memmove(&map->elements[insertionIndex + 1], &map->elements[insertionIndex], (map->size++ - insertionIndex) * sizeof *checkedElement);
+	int insertion_index = insertion_index_min;
+	memmove(&map->elements[insertion_index + 1], &map->elements[insertion_index], (map->size++ - insertion_index) * sizeof *checked_element);
 
-	SortedMapElement* element = &map->elements[insertionIndex];
+	SortedMapElement* element = &map->elements[insertion_index];
 	element->key = key;
 	element->value = value;
 	return true;
 }
 
-int getKeyIndex(SortedMap* map, const void* key) {
+static int sorted_map_get_key_index(SortedMap* map, const void* key) {
 	int min = 0;
 	int max = map->size - 1;
-	int checkedIndex;
-	SortedMapElement* checkedElement;
-	int cmpResult;
+	int checked_index;
+	SortedMapElement* checked_element;
+	int cmp_result;
 
 	while(min <= max) {
-		checkedIndex = (min + max) / 2;
-		checkedElement = &map->elements[checkedIndex];
-		cmpResult = map->compareFunction(key, checkedElement->key);
+		checked_index = (min + max) / 2;
+		checked_element = &map->elements[checked_index];
+		cmp_result = map->compare_function(key, checked_element->key);
 
-		if(cmpResult == 0) {
-			return checkedIndex;
-		} else if(cmpResult > 0) {
-			min = checkedIndex + 1;
-		} else { // cmpResult < 0
-			max = checkedIndex - 1;
+		if(cmp_result == 0) {
+			return checked_index;
+		} else if(cmp_result > 0) {
+			min = checked_index + 1;
+		} else { /* cmp_result < 0 */
+			max = checked_index - 1;
 		}
 	}
 	
 	return -1;
 }
 
-void* sortedMapGet(SortedMap* map, const void* key) {
-	int index = getKeyIndex(map, key);
+void* sorted_map_get(SortedMap* map, const void* key) {
+	int index = sorted_map_get_key_index(map, key);
 	return index >= 0 ? map->elements[index].value : NULL;
 }
 
-bool sortedMapRemove(SortedMap* map, void* key, void** keyAddress, void** valueAddress) {
-	int index = getKeyIndex(map, key);
+bool sorted_map_remove(SortedMap* map, void* key, void** key_address, void** value_address) {
+	int index = sorted_map_get_key_index(map, key);
 	if(index < 0) {
 		return false;
 	}
 
-	SortedMapElement* elementToRemove = &map->elements[index];
-	if(keyAddress != NULL) {
-		*keyAddress = elementToRemove->key;
+	SortedMapElement* element_to_remove = &map->elements[index];
+	if(key_address != NULL) {
+		*key_address = element_to_remove->key;
 	}
-	if(valueAddress != NULL) {
-		*valueAddress = elementToRemove->value;
+	if(value_address != NULL) {
+		*value_address = element_to_remove->value;
 	}
 
-	memmove(elementToRemove, elementToRemove + 1, (map->size-- - index - 1) * sizeof *elementToRemove);
+	memmove(element_to_remove, element_to_remove + 1, (map->size-- - index - 1) * sizeof *element_to_remove);
 	return true;
 }
 
-bool sortedMapExists(SortedMap* map, const void* key) {
-	int index = getKeyIndex(map, key);
+bool sorted_map_exists(SortedMap* map, const void* key) {
+	int index = sorted_map_get_key_index(map, key);
 	return index >= 0;
 }
 
-int sortedMapSize(SortedMap* map) {
+int sorted_map_size(SortedMap* map) {
 	return map->size;
 }
 
-void sortedMapKeys(SortedMap* map, void** keyArray) {
-	int size = sortedMapSize(map);
+void sorted_map_keys(SortedMap* map, void** key_array) {
+	int size = sorted_map_size(map);
 	for(int i = 0; i < size; i++) {
-		keyArray[i] = map->elements[i].key;
+		key_array[i] = map->elements[i].key;
 	}
 }

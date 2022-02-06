@@ -14,13 +14,13 @@
 static void fm_log_definition(const FetchingModule* module, int message_verbosity, const char* format, ...) {
 	va_list args;
 	va_start(args, format);
-	logWriteVararg(module->name, module->verbosity, message_verbosity, format, args);
+	log_write_vararg(module->name, module->verbosity, message_verbosity, format, args);
 	va_end(args);
 }
 
 static const char* fm_get_config_var(FetchingModule* module, const char* var_name) {
 	SortedMap* config = module->config;
-	return sortedMapGet(config, var_name);
+	return sorted_map_get(config, var_name);
 }
 
 static bool fm_get_config_string_definition(FetchingModule* module, const char* var_name, char** output) {
@@ -75,7 +75,7 @@ static void fm_free_message_definition(Message* msg) {
 
 static bool fm_display_message_definition(const FetchingModule* module, const Message* message) {
 	Display* display = module->display;
-	logWrite("core", coreVerbosity, 3, "Displaying message:\nTitle: %s\nBody: %s\nAction data: %s", message->title, message->body, message->action_data);
+	log_write("core", core_verbosity, 3, "Displaying message:\nTitle: %s\nBody: %s\nAction data: %s", message->title, message->body, message->action_data);
 	return display->display_message(message);
 }
 
@@ -119,7 +119,7 @@ static bool fm_manager_add_library(ModuleManager* manager, const char* directory
 	bool success = false;
 	char* full_path = malloc(strlen(directory_path) + 1 + strlen(lib_file_name) + 1);
 	if(full_path == NULL) {
-		logWrite("core", coreVerbosity, 0, "Out of memory");
+		log_write("core", core_verbosity, 0, "Out of memory");
 		goto fm_manager_add_library_finish;
 	}
 
@@ -127,20 +127,20 @@ static bool fm_manager_add_library(ModuleManager* manager, const char* directory
 
 	void* handle = dlopen(full_path, RTLD_LAZY);
 	if(handle == NULL) {
-		logWrite("core", coreVerbosity, 0, "Could not open library \"%s\": %s", lib_file_name, dlerror());
+		log_write("core", core_verbosity, 0, "Could not open library \"%s\": %s", lib_file_name, dlerror());
 		goto fm_manager_add_library_finish;
 	}
 
 	void (*configure)(FMConfig*) = (void (*)(FMConfig*)) dlsym(handle, "configure");
 	if(configure == NULL) {
-		logWrite("core", coreVerbosity, 0, "Configure function not found in library \"%s\"", lib_file_name);
+		log_write("core", core_verbosity, 0, "Configure function not found in library \"%s\"", lib_file_name);
 		goto fm_manager_add_library_finish;
 	}
 
 	FMConfig config = {0};
 	configure(&config);
 
-	success = sortedMapPut(&manager->available_modules, config.name, handle);
+	success = sorted_map_put(&manager->available_modules, config.name, handle);
 
 fm_manager_add_library_finish:
 	free(full_path);
@@ -150,8 +150,8 @@ fm_manager_add_library_finish:
 bool fm_manager_init(ModuleManager* manager) {
 	bool success = false;
 
-	if(!(sortedMapInit(&manager->available_modules, (int (*)(const void*, const void*))strcasecmp) &&
-	     sortedMapInit(&manager->active_modules, (int (*)(const void*, const void*))strcmp))) {
+	if(!(sorted_map_init(&manager->available_modules, (int (*)(const void*, const void*))strcasecmp) &&
+	     sorted_map_init(&manager->active_modules, (int (*)(const void*, const void*))strcmp))) {
 		return false;
 	}
 
@@ -167,9 +167,9 @@ bool fm_manager_init(ModuleManager* manager) {
 		/* TODO: find a better way of determining whether a file can be read? */
 		/* TODO: also check whether file is executable */
 		if(de->d_type == DT_REG || de->d_type == DT_LNK) {
-			logWrite("core", 2, coreVerbosity, "Loading module \"%s\"", de->d_name);
+			log_write("core", 2, core_verbosity, "Loading module \"%s\"", de->d_name);
 			if(!fm_manager_add_library(manager, fm_path, de->d_name)) {
-				logWrite("core", coreVerbosity, 0, "Could not load module \"%s\"", de->d_name);
+				log_write("core", core_verbosity, 0, "Could not load module \"%s\"", de->d_name);
 			}
 		}
 	}
@@ -190,20 +190,20 @@ void fm_manager_destroy(ModuleManager* manager) {
 	/* TODO: create a function for getting key/value pairs instead of doing this? */
 
 	map_to_free = manager->active_modules;
-	map_to_free_size = sortedMapSize(&map_to_free);
+	map_to_free_size = sorted_map_size(&map_to_free);
 	keys_to_free = malloc(map_to_free_size * sizeof *keys_to_free);
-	sortedMapKeys(&map_to_free, (void**)keys_to_free);
+	sorted_map_keys(&map_to_free, (void**)keys_to_free);
 	for(int i = 0; i < map_to_free_size; i++) {
 		fm_disable(manager, keys_to_free[i]);
 	}
 	free(keys_to_free);
 
 	map_to_free = manager->available_modules;
-	map_to_free_size = sortedMapSize(&map_to_free);
+	map_to_free_size = sorted_map_size(&map_to_free);
 	keys_to_free = malloc(map_to_free_size * sizeof *keys_to_free);
-	sortedMapKeys(&map_to_free, (void**)keys_to_free);
+	sorted_map_keys(&map_to_free, (void**)keys_to_free);
 	for(int i = 0; i < map_to_free_size; i++) {
-		void* handle = sortedMapGet(&map_to_free, keys_to_free[i]);
+		void* handle = sorted_map_get(&map_to_free, keys_to_free[i]);
 		dlclose(handle);
 	}
 	for(int i = 0; i < map_to_free_size; i++) {
@@ -211,8 +211,8 @@ void fm_manager_destroy(ModuleManager* manager) {
 	}
 	free(keys_to_free);
 
-	sortedMapDestroy(&manager->available_modules);
-	sortedMapDestroy(&manager->active_modules);
+	sorted_map_destroy(&manager->available_modules);
+	sorted_map_destroy(&manager->active_modules);
 }
 
 static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, void* library) {
@@ -225,13 +225,13 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 
 	fm_get_config_int_definition(module, "verbosity", &module->verbosity);
 
-	char* display_name = sortedMapGet(config, "display");
+	char* display_name = sorted_map_get(config, "display");
 	if(display_name == NULL) {
 		module->log(module, 0, "Invalid display");
 		return false;
 	}
 
-	Display* display = display_manager_get_display(&displayManager, display_name);
+	Display* display = display_manager_get_display(&display_manager, display_name);
 	if(display == NULL) {
 		module->log(module, 0, "Display does not exist");
 		return false;
@@ -275,63 +275,63 @@ static void fm_free_basic_settings(FetchingModule* module) {
 
 bool fm_enable(ModuleManager* manager, char* type, char* custom_name, SortedMap* config) {
 	if(manager == NULL) {
-		logWrite("core", coreVerbosity, 0, "Manager is NULL");
+		log_write("core", core_verbosity, 0, "Manager is NULL");
 		return false;
 	}
 	if(type == NULL) {
-		logWrite("core", coreVerbosity, 0, "Module type is NULL");
+		log_write("core", core_verbosity, 0, "Module type is NULL");
 		return false;
 	}
 	if(custom_name == NULL) {
-		logWrite("core", coreVerbosity, 0, "Module custom name is NULL");
+		log_write("core", core_verbosity, 0, "Module custom name is NULL");
 		return false;
 	}
 	if(config == NULL) {
-		logWrite("core", coreVerbosity, 0, "Config for module %s is NULL", custom_name);
+		log_write("core", core_verbosity, 0, "Config for module %s is NULL", custom_name);
 		return false;
 	}
 
-	void* library = sortedMapGet(&manager->available_modules, type);
+	void* library = sorted_map_get(&manager->available_modules, type);
 	bool (*enable)(FetchingModule*);
 	FetchingModule* module;
 
 	if(library == NULL) {
-		logWrite("core", coreVerbosity, 0, "Fetching module \"%s\" not found", type);
+		log_write("core", core_verbosity, 0, "Fetching module \"%s\" not found", type);
 		return false;
 	}
 
 	enable = (bool (*)(FetchingModule*)) dlsym(library, "enable");
 	if(dlerror() != NULL) {
-		logWrite("core", coreVerbosity, 0, "Enable function not found in fetching module \"%s\"", type);
+		log_write("core", core_verbosity, 0, "Enable function not found in fetching module \"%s\"", type);
 		return false;
 	}
 
 	module = malloc(sizeof *module);
 	if(module == NULL) {
-		logWrite("core", coreVerbosity, 0, "Out of memory");
+		log_write("core", core_verbosity, 0, "Out of memory");
 		return false;
 	}
 
 	if(!fm_load_basic_settings(module, config, library)) {
-		logWrite("core", coreVerbosity, 0, "Could not initialize fetching module \"%s\"", custom_name);
+		log_write("core", core_verbosity, 0, "Could not initialize fetching module \"%s\"", custom_name);
 		return false;
 	}
 	if(!enable(module)) {
-		logWrite("core", coreVerbosity, 0, "Failed to enable fetching module \"%s\"", custom_name);
+		log_write("core", core_verbosity, 0, "Failed to enable fetching module \"%s\"", custom_name);
 		return false;
 	}
 	if(!fm_create_thread(module)) {
-		logWrite("core", coreVerbosity, 0, "Failed to create thread for fetching module \"%s\"", custom_name);
+		log_write("core", core_verbosity, 0, "Failed to create thread for fetching module \"%s\"", custom_name);
 		return false;
 	}
 
 	fm_log_definition(module, 1, "Module enabled");
-	sortedMapPut(&manager->active_modules, custom_name, module);
+	sorted_map_put(&manager->active_modules, custom_name, module);
 	return true;
 }
 
 bool fm_disable(ModuleManager* manager, char* custom_name) {
-	FetchingModule* module = sortedMapGet(&manager->active_modules, custom_name);
+	FetchingModule* module = sorted_map_get(&manager->active_modules, custom_name);
 	void (*disable)(FetchingModule*) = (void (*)(FetchingModule*)) dlsym(module->library, "disable");
 	char* custom_name_copy = strdup(custom_name);
 	int verbosity = module->verbosity;
@@ -345,11 +345,11 @@ bool fm_disable(ModuleManager* manager, char* custom_name) {
 	fm_destroy_thread(module);
 	disable(module);
 	fm_free_basic_settings(module);
-	sortedMapRemove(&manager->active_modules, custom_name, (void**)&key_to_free, NULL); /* value is already stored in "module" */
+	sorted_map_remove(&manager->active_modules, custom_name, (void**)&key_to_free, NULL); /* value is already stored in "module" */
 	free(key_to_free);
 	free(module);
 
-	logWrite(custom_name_copy, verbosity, 1, "Module disabled");
+	log_write(custom_name_copy, verbosity, 1, "Module disabled");
 	free(custom_name_copy);
 	return true;
 }
