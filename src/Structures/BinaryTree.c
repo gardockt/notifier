@@ -55,7 +55,7 @@ void binaryTreePut(BinaryTree* tree, void* value) {
 	}
 }
 
-void* binaryTreeGet(BinaryTree* tree, void* value) {
+void* binaryTreeGet(BinaryTree* tree, const void* value) {
 	BinaryTreeNode node = tree->root;
 	int compareResult;
 	while(node != NULL) {

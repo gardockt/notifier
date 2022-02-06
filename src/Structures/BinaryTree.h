@@ -19,7 +19,7 @@ void binaryTreeInit(BinaryTree* tree, int (*compareFunction)(const void*, const 
 void binaryTreeDestroy(BinaryTree* tree);
 
 void binaryTreePut(BinaryTree* tree, void* value);
-void* binaryTreeGet(BinaryTree* tree, void* value);
+void* binaryTreeGet(BinaryTree* tree, const void* value);
 void* binaryTreeRemove(BinaryTree* tree, void* value);
 void* binaryTreePopLowest(BinaryTree* tree);
 int binaryTreeSize(BinaryTree* tree);

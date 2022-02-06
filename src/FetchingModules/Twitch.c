@@ -1,369 +1,404 @@
-#ifdef ENABLE_MODULE_TWITCH
+#include <pthread.h> /* OAuth mutex */
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 
-#include "../Structures/SortedMap.h"
-#include "../Structures/BinaryTree.h"
-#include "../StringOperations.h"
-#include "../Stash.h"
-#include "../Network.h"
-#include "../Globals.h"
-#include "../Log.h"
-#include "Utilities/FetchingModuleUtilities.h"
+#include <curl/curl.h>
+#include <json-c/json.h>
+
 #include "Utilities/Json.h"
-#include "Twitch.h"
+#include "Utilities/Network.h"
+#include "FetchingModule.h"
+
+#include "../Globals.h"
+#include "../Structures/BinaryTree.h"
+#include "../Structures/SortedMap.h"
 
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #define IS_VALID_URL_CHARACTER(c) ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')
 #define IS_VALID_STREAMS_CHARACTER(c) (IS_VALID_URL_CHARACTER(c) || strchr(LIST_ENTRY_SEPARATORS, c) != NULL)
 
-static BinaryTree* twitchOAuthStorage = NULL;
-static pthread_mutex_t twitchOAuthGlobalMutex;
+static BinaryTree* oauth_storage = NULL;
+static pthread_mutex_t oauth_global_mutex;
 
-int twitchOAuthCompare(const void* a, const void* b) {
-	return strcmp(((const TwitchOAuth*)a)->id, ((const TwitchOAuth*)b)->id);
+typedef struct {
+	char* id;
+	char* secret;
+	char* token;
+	int use_count;
+	char* refresh_url;
+	pthread_mutex_t mutex;
+	int refresh_counter;
+	bool last_refresh_result;
+} OAuthEntry;
+
+typedef struct {
+	char** streams;
+	int stream_count;
+	SortedMap* stream_titles;
+	OAuthEntry* oauth_entry;
+	CURL* curl;
+	struct curl_slist* list;
+
+	char* title_template;
+	char* body_template;
+	char* icon_path;
+} Config;
+
+typedef struct {
+	char* streamer_name;
+	char* title;
+	char* category;
+	char* url;
+} NotificationData;
+
+static int oauth_entry_compare(const void* a, const void* b) {
+	return strcmp(((const OAuthEntry*)a)->id, ((const OAuthEntry*)b)->id);
 }
 
-void twitchOAuthInit() {
-	binaryTreeInit(twitchOAuthStorage, twitchOAuthCompare);
-	pthread_mutex_init(&twitchOAuthGlobalMutex, NULL);
+static void oauth_storage_init() {
+	binaryTreeInit(oauth_storage, oauth_entry_compare);
+	pthread_mutex_init(&oauth_global_mutex, NULL);
 }
 
-void twitchOAuthDestroy() {
-	binaryTreeDestroy(twitchOAuthStorage);
-	pthread_mutex_destroy(&twitchOAuthGlobalMutex);
+static void oauth_storage_destroy() {
+	binaryTreeDestroy(oauth_storage);
+	pthread_mutex_destroy(&oauth_global_mutex);
 }
 
-bool twitchOAuthRefreshToken(TwitchOAuth* oauth) {
-	bool refreshSuccessful = false;
-	int refreshCounterBeforeLock = oauth->refreshCounter;
+static bool oauth_entry_refresh_token(const FetchingModule* module, OAuthEntry* entry) {
+	bool success = false;
+	int refresh_counter_before_lock = entry->refresh_counter;
 
-	pthread_mutex_lock(&oauth->mutex);
-	logWrite("core", coreVerbosity, 3, "Refresh counter before lock: %d, current: %d", refreshCounterBeforeLock, oauth->refreshCounter);
-	if(refreshCounterBeforeLock != oauth->refreshCounter) {
-		refreshSuccessful = oauth->lastRefreshResult;
-		goto oauthRefreshTokenUnlockMutex;
+	pthread_mutex_lock(&entry->mutex);
+	fm_log(module, 3, "Refresh counter before lock: %d, current: %d", refresh_counter_before_lock, entry->refresh_counter);
+	if(refresh_counter_before_lock != entry->refresh_counter) {
+		success = entry->last_refresh_result;
+		goto oauth_entry_refresh_token_unlock_mutex;
 	}
 
 	CURL* curl = curl_easy_init();
 	NetworkResponse response = {NULL, 0};
 
-	logWrite("core", coreVerbosity, 1, "Refreshing token for ID %s...", oauth->id);
+	fm_log(module, 1, "Refreshing token for ID %s...", entry->id);
 	if(curl == NULL) {
-		logWrite("core", coreVerbosity, 0, "Token refreshing failed - failed to initialize CURL object");
-		goto oauthRefreshTokenSetLastRefreshResult;
+		fm_log(module, 0, "Token refreshing failed - failed to initialize CURL object");
+		goto oauth_entry_refresh_token_set_last_refresh_result;
 	}
 
-	curl_easy_setopt(curl, CURLOPT_URL, oauth->refreshUrl);
+	curl_easy_setopt(curl, CURLOPT_URL, entry->refresh_url);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&response);
 	curl_easy_setopt(curl, CURLOPT_POST, true);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "\n");
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, networkCallback);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, network_callback);
 
 	CURLcode code = curl_easy_perform(curl);
 	curl_easy_cleanup(curl);
 	if(code != CURLE_OK) {
-		logWrite("core", coreVerbosity, 0, "Token refreshing failed with CURL code %d", code);
-		goto oauthRefreshTokenSetLastRefreshResult;
+		fm_log(module, 0, "Token refreshing failed with CURL code %d", code);
+		goto oauth_entry_refresh_token_set_last_refresh_result;
 	}
 
-	logWrite("core", coreVerbosity, 3, "Received response:\n%s", response.data);
+	fm_log(module, 3, "Received refresh response:\n%s", response.data);
 	json_object* root = json_tokener_parse(response.data);
-	json_object* newTokenObject = json_object_object_get(root, "access_token");
-	if(json_object_get_type(newTokenObject) != json_type_string) {
-		logWrite("core", coreVerbosity, 0, "Token refreshing failed - invalid response");
-		goto oauthRefreshTokenPutRoot;
+	json_object* new_token_object = json_object_object_get(root, "access_token");
+	if(json_object_get_type(new_token_object) != json_type_string) {
+		fm_log(module, 0, "Token refreshing failed - invalid response");
+		goto oauth_entry_refresh_token_put_root;
 	}
 
-	const char* newToken = json_object_get_string(newTokenObject);
-	logWrite("core", coreVerbosity, 2, "New token: %s", newToken);
+	const char* new_token = json_object_get_string(new_token_object);
+	fm_log(module, 2, "New token: %s", new_token);
 
-	if(oauth->token == NULL) {
-		oauth->token = malloc(strlen(newToken) + 1);
+	if(entry->token == NULL) {
+		entry->token = malloc(strlen(new_token) + 1);
 	}
-	strcpy(oauth->token, newToken);
-	refreshSuccessful = true;
+	strcpy(entry->token, new_token);
+	success = true;
 
-oauthRefreshTokenPutRoot:
+oauth_entry_refresh_token_put_root:
 	json_object_put(root);
-oauthRefreshTokenSetLastRefreshResult:
-	oauth->lastRefreshResult = refreshSuccessful;
-	oauth->refreshCounter++;
-oauthRefreshTokenUnlockMutex:
-	pthread_mutex_unlock(&oauth->mutex);
-	return refreshSuccessful;
+oauth_entry_refresh_token_set_last_refresh_result:
+	entry->last_refresh_result = success;
+	entry->refresh_counter++;
+oauth_entry_refresh_token_unlock_mutex:
+	pthread_mutex_unlock(&entry->mutex);
+	return success;
 }
 
-TwitchOAuth* twitchOAuthAdd(TwitchOAuth* oauth) {
-	pthread_mutex_lock(&twitchOAuthGlobalMutex);
+static OAuthEntry* oauth_storage_add_entry(OAuthEntry* entry) {
+	pthread_mutex_lock(&oauth_global_mutex);
 
-	if(twitchOAuthStorage == NULL) {
-		twitchOAuthStorage = malloc(sizeof *twitchOAuthStorage);
-		twitchOAuthInit();
+	if(oauth_storage == NULL) {
+		oauth_storage = malloc(sizeof *oauth_storage);
+		oauth_storage_init();
 	}
 
-	TwitchOAuth* oauthFromMap = binaryTreeGet(twitchOAuthStorage, oauth);
-	if(oauthFromMap != NULL) {
-		oauthFromMap->useCount++;
-		goto oauthAddUnlockMutex;
+	OAuthEntry* oauth_entry_from_map = binaryTreeGet(oauth_storage, entry);
+	if(oauth_entry_from_map != NULL) {
+		oauth_entry_from_map->use_count++;
+		goto oauth_storage_add_entry_unlock_mutex;
 	}
 
-	oauthFromMap = malloc(sizeof *oauthFromMap);
-	oauthFromMap->id              = strdup(oauth->id);
-	oauthFromMap->secret          = strdup(oauth->secret);
-	oauthFromMap->token           = strdup(oauth->token);
-	oauthFromMap->useCount        = 1;
-	oauthFromMap->refreshUrl      = strdup(oauth->refreshUrl);
-	oauthFromMap->refreshCounter  = 0;
-	pthread_mutex_init(&oauthFromMap->mutex, NULL);
+	oauth_entry_from_map = malloc(sizeof *oauth_entry_from_map);
+	oauth_entry_from_map->id              = strdup(entry->id);
+	oauth_entry_from_map->secret          = strdup(entry->secret);
+	oauth_entry_from_map->token           = strdup(entry->token);
+	oauth_entry_from_map->use_count       = 1;
+	oauth_entry_from_map->refresh_url     = strdup(entry->refresh_url);
+	oauth_entry_from_map->refresh_counter = 0;
+	pthread_mutex_init(&oauth_entry_from_map->mutex, NULL);
 
-	binaryTreePut(twitchOAuthStorage, oauthFromMap);
+	binaryTreePut(oauth_storage, oauth_entry_from_map);
 
-oauthAddUnlockMutex:
-	pthread_mutex_unlock(&twitchOAuthGlobalMutex);
-	return oauthFromMap;
+oauth_storage_add_entry_unlock_mutex:
+	pthread_mutex_unlock(&oauth_global_mutex);
+	return oauth_entry_from_map;
 }
 
-void twitchOAuthRemove(TwitchOAuth* oauth) {
-	TwitchOAuth* oauthFromMap = binaryTreeGet(twitchOAuthStorage, oauth);
+static void oauth_storage_remove_entry(const OAuthEntry* entry) {
+	OAuthEntry* oauth_entry_from_map = binaryTreeGet(oauth_storage, entry);
 
-	// this should never happen
-	if(oauthFromMap == NULL) {
+	/* this should never happen */
+	if(oauth_entry_from_map == NULL) {
 		return;
 	}
 
-	oauthFromMap->useCount--;
-	if(oauthFromMap->useCount == 0) {
-		binaryTreeRemove(twitchOAuthStorage, oauthFromMap);
-		pthread_mutex_destroy(&oauthFromMap->mutex);
-		free(oauthFromMap->id);
-		free(oauthFromMap->secret);
-		free(oauthFromMap->token);
-		free(oauthFromMap->refreshUrl);
-		free(oauthFromMap);
+	oauth_entry_from_map->use_count--;
+	if(oauth_entry_from_map->use_count == 0) {
+		binaryTreeRemove(oauth_storage, oauth_entry_from_map);
+		pthread_mutex_destroy(&oauth_entry_from_map->mutex);
+		free(oauth_entry_from_map->id);
+		free(oauth_entry_from_map->secret);
+		free(oauth_entry_from_map->token);
+		free(oauth_entry_from_map->refresh_url);
+		free(oauth_entry_from_map);
 	}
 
-	if(twitchOAuthStorage->root == NULL) {
-		twitchOAuthDestroy();
-		free(twitchOAuthStorage);
-		twitchOAuthStorage = NULL;
+	if(oauth_storage->root == NULL) {
+		oauth_storage_destroy();
+		free(oauth_storage);
+		oauth_storage = NULL;
 	}
 }
 
-typedef struct {
-	char* streamerName;
-	char* title;
-	char* category;
-	char* url;
-} TwitchNotificationData;
-
-char* twitchGenerateUrl(char** streams, int start, int stop) {
+static char* generate_url(char** streams, int start, int stop) {
 	const char* base = "https://api.twitch.tv/helix/streams";
 	char* output;
-	int totalLength;
-	int outputPointer;
+	int total_length;
+	int output_ptr;
 
-	totalLength = strlen(base);
+	total_length = strlen(base);
 	for(int i = start; i <= stop; i++) {
-		totalLength += strlen("?user_login=") + strlen(streams[i]);
+		total_length += strlen("?user_login=") + strlen(streams[i]);
 	}
-	output = malloc(totalLength + 1);
+	output = malloc(total_length + 1);
 	strcpy(output, base);
-	outputPointer = strlen(base);
+	output_ptr = strlen(base);
 
 	for(int i = start; i <= stop; i++) {
-		outputPointer += sprintf(&output[outputPointer], "%cuser_login=%s", (i == start ? '?' : '&'), streams[i]);
+		output_ptr += sprintf(&output[output_ptr], "%cuser_login=%s", (i == start ? '?' : '&'), streams[i]);
 	}
 
 	return output;
 }
 
-char* twitchGenerateTokenRefreshUrl(TwitchOAuth* oauth) {
-	char* url = malloc(strlen("https://id.twitch.tv/oauth2/token?client_id=&client_secret=&grant_type=client_credentials") + strlen(oauth->id) + strlen(oauth->secret) + 1);
-	sprintf(url, "https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials", oauth->id, oauth->secret);
+static char* generate_token_refresh_url(const OAuthEntry* entry) {
+	char* url = malloc(strlen("https://id.twitch.tv/oauth2/token?client_id=&client_secret=&grant_type=client_credentials") + strlen(entry->id) + strlen(entry->secret) + 1);
+	sprintf(url, "https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials", entry->id, entry->secret);
 	return url;
 }
 
-void twitchSetHeader(FetchingModule* fetchingModule) {
-	TwitchConfig* config = fetchingModule->config;
+static void set_header(const FetchingModule* module) {
+	Config* config = fm_get_data(module);
 
 	if(config->list != NULL) {
 		curl_slist_free_all(config->list);
 		config->list = NULL;
 	}
 
-	char* headerClientId = malloc(strlen("Client-ID: ") + strlen(config->oauth->id) + 1);
-	char* headerClientToken = malloc(strlen("Authorization: Bearer ") + strlen(config->oauth->token) + 1);
+	char* header_client_id = malloc(strlen("Client-ID: ") + strlen(config->oauth_entry->id) + 1);
+	char* header_client_token = malloc(strlen("Authorization: Bearer ") + strlen(config->oauth_entry->token) + 1);
 
-	sprintf(headerClientId, "Client-ID: %s", config->oauth->id);
-	sprintf(headerClientToken, "Authorization: Bearer %s", config->oauth->token);
+	sprintf(header_client_id, "Client-ID: %s", config->oauth_entry->id);
+	sprintf(header_client_token, "Authorization: Bearer %s", config->oauth_entry->token);
 
-	config->list = curl_slist_append(config->list, headerClientId);
-	config->list = curl_slist_append(config->list, headerClientToken);
+	config->list = curl_slist_append(config->list, header_client_id);
+	config->list = curl_slist_append(config->list, header_client_token);
 
 	curl_easy_setopt(config->curl, CURLOPT_HTTPHEADER, config->list);
 
-	free(headerClientId);
-	free(headerClientToken);
+	free(header_client_id);
+	free(header_client_token);
 }
 
-bool twitchRefreshTokenForOAuth(TwitchOAuth* oauth) {
-	bool success = twitchOAuthRefreshToken(oauth);
+static bool refresh_token(const FetchingModule* module, OAuthEntry* entry) {
+	bool success = oauth_entry_refresh_token(module, entry);
 	if(success) {
-		char* tokenKeyName = malloc(strlen("token_") + strlen(oauth->id) + 1);
-		sprintf(tokenKeyName, "token_%s", oauth->id);
-		stashSetString("twitch", tokenKeyName, oauth->token);
-		free(tokenKeyName);
+		char* token_key_name = malloc(strlen("token_") + strlen(entry->id) + 1);
+		sprintf(token_key_name, "token_%s", entry->id);
+		fm_set_stash_string(module, "twitch", token_key_name, entry->token);
+		free(token_key_name);
 	}
 	return success;
 }
 
-bool twitchParseConfig(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	TwitchOAuth oauth = {0};
-	TwitchConfig* config = malloc(sizeof *config);
-	fetchingModule->config = config;
+static bool parse_config(FetchingModule* module) {
+	Config* config = malloc(sizeof *config);
+	memset(config, 0, sizeof *config);
+	fm_set_data(module, config);
 
-	if(!moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "id", &oauth.id) ||
-	   !moduleLoadStringFromConfigWithErrorMessage(fetchingModule, configToParse, "secret", &oauth.secret)) {
+	OAuthEntry oauth = {0};
+	char* streams;
+
+	if(!fm_get_config_string_log(module, "id", &oauth.id, 0) ||
+	   !fm_get_config_string_log(module, "secret", &oauth.secret, 0) ||
+	   !fm_get_config_string_log(module, "streams", &streams, 0) ||
+	   !fm_get_config_string_log(module, "title", &config->title_template, 0) ||
+	   !fm_get_config_string_log(module, "body", &config->body_template, 0)) {
 		return false;
 	}
 
-	oauth.refreshUrl = twitchGenerateTokenRefreshUrl(&oauth);
+	fm_get_config_string(module, "icon", &config->icon_path);
 
-	char* tokenKeyName = malloc(strlen("token_") + strlen(oauth.id) + 1);
-	sprintf(tokenKeyName, "token_%s", oauth.id);
-	const char* token = stashGetString("twitch", tokenKeyName, NULL);
+	oauth.refresh_url = generate_token_refresh_url(&oauth);
+
+	char* token_key_name = malloc(strlen("token_") + strlen(oauth.id) + 1);
+	sprintf(token_key_name, "token_%s", oauth.id);
+	const char* token = fm_get_stash_string(module, "twitch", token_key_name, NULL);
 	if(token == NULL) {
-		if(!twitchRefreshTokenForOAuth(&oauth)) {
+		if(!refresh_token(module, &oauth)) {
 			return false;
 		}
 	} else {
 		oauth.token = strdup(token);
 	}
-	free(tokenKeyName);
-
-	char* streams = sortedMapGet(configToParse, "streams");
-	if(streams == NULL) {
-		moduleLog(fetchingModule, 0, "Invalid streams");
-		return false;
-	}
+	free(token_key_name);
 
 	for(int i = 0; oauth.id[i] != '\0'; i++) {
 		if(!IS_VALID_URL_CHARACTER(oauth.id[i])) {
-			moduleLog(fetchingModule, 0, "ID contains illegal character \"%c\"", oauth.id[i]);
+			fm_log(module, 0, "ID contains illegal character \"%c\"", oauth.id[i]);
 			return false;
 		}
 	}
 	for(int i = 0; oauth.secret[i] != '\0'; i++) {
 		if(!IS_VALID_URL_CHARACTER(oauth.secret[i])) {
-			moduleLog(fetchingModule, 0, "Secret contains illegal character \"%c\"", oauth.secret[i]);
+			fm_log(module, 0, "Secret contains illegal character \"%c\"", oauth.secret[i]);
 			return false;
 		}
 	}
 	for(int i = 0; streams[i] != '\0'; i++) {
 		if(!IS_VALID_STREAMS_CHARACTER(streams[i])) {
-			moduleLog(fetchingModule, 0, "Streams contain illegal character \"%c\"", streams[i]);
+			fm_log(module, 0, "Streams contain illegal character \"%c\"", streams[i]);
 			return false;
 		}
 	}
 
-	config->streamCount   = split(streams, LIST_ENTRY_SEPARATORS, &config->streams);
-	config->streamTitles  = malloc(sizeof *config->streamTitles);
+	config->stream_count  = fm_split(module, streams, LIST_ENTRY_SEPARATORS, &config->streams);
+	config->stream_titles = malloc(sizeof *config->stream_titles);
 
 	config->list = NULL;
 	config->curl = curl_easy_init();
 
 	if(config->curl == NULL) {
-		moduleLog(fetchingModule, 0, "Error initializing CURL object");
+		fm_log(module, 0, "Error initializing CURL object");
 		return false;
 	}
-	curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, networkCallback);
+	curl_easy_setopt(config->curl, CURLOPT_WRITEFUNCTION, network_callback);
 
-	config->oauth = twitchOAuthAdd(&oauth);
+	config->oauth_entry = oauth_storage_add_entry(&oauth);
 	free(oauth.id);
 	free(oauth.secret);
 	free(oauth.token);
-	free(oauth.refreshUrl);
+	free(oauth.refresh_url);
 
-	sortedMapInit(config->streamTitles, sortedMapCompareFunctionStrcmp);
-	for(int i = 0; i < config->streamCount; i++) {
-		sortedMapPut(config->streamTitles, config->streams[i], NULL);
+	sortedMapInit(config->stream_titles, (int (*)(const void*, const void*))strcmp);
+	for(int i = 0; i < config->stream_count; i++) {
+		sortedMapPut(config->stream_titles, config->streams[i], NULL);
 	}
 
 	return true;
 }
 
-bool twitchEnable(FetchingModule* fetchingModule, SortedMap* configToParse) {
-	if(!fetchingModuleInit(fetchingModule, configToParse, FM_DEFAULTS) ||
-	   !twitchParseConfig(fetchingModule, configToParse)) {
+void configure(FMConfig* config) {
+	fm_config_set_name(config, "twitch");
+}
+
+bool enable(FetchingModule* module) {
+	if(!parse_config(module)) {
 		return false;
 	}
 
-	twitchSetHeader(fetchingModule);
+	set_header(module);
 	return true;
 }
 
-char* twitchReplaceVariables(char* text, void* notificationDataPtr) {
-	TwitchNotificationData* notificationData = notificationDataPtr;
-	return replace(text, 4,
-		"<streamer-name>", notificationData->streamerName,
-		"<title>", notificationData->title,
-		"<category>", notificationData->category,
-		"<url>", notificationData->url);
+static char* replace_variables(const FetchingModule* module, const char* text, const NotificationData* notification_data) {
+	return fm_replace(module, text, 4,
+		"<streamer-name>", notification_data->streamer_name,
+		"<title>", notification_data->title,
+		"<category>", notification_data->category,
+		"<url>", notification_data->url);
 }
 
-void twitchDisplayNotification(FetchingModule* fetchingModule, TwitchNotificationData* notificationData) {
-	Message message = {0};
-	moduleFillBasicMessage(fetchingModule, &message, twitchReplaceVariables, notificationData, NULL);
-	message.actionData = notificationData->url;
-	message.actionType = URL;
-	fetchingModule->display->displayMessage(&message);
-
-	moduleDestroyBasicMessage(&message);
+static void display_notification(const FetchingModule* module, const NotificationData* notification_data) {
+	Config* config = fm_get_data(module);
+	Message* message = fm_new_message();
+	message->title = replace_variables(module, config->title_template, notification_data);
+	message->body = replace_variables(module, config->body_template, notification_data);
+	message->icon_path = config->icon_path;
+	message->action_data = notification_data->url;
+	message->action_type = URL;
+	fm_display_message(module, message);
+	free(message->title);
+	free(message->body);
+	fm_free_message(message);
 }
 
-int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** checkedStreamNames, TwitchNotificationData* newData) {
-	TwitchConfig* config = fetchingModule->config;
+static int parse_response(const FetchingModule* module, const char* response, char** checked_stream_names, NotificationData* new_data) {
+	Config* config = fm_get_data(module);
 	json_object* root = json_tokener_parse(response);
 	json_object* data;
 
-	// TODO: memory leak?
-	if(!jsonReadArray(root, "data", &data)) {
-		int errorStatus;
-		const char* errorCode;
-		const char* errorMessage;
+	/* TODO: memory leak? */
+	if(!json_read_array(root, "data", &data)) {
+		int error_status;
+		const char* error_code;
+		const char* error_msg;
 		if(json_object_get_type(root) == json_type_object &&
-		   jsonReadInt(root, "status", &errorStatus) &&
-		   jsonReadString(root, "error", &errorCode) &&
-		   jsonReadString(root, "message", &errorMessage)) {
-			moduleLog(fetchingModule, 0, "Error %d - %s (%s)", errorStatus, errorCode, errorMessage);
-			return errorStatus;
+		   json_read_int(root, "status", &error_status) &&
+		   json_read_string(root, "error", &error_code) &&
+		   json_read_string(root, "message", &error_msg)) {
+			fm_log(module, 0, "Error %d - %s (%s)", error_status, error_code, error_msg);
+			return error_status;
 		} else {
-			moduleLog(fetchingModule, 0, "Invalid response");
+			fm_log(module, 0, "Invalid response");
 			return -1;
 		}
 	}
 
-	int activeStreamersCount = json_object_array_length(data);
+	int active_streamers_count = json_object_array_length(data);
 
-	for(int i = 0; i < activeStreamersCount; i++) {
+	for(int i = 0; i < active_streamers_count; i++) {
 		json_object* stream = json_object_array_get_idx(data, i);
-		const char* activeStreamerName;
-		const char* newTitle;
-		const char* newCategory;
+		const char* active_streamer_name;
+		const char* new_title;
+		const char* new_category;
 
-		if(!jsonReadString(stream, "user_name", &activeStreamerName) ||
-		   !jsonReadString(stream, "title", &newTitle) ||
-		   !jsonReadString(stream, "game_name", &newCategory)) {
-			moduleLog(fetchingModule, 0, "Invalid data for stream %d", i);
+		if(!json_read_string(stream, "user_name", &active_streamer_name) ||
+		   !json_read_string(stream, "title", &new_title) ||
+		   !json_read_string(stream, "game_name", &new_category)) {
+			fm_log(module, 0, "Invalid data for stream %d", i);
 			continue;
 		}
 
-		for(int j = 0; j < config->streamCount; j++) {
-			if(!strcasecmp(activeStreamerName, checkedStreamNames[j])) {
-				newData[j].streamerName  = strdup(activeStreamerName);
-				newData[j].title         = strdup(newTitle);
-				newData[j].category      = strdup(newCategory);
-				newData[j].url           = malloc(strlen("https://twitch.tv/") + strlen(activeStreamerName) + 1);
-				sprintf(newData[j].url, "https://twitch.tv/%s", activeStreamerName);
+		for(int j = 0; j < config->stream_count; j++) {
+			if(!strcasecmp(active_streamer_name, checked_stream_names[j])) {
+				new_data[j].streamer_name = strdup(active_streamer_name);
+				new_data[j].title         = strdup(new_title);
+				new_data[j].category      = strdup(new_category);
+				new_data[j].url           = malloc(strlen("https://twitch.tv/") + strlen(active_streamer_name) + 1);
+				sprintf(new_data[j].url, "https://twitch.tv/%s", active_streamer_name);
 
 				break;
 			}
@@ -373,94 +408,89 @@ int twitchParseResponse(FetchingModule* fetchingModule, char* response, char** c
 	return 0;
 }
 
-void twitchFetch(FetchingModule* fetchingModule) {
-	TwitchConfig* config = fetchingModule->config;
-	char** checkedStreamNames = malloc(config->streamCount * sizeof *checkedStreamNames);
-	TwitchNotificationData* newData = malloc(config->streamCount * sizeof *newData);
+void fetch(const FetchingModule* module) {
+	Config* config = fm_get_data(module);
+	char** checked_stream_names = malloc(config->stream_count * sizeof *checked_stream_names);
+	NotificationData* new_data = malloc(config->stream_count * sizeof *new_data);
 
-	sortedMapKeys(config->streamTitles, (void**)checkedStreamNames);
-	newData = memset(newData, 0, config->streamCount * sizeof *newData);
+	sortedMapKeys(config->stream_titles, (void**)checked_stream_names);
+	new_data = memset(new_data, 0, config->stream_count * sizeof *new_data);
 
-	for(int i = 0; i < config->streamCount; i += 100) {
+	for(int i = 0; i < config->stream_count; i += 100) {
 		NetworkResponse response = {NULL, 0};
-		char* tokenUsed = strdup(config->oauth->token);
-		char* url = twitchGenerateUrl(config->streams, i, MIN(config->streamCount - 1, i + 99));
+		char* token_used = strdup(config->oauth_entry->token);
+		char* url = generate_url(config->streams, i, MIN(config->stream_count - 1, i + 99));
 		curl_easy_setopt(config->curl, CURLOPT_URL, url);
 		curl_easy_setopt(config->curl, CURLOPT_WRITEDATA, &response);
 		free(url);
 
 		CURLcode code = curl_easy_perform(config->curl);
 		if(code != CURLE_OK) {
-			moduleLog(fetchingModule, 0, "Request failed with code %d", code);
-			goto twitchFetchFreeResponse;
+			fm_log(module, 0, "Request failed with code %d", code);
+			goto fetch_free_response;
 		}
 
-		moduleLog(fetchingModule, 3, "Received response:\n%s", response.data);
-		int errorCode = twitchParseResponse(fetchingModule, response.data, checkedStreamNames, newData);
-		if(errorCode == 401) {
-			moduleLog(fetchingModule, 3, "Used token: %s, current: %s", tokenUsed, config->oauth->token);
-			if(strcmp(tokenUsed, config->oauth->token) != 0 || twitchRefreshTokenForOAuth(config->oauth)) {
-				twitchSetHeader(fetchingModule);
-				i -= 100; // retry
+		fm_log(module, 3, "Received response:\n%s", response.data);
+		int error_code = parse_response(module, response.data, checked_stream_names, new_data);
+		if(error_code == 401) {
+			fm_log(module, 3, "Used token: %s, current: %s", token_used, config->oauth_entry->token);
+			if(strcmp(token_used, config->oauth_entry->token) != 0 || refresh_token(module, config->oauth_entry)) {
+				set_header(module);
+				i -= 100; /* retry */
 			} else {
-				moduleLog(fetchingModule, 0, "Unable to refresh token, skipping fetch");
-				i = config->streamCount; // end the loop
+				fm_log(module, 0, "Unable to refresh token, skipping fetch");
+				i = config->stream_count; /* end the loop */
 			}
 		}
 
-twitchFetchFreeResponse:
+fetch_free_response:
 		free(response.data);
-		free(tokenUsed);
+		free(token_used);
 	}
 
-	for(int i = 0; i < config->streamCount; i++) {
-		if(sortedMapGet(config->streamTitles, checkedStreamNames[i]) == NULL && newData[i].title != NULL) {
-			TwitchNotificationData notificationData = {0};
-			notificationData.streamerName  = newData[i].streamerName;
-			notificationData.title         = newData[i].title;
-			notificationData.category      = newData[i].category;
-			notificationData.url           = newData[i].url;
-			twitchDisplayNotification(fetchingModule, &notificationData);
+	for(int i = 0; i < config->stream_count; i++) {
+		if(sortedMapGet(config->stream_titles, checked_stream_names[i]) == NULL && new_data[i].title != NULL) {
+			NotificationData notification_data = {0};
+			notification_data.streamer_name = new_data[i].streamer_name;
+			notification_data.title         = new_data[i].title;
+			notification_data.category      = new_data[i].category;
+			notification_data.url           = new_data[i].url;
+			display_notification(module, &notification_data);
 		}
-		char* lastStreamTitle;
-		sortedMapRemove(config->streamTitles, checkedStreamNames[i], NULL, (void**)&lastStreamTitle);
-		free(lastStreamTitle);
-		sortedMapPut(config->streamTitles, checkedStreamNames[i], newData[i].title);
+		char* last_stream_title;
+		sortedMapRemove(config->stream_titles, checked_stream_names[i], NULL, (void**)&last_stream_title);
+		free(last_stream_title);
+		sortedMapPut(config->stream_titles, checked_stream_names[i], new_data[i].title);
 
-		free(newData[i].streamerName);
-		free(newData[i].category);
-		free(newData[i].url);
+		free(new_data[i].streamer_name);
+		free(new_data[i].category);
+		free(new_data[i].url);
 	}
 
-	free(checkedStreamNames);
-	free(newData);
+	free(checked_stream_names);
+	free(new_data);
 }
 
-void twitchDisable(FetchingModule* fetchingModule) {
-	TwitchConfig* config = fetchingModule->config;
+void disable(FetchingModule* module) {
+	Config* config = fm_get_data(module);
 
 	curl_slist_free_all(config->list);
 	curl_easy_cleanup(config->curl);
 
-	char* streamTitle;
-	for(int i = 0; i < config->streamCount; i++) {
-		sortedMapRemove(config->streamTitles, config->streams[i], NULL, (void**)&streamTitle);
-		free(streamTitle);
+	char* stream_title;
+	for(int i = 0; i < config->stream_count; i++) {
+		sortedMapRemove(config->stream_titles, config->streams[i], NULL, (void**)&stream_title);
+		free(stream_title);
 	}
-	twitchOAuthRemove(config->oauth);
-	sortedMapDestroy(config->streamTitles);
-	free(config->streamTitles);
-	for(int i = 0; i < config->streamCount; i++) {
+	oauth_storage_remove_entry(config->oauth_entry);
+	sortedMapDestroy(config->stream_titles);
+	free(config->stream_titles);
+	for(int i = 0; i < config->stream_count; i++) {
 		free(config->streams[i]);
 	}
 	free(config->streams);
+	free(config->title_template);
+	free(config->body_template);
+	free(config->icon_path);
 	free(config);
 }
-
-void twitchTemplate(FetchingModule* fetchingModule) {
-	fetchingModule->enable = twitchEnable;
-	fetchingModule->fetch = twitchFetch;
-	fetchingModule->disable = twitchDisable;
-}
-
-#endif // ifdef ENABLE_MODULE_TWITCH
