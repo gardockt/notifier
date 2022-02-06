@@ -63,16 +63,6 @@ static bool fm_get_config_int_log_definition(FetchingModule* module, const char*
 	return success;
 }
 
-static Message* fm_new_message_definition() {
-	Message* msg = malloc(sizeof *msg);
-	memset(msg, 0, sizeof *msg);
-	return msg;
-}
-
-static void fm_free_message_definition(Message* msg) {
-	free(msg);
-}
-
 static bool fm_display_message_definition(const FetchingModule* module, const Message* message) {
 	Display* display = module->display;
 	log_write("core", core_verbosity, 3, "Displaying message:\nTitle: %s\nBody: %s\nAction data: %s", message->title, message->body, message->action_data);
@@ -249,9 +239,7 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 	module->get_config_string_log = fm_get_config_string_log_definition;
 	module->get_config_int_log = fm_get_config_int_log_definition;
 
-	module->new_message = fm_new_message_definition;
 	module->display_message = fm_display_message_definition;
-	module->free_message = fm_free_message_definition;
 	module->log = fm_log_definition;
 
 	module->get_stash_string = stash_get_string;

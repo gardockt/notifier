@@ -97,14 +97,14 @@ static char* replace_variables(const FetchingModule* module, const char* text, c
 
 static void display_notification(const FetchingModule* module, NotificationData* notification_data) {
 	Config* config = fm_get_data(module);
-	Message* message = fm_new_message();
-	message->title = replace_variables(module, config->title_template, notification_data);
-	message->body = replace_variables(module, config->body_template, notification_data);
-	message->icon_path = config->icon_path;
-	fm_display_message(module, message);
-	free(message->title);
-	free(message->body);
-	fm_free_message(message);
+	Message message = {
+		.title     = replace_variables(module, config->title_template, notification_data),
+		.body      = replace_variables(module, config->body_template,  notification_data),
+		.icon_path = config->icon_path,
+	};
+	fm_display_message(module, &message);
+	free(message.title);
+	free(message.body);
 }
 
 static void parse_response(FetchingModule* module, const char* response) {

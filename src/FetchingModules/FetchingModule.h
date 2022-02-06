@@ -29,9 +29,7 @@ typedef struct FetMod {
 	bool (*get_config_string_log)(struct FetMod* module, const char* var_name, char** output, int message_verbosity);
 	bool (*get_config_int_log)(struct FetMod* module, const char* var_name, int* output, int message_verbosity);
 
-	Message* (*new_message)();
 	bool (*display_message)(const struct FetMod* module, const Message* message);
-	void (*free_message)(Message* message);
 
 	void (*log)(const struct FetMod* module, int message_verbosity, const char* format, ...);
 
@@ -58,9 +56,7 @@ typedef struct {
 #define fm_set_data(module, data) ((module)->custom_data = data)
 #define fm_get_data(module)       ((module)->custom_data)
 
-#define fm_new_message()                ((module)->new_message())
 #define fm_display_message(module, msg) ((module)->display_message(module, msg))
-#define fm_free_message(msg)            ((module)->free_message(msg))
 
 #define fm_log(module, msg_verbosity, format, ...) ((module)->log(module, msg_verbosity, format __VA_OPT__(,) __VA_ARGS__))
 

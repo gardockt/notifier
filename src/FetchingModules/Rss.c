@@ -200,17 +200,16 @@ static char* replace_variables(const FetchingModule* module, const char* text, c
 
 static void display_notification(const FetchingModule* module, const NotificationData* notification_data) {
 	Config* config = fm_get_data(module);
-	Message* message = fm_new_message();
-	message->title = replace_variables(module, config->title_template, notification_data);
-	message->body = replace_variables(module, config->body_template, notification_data);
-	message->icon_path = config->icon_path;
-	message->action_data = notification_data->url;
-	message->action_type = URL;
-	fm_display_message(module, message);
-
-	free(message->title);
-	free(message->body);
-	fm_free_message(message);
+	Message message = {
+		.title       = replace_variables(module, config->title_template, notification_data),
+		.body        = replace_variables(module, config->body_template,  notification_data),
+		.icon_path   = config->icon_path,
+		.action_data = notification_data->url,
+		.action_type = URL,
+	};
+	fm_display_message(module, &message);
+	free(message.title);
+	free(message.body);
 }
 
 static void detect_rss_standard(xmlXPathContext* xml_context, RssStandardInfo* output) {
