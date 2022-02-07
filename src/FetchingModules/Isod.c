@@ -60,12 +60,12 @@ static bool parse_config(FetchingModule* module) {
 	}
 
 	fm_get_config_string(module, "icon", &config->icon_path);
+	fm_set_data(module, config);
 
 	char* section_name = generate_last_read_key_name(module);
 	config->last_read = strdup(fm_get_stash_string(module, "isod", section_name, "01.01.1970 00:00"));
 	free(section_name);
 	
-	fm_set_data(module, config);
 	return true;
 }
 
