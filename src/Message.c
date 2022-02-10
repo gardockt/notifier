@@ -2,15 +2,6 @@
 
 #define STRDUP_IF_NOT_NULL(str) ((str) != NULL ? strdup(str) : NULL)
 
-/* may be changed later */
-Message* message_new() {
-	return malloc(sizeof (Message));
-}
-
-void message_free(Message* message) {
-	free(message);
-}
-
 Message* message_clone(const Message* message) {
 	Message* ret = malloc(sizeof *ret);
 	ret->title       = STRDUP_IF_NOT_NULL(message->title);

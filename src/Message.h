@@ -17,9 +17,6 @@ typedef struct {
 	char* icon_path;
 } Message;
 
-Message* message_new();
-void message_free(Message* message);
-
 Message* message_clone(const Message* message);
 void message_free_all_children(Message* message);
 
