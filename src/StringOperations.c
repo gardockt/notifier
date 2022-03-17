@@ -54,15 +54,8 @@ int split(const char* text, const char* separators, char*** output) {
 }
 
 static int find(const char* text, const char* substring) {
-	int text_length = strlen(text);
-	int substring_length = strlen(substring);
-
-	for(int i = 0; i <= text_length - substring_length; i++) {
-		if(!strncmp(&text[i], substring, substring_length)) {
-			return i;
-		}
-	}
-	return -1;
+	char* ptr = strstr(text, substring);
+	return (ptr != NULL ? (ptr - text) : -1);
 }
 
 static int compare_replacements(const void* a_ptr, const void* b_ptr) {
