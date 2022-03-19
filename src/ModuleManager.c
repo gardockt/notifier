@@ -66,7 +66,7 @@ static bool fm_get_config_int_log_definition(FetchingModule* module, const char*
 static bool fm_display_message_definition(const FetchingModule* module, const Message* message) {
 	Display* display = module->display;
 	log_write("core", core_verbosity, 3, "Displaying message:\nTitle: %s\nBody: %s\nAction data: %s", message->title, message->body, message->action_data);
-	return display->display_message(message);
+	return display->display(message);
 }
 
 static void* fm_fetching_thread(void* args) {
@@ -130,6 +130,11 @@ static bool fm_manager_add_library(ModuleManager* manager, const char* directory
 	FMConfig config = {0};
 	configure(&config);
 
+	if(config.name == NULL) {
+		log_write("core", core_verbosity, 0, "No name set for library \"%s\"", lib_file_name);
+		goto fm_manager_add_library_finish;
+	}
+
 	success = sorted_map_put(&manager->available_modules, config.name, handle);
 
 fm_manager_add_library_finish:
@@ -157,9 +162,9 @@ bool fm_manager_init(ModuleManager* manager) {
 		/* TODO: find a better way of determining whether a file can be read? */
 		/* TODO: also check whether file is executable */
 		if(de->d_type == DT_REG || de->d_type == DT_LNK) {
-			log_write("core", 2, core_verbosity, "Loading module \"%s\"", de->d_name);
+			log_write("core", 2, core_verbosity, "Loading fetching module \"%s\"", de->d_name);
 			if(!fm_manager_add_library(manager, fm_path, de->d_name)) {
-				log_write("core", core_verbosity, 0, "Could not load module \"%s\"", de->d_name);
+				log_write("core", core_verbosity, 0, "Could not load fetching module \"%s\"", de->d_name);
 			}
 		}
 	}
@@ -226,8 +231,8 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 		fm_log_definition(module, 0, "Display does not exist");
 		return false;
 	}
-	if(!display->init()) {
-		fm_log_definition(module, 0, "Failed to init display");
+	if(!display->enable()) {
+		fm_log_definition(module, 0, "Failed to enable display");
 		return false;
 	}
 
@@ -257,7 +262,7 @@ static bool fm_load_basic_settings(FetchingModule* module, SortedMap* config, vo
 
 static void fm_free_basic_settings(FetchingModule* module) {
 	Display* display = module->display;
-	display->uninit();
+	display->disable();
 	free(module->name);
 }
 

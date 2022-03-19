@@ -8,9 +8,16 @@
 #include "../Message.h"
 
 typedef struct {
-	bool (*init)();
-	bool (*display_message)(const Message* message);
-	void (*uninit)();
+	bool (*enable)();
+	bool (*display)(const Message* message);
+	void (*disable)();
+	void* handle;
 } Display;
+
+typedef struct {
+	char* name;
+} DisplayLibConfig;
+
+#define display_config_set_name(config, display_name) ((config)->name = strdup(display_name))
 
 #endif /* ifndef DISPLAY_H */

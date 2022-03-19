@@ -1,4 +1,5 @@
-#include "Message.h"
+#include "../../Message.h"
+#include "MessageUtilities.h"
 
 #define STRDUP_IF_NOT_NULL(str) ((str) != NULL ? strdup(str) : NULL)
 

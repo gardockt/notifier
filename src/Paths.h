@@ -12,5 +12,6 @@ char* get_config_file_path();
 char* get_stash_path();
 bool create_stash_dir();
 char* get_fm_path();
+char* get_display_path();
 
 #endif /* ifndef PATHS_H */

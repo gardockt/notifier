@@ -74,3 +74,12 @@ char* get_fm_path() {
 	free(config_path);
 	return ret;
 }
+
+/* $HOME/.config/notifier/displays */
+char* get_display_path() {
+	char* config_path = get_config_path();
+	char* ret = malloc(strlen(config_path) + strlen("/displays") + 1);
+	sprintf(ret, "%s/displays", config_path);
+	free(config_path);
+	return ret;
+}

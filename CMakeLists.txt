@@ -73,7 +73,7 @@ macro(configure_fm name dependencies)
 		foreach(dep ${dependencies})
 			string(TOUPPER ${dep} dep_upper)
 			target_include_directories(${target_name} PUBLIC ${${dep_upper}_INCLUDE_DIRS})
-			target_compile_options(${target_name} PUBLIC ${${dep_upper}_CFLAGS_OTHER})
+			target_compile_options(${target_name} PUBLIC ${${dep_upper}_CFLAGS_OTHER} -ggdb)
 			target_link_libraries(${target_name} PUBLIC ${${dep_upper}_LIBRARIES})
 		endforeach()
 	endif()
@@ -86,6 +86,33 @@ configure_fm(twitch  "curl;json-c")
 
 
 
+### DISPLAYS ###
+
+set(display_libnotify_sources
+	src/Displays/Libnotify.c
+	src/Displays/Utilities/MessageUtilities.c
+)
+
+macro(configure_display name dependencies)
+	string(TOUPPER ${name} name_upper)
+	set(target_name display_${name})
+	check_dependencies(DISPLAY_${name_upper} ${dependencies})
+	if(ENABLE_DISPLAY_${name_upper})
+		add_library(${target_name} SHARED ${${target_name}_sources})
+		set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/displays LIBRARY_OUTPUT_NAME ${name} PREFIX "")
+		foreach(dep ${dependencies})
+			string(TOUPPER ${dep} dep_upper)
+			target_include_directories(${target_name} PUBLIC ${${dep_upper}_INCLUDE_DIRS})
+			target_compile_options(${target_name} PUBLIC ${${dep_upper}_CFLAGS_OTHER} -ggdb)
+			target_link_libraries(${target_name} PUBLIC ${${dep_upper}_LIBRARIES})
+		endforeach()
+	endif()
+endmacro()
+
+configure_display(libnotify  "libnotify")
+
+
+
 ### MAIN EXECUTABLE ###
 
 set(notifier_sources
@@ -93,30 +120,15 @@ set(notifier_sources
 	src/DisplayManager.c
 	src/Log.c
 	src/Main.c
-	src/Message.c
 	src/ModuleManager.c
 	src/Paths.c
 	src/Stash.c
 	src/StringOperations.c
-	src/Displays/Libnotify.c
 	src/Structures/BinaryTree.c
 	src/Structures/SortedMap.c
 )
 
 add_executable(notifier ${notifier_sources})
-
-macro(check_main_dependencies module_name dependencies)
-	check_dependencies(${module_name} ${dependencies})
-	if(${ENABLE_${module_name}})
-		add_definitions("-DENABLE_${module_name}")
-		foreach(dep ${dependencies})
-			string(TOUPPER ${dep} dependency_name_uppercase)
-			set(COMPILE_${dependency_name_uppercase} TRUE)
-		endforeach()
-	endif()
-endmacro()
-
-check_main_dependencies(DISPLAY_LIBNOTIFY   "libnotify")
 
 # for some reason that's where Ubuntu stores iniparser's header files
 if(UNIX)
@@ -125,16 +137,5 @@ endif()
 
 target_compile_options(notifier PUBLIC -ggdb)
 target_link_libraries(notifier PUBLIC -liniparser -lm ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
-
-function(compile_if_needed dependency_name)
-	string(TOUPPER ${dependency_name} dependency_name_uppercase)
-	if(COMPILE_${dependency_name_uppercase})
-		target_include_directories(notifier PUBLIC ${${dependency_name_uppercase}_INCLUDE_DIRS})
-		target_compile_options(notifier PUBLIC ${${dependency_name_uppercase}_CFLAGS_OTHER})
-		target_link_libraries(notifier PUBLIC ${${dependency_name_uppercase}_LIBRARIES})
-	endif()
-endfunction()
-
-compile_if_needed(libnotify)
 
 install(TARGETS notifier RUNTIME DESTINATION bin)
