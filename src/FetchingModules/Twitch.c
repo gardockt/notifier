@@ -157,6 +157,7 @@ oauth_storage_add_entry_unlock_mutex:
 }
 
 static void oauth_storage_remove_entry(const OAuthEntry* entry) {
+	pthread_mutex_lock(&oauth_global_mutex);
 	OAuthEntry* oauth_entry_from_map = binary_tree_get(oauth_storage, entry);
 
 	/* this should never happen */
@@ -180,6 +181,8 @@ static void oauth_storage_remove_entry(const OAuthEntry* entry) {
 		free(oauth_storage);
 		oauth_storage = NULL;
 	}
+
+	pthread_mutex_unlock(&oauth_global_mutex);
 }
 
 static char* generate_url(char** streams, int start, int stop) {
